@@ -60,6 +60,15 @@ static nrf_sdh_freertos_task_hook_t m_task_hook;        //!< A hook function run
 
 void SD_EVT_IRQHandler(void)
 {
+#if ENABLE_SOFTDEVICE_DIRECT_TASK_NOTIFICATION
+    BaseType_t xHigherPriorityTaskWoken ;
+    xHigherPriorityTaskWoken = pdFALSE;
+
+    vTaskNotifyGiveFromISR( m_softdevice_task, &xHigherPriorityTaskWoken );
+
+    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+
+#else
      BaseType_t xYieldRequired;
 
      xYieldRequired = xTaskResumeFromISR( m_softdevice_task );
@@ -68,6 +77,7 @@ void SD_EVT_IRQHandler(void)
      {
          portYIELD_FROM_ISR(xYieldRequired);
      }
+#endif
 }
 
 
@@ -81,11 +91,33 @@ static void softdevice_task(void * pvParameter)
         m_task_hook(pvParameter);
     }
 
+#if ENABLE_SOFTDEVICE_DIRECT_TASK_NOTIFICATION
+
+    BaseType_t xEvent;
+    const TickType_t xBlockTime =  500;
+    uint32_t ulNotifiedValue;
+
+    while (true)
+    {
+       ulNotifiedValue = ulTaskNotifyTake( pdFALSE,
+                                           xBlockTime );
+        if( ulNotifiedValue > 0 )
+        { 
+            nrf_sdh_evts_poll(); // Let the handlers run first, in case the EVENT occured before creating this task.
+            vTaskSuspend(NULL);
+        }
+        else
+        {
+           NRF_LOG_ERROR("Task Notification Value = 0");
+        }
+    }
+#else
     while (true)
     {
         nrf_sdh_evts_poll(); // Let the handlers run first, in case the EVENT occured before creating this task.
         vTaskSuspend(NULL);
     }
+#endif
 }
 
 
