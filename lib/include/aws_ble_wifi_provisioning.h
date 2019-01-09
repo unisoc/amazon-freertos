@@ -85,7 +85,7 @@ typedef enum
 /**
  * @brief Tokens used within the JSON messages exchanged between GATT client and server.
  */
-#define wifiProvMAX_TOKENS          ( 12 )
+
 #define wifiProvMAX_NETWORKS_KEY    "maxNetworks"
 #define wifiProvSCAN_TIMEOUT_KEY    "timeout"
 #define wifiProvKEY_MGMT_KEY        "security"
@@ -99,40 +99,6 @@ typedef enum
 #define wifiProvCONNECTED_KEY       "connected"
 #define wifiProvINDEX_KEY           "index"
 #define wifiProvNEWINDEX_KEY        "newIndex"
-#define wifiProvTRUE                "true"
-#define wifiProvFALSE               "false"
-#define wifiProvUINT16_MAX_WIDTH    ( 5 )
-#define wifiProvBSSID_MAX_LEN       ( 17 )
-#define JSON_STR( x )    STR( x )
-#define STR( x )         # x
-
-/**
- * @brief Format of the JSON messages sent from GATT client to server
- */
-#define wifiProvLISTNETWORK_RSP_FORMAT         \
-    "{"                                        \
-    JSON_STR( wifiProvSTATUS_KEY ) ":%d,"      \
-    JSON_STR( wifiProvSSID_KEY ) ":\"%.*s\","  \
-    JSON_STR( wifiProvBSSID_KEY ) ":\"%.*s\"," \
-    JSON_STR( wifiProvKEY_MGMT_KEY ) ":%d,"    \
-    JSON_STR( wifiProvHIDDEN_KEY ) ":%s,"      \
-    JSON_STR( wifiRSSI_KEY ) ":%d,"            \
-    JSON_STR( wifiProvCONNECTED_KEY ) ":%s,"   \
-    JSON_STR( wifiProvINDEX_KEY ) ":%d"        \
-                                  "}"
-#define wifProvLIST_NETWORK_RSP_LEN              \
-    (                                            \
-        sizeof( wifiProvLISTNETWORK_RSP_FORMAT ) \
-        + wificonfigMAX_SSID_LEN                 \
-        + wifiProvBSSID_MAX_LEN                  \
-        + ( 6 * wifiProvUINT16_MAX_WIDTH ) )     \
-
-#define wifiProvSTATUS_RSP_FORMAT        \
-    "{"                                  \
-    JSON_STR( wifiProvSTATUS_KEY ) ":%d" \
-                                   "}"
-#define wifiProvSTATUS_RSP_FORMAT_LEN    ( sizeof( wifiProvSTATUS_RSP_FORMAT ) + wifiProvUINT16_MAX_WIDTH )
-
 
 /**
  * @brief List Network request sent by the GATT client to list saved and scanned networks.
@@ -176,15 +142,15 @@ typedef struct DeleteNetworkRequest
 
 typedef struct WifiNetworkInfo
 {
-	BaseType_t xIsScan;
-	int16_t sSavedIdx;
-	BaseType_t xConnected;
-
-	union {
-		WIFINetworkProfile_t* pxSavedNetworkInfo;
-		WIFIScanResult_t* pxScannedNetworkInfo;
-	} info;
-
+	const char* pcSSID;
+	size_t xSSIDLength;
+	const uint8_t* pucBSSID;
+	size_t xBSSIDLength;
+	WIFISecurity_t xSecurity;
+	int8_t cRSSI;
+	uint8_t ucHidden;
+	uint8_t ucConnected;
+    int32_t sSavedIdx;
 } WifiNetworkInfo_t;
 
 /**
@@ -201,7 +167,6 @@ typedef enum
 } WifiProvEvent_t;
 
 #define ALL_EVENTS    ( eWIFIPROVStarted | eWIFIPROVConnect | eWIFIPROVConnected | eWIFIPROVStopped | eWIFIPROVDeleted | eWIFIPROVFailed )
-
 
 /**
  * @brief Structure used for WiFi provisioning service.
@@ -221,6 +186,13 @@ typedef struct WifiProvService
 } WifiProvService_t;
 
 #define wifiProvIS_SUCCESS( btstatus )    ( ( btstatus ) == eBTStatusSuccess )
+
+
+#define wifiProvINVALID_NETWORK_RSSI      ( -100 )
+
+
+#define wifiProvINVALID_NETWORK_INDEX     ( -1 )
+
 
 /**
  * @brief Maximum number of WiFi networks that can be provisioned

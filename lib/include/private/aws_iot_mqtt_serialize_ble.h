@@ -25,7 +25,8 @@
 
 /**
  * @file aws_iot_mqtt_serialize_ble.h
- * @brief MQTT serialize/deserialize library for BLE.
+ * @brief File contains serializer and deserializer APIS for sending and receiving MQTT messages
+ * over BLE using a companion device SDK.
  */
 
 #ifndef AWS_IOT_MQTT_SERIALIZE_BLE_H
@@ -35,14 +36,10 @@
 #include "aws_clientcredential.h"
 
 /**
- * @brief Tokens used within JSON payloads for MQTT messages.
+ *  @defgroup
+ *  Keys for MQTT message parameters exchanged between device and the companion BLE device SDK.
  */
-#define JSON_STR(x)   STR(x)
-#define STR(x)  #x
-
-#define mqttBLETRUE		            "true"
-#define mqttBLEFALSE		        "false"
-
+/** @{ */
 #define mqttBLEMSG_TYPE        "type"
 #define mqttBLECLIENT_ID       "clientID"
 #define mqttBLEBROKER_EP       "brokerEndpoint"
@@ -56,109 +53,11 @@
 #define mqttBLEMESSAGE_ID      "msgID"
 #define mqttBLEPAYLOAD         "payloadVal"
 #define mqttBLESTATUS          "status"
-
-#define mqttBLEINTEGER_WIDTH      ( 5 )
-#define mqttBLEBOOLEAN_WIDTH      ( 5 )
-#define mqttBLEQOS_WIDTH          ( 1 )
-
-#define mqttBLEMAX_MESG_TOKENS    ( 16 )
-
-#define JSON_STR(x)		STR(x)
-#define STR(x)		    #x
-
-#define JSON_STR_ARR_LEN( numelems ) ( ( numelems * 2 ) + ( numelems - 1 ) + 2 )
-
-#define JSON_PRIMITIVE_ARR_LEN( numelems, elemwidth ) ( ( numelems * elemwidth ) +  ( numelems - 1 ) + 2 )
-
-/**
- * @brief Format used for serializing MQTT messages as JSON payloads over BLE.
- */
-#define mqttBLECONNECT_MSG_FORMAT                    \
-		"{"                                               \
-	    JSON_STR( mqttBLEMSG_TYPE )":%hu,"           \
-        JSON_STR( mqttBLECLIENT_ID )":\"%.*s\","     \
-        JSON_STR( mqttBLEBROKER_EP )":\"%.*s\","     \
-		JSON_STR( mqttBLEBROKER_PORT )":%hu,"        \
-		JSON_STR( mqttBLEUSER )":\"%.*s\","          \
-		JSON_STR( mqttBLECLEAN_SESSION )":%s"        \
-		"}"
-
-#define mqttBLECONNECT_MSG_LEN( pConnectInfo )          \
-	( sizeof( mqttBLECONNECT_MSG_FORMAT )               \
-			+ mqttBLEINTEGER_WIDTH                          \
-			+ ( pConnectInfo )->clientIdentifierLength       \
-			+ sizeof( clientcredentialMQTT_BROKER_ENDPOINT ) \
-			+ mqttBLEINTEGER_WIDTH                          \
-			+ ( pConnectInfo )->userNameLength               \
-			+ mqttBLEBOOLEAN_WIDTH )
-
-#define mqttBLEPUBLISH_MSG_HEADER                      \
-		"{" 								                \
-	    JSON_STR( mqttBLEMSG_TYPE )":%hu," 		    \
-        JSON_STR( mqttBLETOPIC )":\"%.*s\","  	        \
-		JSON_STR( mqttBLEQOS )":%hu,"					\
-		JSON_STR( mqttBLEMESSAGE_ID )":%hu,"			\
-		JSON_STR( mqttBLEPAYLOAD )":\""
-
-#define mqttBLEPUBLISH_MSG_TRAILER     "\"}"
-
-#define mqttBLEPUBLISH_MSG_LEN( topicLen, dataLen )  \
-	    ( sizeof( mqttBLEPUBLISH_MSG_HEADER )        \
-		+ topicLen                                        \
-		+ mqttBLEINTEGER_WIDTH                           \
-		+ mqttBLEINTEGER_WIDTH                           \
-		+ dataLen                                         \
-		+ sizeof( mqttBLEPUBLISH_MSG_TRAILER ) )     \
-
-#define mqttBLESUBSCRIBE_MSG_FORMAT                \
-		"{"                                             \
-	    JSON_STR( mqttBLEMSG_TYPE )":%d,"          \
-        JSON_STR( mqttBLETOPIC_LIST )":%.*s,"      \
-		JSON_STR( mqttBLEQOS_LIST )":%.*s,"        \
-		JSON_STR( mqttBLEMESSAGE_ID )":%d"         \
-		"}"
-
-#define mqttBLESUBSCRIBE_MSG_LEN( topicArrLen, qosArrLen ) \
-	   (  sizeof( mqttBLESUBSCRIBE_MSG_FORMAT )            \
-		+ mqttBLEINTEGER_WIDTH                                 \
-		+ topicArrLen                                           \
-		+ qosArrLen                                             \
-		+ mqttBLEINTEGER_WIDTH  )
-
-#define mqttBLEUNSUBSCRIBE_MSG_FORMAT         \
-		"{"                                        \
-	    JSON_STR( mqttBLEMSG_TYPE )":%d,"     \
-        JSON_STR( mqttBLETOPIC_LIST )":%.*s,"      \
-		JSON_STR( mqttBLEMESSAGE_ID )":%d"    \
-		"}"
-#define mqttBLEUNSUBSCRIBE_MSG_LEN( topicArrLen )   \
-	    ( sizeof( mqttBLEUNSUBSCRIBE_MSG_FORMAT )   \
-		+ mqttBLEINTEGER_WIDTH                          \
-		+ topicArrLen                                    \
-		+ mqttBLEINTEGER_WIDTH )
-
-#define mqttBLEDISCONNECT_MSG_FORMAT	    \
-		"{" 							        \
-	     JSON_STR( mqttBLEMSG_TYPE )":%d" 	\
-		"}"
-
-#define mqttBLEDISCONNECT_MSG_LEN           \
-	    ( sizeof( mqttBLEDISCONNECT_MSG_FORMAT )  \
-		+ mqttBLEINTEGER_WIDTH )
-
-#define mqttBLEPUBACK_MSG_FORMAT            \
-		"{"                                      \
-	     JSON_STR( mqttBLEMSG_TYPE )":%d,"  \
-		 JSON_STR( mqttBLEMESSAGE_ID )":%d" \
-		"}"
-#define mqttBLEPUBACK_MSG_LEN                   \
-	    ( sizeof( mqttBLEPUBACK_MSG_FORMAT )    \
-		+ mqttBLEINTEGER_WIDTH                      \
-		+ mqttBLEINTEGER_WIDTH )
+/** @} */
 
 /**
  * @defgroup
- * MQTT message type exchanged between the Device and the Proxy.
+ * MQTT message types exchanged between the device and the companion BLE device SDK.
  */
 /** @{ */
 #define mqttBLEMSG_TYPE_CONNECT          ( 1 )
@@ -178,19 +77,21 @@
 /** @} */
 
 /**
- * Response code from proxy for an MQTT connect.
+ * @defgroup
+ * CONNECT Response code exchanged between the device and the companion BLE device SDK.
  */
+/** @{ */
 typedef enum {
 
-	eMQTTBLEStatusUnknown = 0,        //!< eMQTTBLEStatusUnknown
-	eMQTTBLEStatusConnecting,         //!< eMQTTBLEStatusConnecting
-	eMQTTBLEStatusConnected,          //!< eMQTTBLEStatusConnected
-	eMQTTBLEStatusDisconnected,       //!< eMQTTBLEStatusDisconnected
-	eMQTTBLEStatusConnectionRefused,  //!< eMQTTBLEStatusConnectionRefused
-	eMQTTBLEStatusConnectionError,    //!< eMQTTBLEStatusConnectionError
-	eMQTTBLEStatusProtocolError       //!< eMQTTBLEStatusProtocolError
+	eMQTTBLEStatusUnknown = 0,        //!< eMQTTBLEStatusUnknown  Connection status unknown by the SDK.
+	eMQTTBLEStatusConnecting,         //!< eMQTTBLEStatusConnecting SDK has sent CONNECT request to server and waiting for the response.
+	eMQTTBLEStatusConnected,          //!< eMQTTBLEStatusConnected  SDK is connected to the MQTT server.
+	eMQTTBLEStatusDisconnected,       //!< eMQTTBLEStatusDisconnected SDK is disconnected with the MQTT server.
+	eMQTTBLEStatusConnectionRefused,  //!< eMQTTBLEStatusConnectionRefused Server refused connection with the SDK.
+	eMQTTBLEStatusConnectionError,    //!< eMQTTBLEStatusConnectionError Internal error while connecting to the server.
+	eMQTTBLEStatusProtocolError       //!< eMQTTBLEStatusProtocolError CONNECT message from the device was malformed.
 } MQTTBLEConnectStatus_t;
-
+/** @} */
 
 /**
  * @brief Initializes the serializer for MQTT messages over BLE.

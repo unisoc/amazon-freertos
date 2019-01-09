@@ -31,22 +31,23 @@
 #include <aws_ble.h>
 #include <string.h>
 
-#include "aws_ble_config.h"
+#include "private/aws_ble_service_internals.h"
 #include "aws_ble_wifi_provisioning.h"
 #include "semphr.h"
-#include "aws_json_utils.h"
-
 
 #define ATTR_DATA( svc, attrType )      ( ( svc )->pxGattService->pxCharacteristics[ attrType ].xAttributeData )
 #define ATTR_HANDLE( svc, attrType )    ( ( ATTR_DATA( svc, attrType ) ).xHandle )
 #define ATTR_UUID( svc, attrType )      ( ( ATTR_DATA( svc, attrType ) ).xUuid )
 
+#define IS_VALID_SERIALIZER_RET( ret, pxSerializerBuf )                                \
+    (  ( ret == AWS_IOT_SERIALIZER_SUCCESS ) ||                                        \
+          (  ( !pxSerializerBuf ) && ( ret == AWS_IOT_SERIALIZER_BUFFER_TOO_SMALL ) ) )
 /*---------------------------------------------------------------------------------------------------------*/
 
 static WifiProvService_t xWifiProvService = { 0 };
 
 #define STORAGE_INDEX( priority )    ( xWifiProvService.usNumNetworks - priority - 1 )
-#define INVALID_INDEX    ( -1 )
+#define NETWORK_INFO_DEFAULT_PARAMS        { .cRSSI = wifiProvINVALID_NETWORK_RSSI, .ucConnected = 0, .sSavedIdx = wifiProvINVALID_NETWORK_INDEX }
 /*---------------------------------------------------------------------------------------------------------*/
 
 /*
@@ -100,23 +101,32 @@ static void prvSetEvent( WifiProvEvent_t xEvent );
 static BaseType_t prvWaitForEvent( WifiProvEvent_t xEvent,
                                           TickType_t xTimeout );
 
+static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, ListNetworkRequest_t* pxListNetworkRequest );
+
 /*
  * @brief Parses List Network request params and creates task to list networks.
  */
 static BaseType_t prxHandleListNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
 
+
+static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, AddNetworkRequest_t* pxAddNetworkRequest );
 /*
  * @brief Parses Save Network request params and creates task to save the new network.
  */
 static BaseType_t prxHandleSaveNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
 
+
+static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, EditNetworkRequest_t* pxEditNetworkRequest );
+
 /*
  * @brief Parses Edit Network request params and creates task to edit network priority.
  */
 static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
+
+static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, DeleteNetworkRequest_t* pxDeleteNetworkRequest );
 
 /*
  * @brief Parses Delete Network request params and creates task to delete a WiFi networ.
@@ -150,7 +160,15 @@ WIFIReturnCode_t prvConnectSavedNetwork( uint16_t usIndex );
 
 WIFIReturnCode_t prvAddNewNetwork( WIFINetworkProfile_t * pxProfile );
 
-void prvSerializeNetwork( WifiNetworkInfo_t *xProfile, uint8_t *pucBuffer, uint32_t ulLen, uint32_t *pulLen );
+
+static AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, uint8_t *pucBuffer, size_t *pxLength );
+
+static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t usIdx );
+
+static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork );
+
+static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xStatus, uint8_t* pucBuffer, size_t* pxLength );
+
 /*
  * @brief  The task lists the saved network configurations in flash and also scans nearby networks.
  * It sends the profile information for each saved and scanned networks one at a time to the GATT client.
@@ -504,259 +522,416 @@ static uint16_t prvGetNumSavedNetworks( void )
     return usNumNetworks;
 }
 
+static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, ListNetworkRequest_t* pxListNetworkRequest )
+{
+
+    AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    BaseType_t xResult = pdTRUE;
+
+    xRet = bleMESSAGE_DECODER.init( &xDecoderObj, ( uint8_t * ) pucData, xLength );
+
+    if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+            ( xDecoderObj.type != AWS_IOT_SERIALIZER_CONTAINER_MAP ) )
+    {
+        configPRINTF(( "Failed to initialize the decoder, error = %d, object type = %d\n", xRet, xDecoderObj.type ));
+        xResult = pdFALSE;
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvMAX_NETWORKS_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get max Networks parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( xValue.value.signedInt > bleconfigMAX_NETWORK )
+            {
+                configPRINTF(( "WARN: Max Networks (%d) exceeds configured Max networks (%d). Caping max networks to %d\n",
+                        xValue.value.signedInt,
+                        bleconfigMAX_NETWORK,
+                        bleconfigMAX_NETWORK ));
+                pxListNetworkRequest->sMaxNetworks = bleconfigMAX_NETWORK;
+            }
+            else
+            {
+                pxListNetworkRequest->sTimeoutMs = xValue.value.signedInt;
+            }
+        }
+    }
+    bleMESSAGE_DECODER.destroy( &xValue );
+    bleMESSAGE_DECODER.destroy( &xDecoderObj );
+    return xResult;
+}
+
+
 /*-----------------------------------------------------------*/
 
 static BaseType_t prxHandleListNetworkRequest( uint8_t * pucData,
                                                size_t xLength )
 {
     BaseType_t xStatus = pdFALSE;
-    jsmntok_t xTokens[ wifiProvMAX_TOKENS ];
-    int16_t sNumTokens;
-    ListNetworkRequest_t * pxParams;
-
-    if( ( sNumTokens = JsonUtils_Parse( ( char * ) pucData, xLength, xTokens, wifiProvMAX_TOKENS ) ) > 0 )
+    ListNetworkRequest_t * pxParams = pvPortMalloc( sizeof( ListNetworkRequest_t ));
+    if( pxParams != NULL )
     {
-        pxParams = pvPortMalloc( sizeof( ListNetworkRequest_t ) );
-
-        if( pxParams != NULL )
+        xStatus = prxDeserializeListNetworkRequest( pucData, xLength, pxParams );
+        if( xStatus == pdTRUE )
         {
-            xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                               xTokens,
-                                               sNumTokens,
-                                               wifiProvMAX_NETWORKS_KEY,
-                                               strlen( wifiProvMAX_NETWORKS_KEY ),
-                                               ( int16_t * ) &pxParams->sMaxNetworks );
-
-            if( xStatus == pdTRUE )
-            {
-                if(pxParams->sMaxNetworks > bleconfigMAX_NETWORK )
-                {
-                    configPRINTF(("Too many network request: %d, expected at most %d\n", pxParams->sMaxNetworks, bleconfigMAX_NETWORK));
-                    pxParams->sMaxNetworks = bleconfigMAX_NETWORK;
-                }
-                else if ( pxParams->sMaxNetworks <= 0 )
-                {
-                    configPRINTF(( "Invalid message received, max scan networks (%d) is <= 0\n", pxParams->sMaxNetworks  ));
-                    xStatus = pdFALSE;
-                }
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                                   xTokens,
-                                                   sNumTokens,
-                                                   wifiProvSCAN_TIMEOUT_KEY,
-                                                   strlen( wifiProvSCAN_TIMEOUT_KEY ),
-                                                   &pxParams->sTimeoutMs );
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = xTaskCreate(
+            xStatus = xTaskCreate(
                     prvListNetworkTask,
                     "WifiProvListNetwork",
                     configMINIMAL_STACK_SIZE * 6,
                     pxParams,
-					wifiProvLIST_NETWORK_TASK_PRIORITY,
+                    wifiProvLIST_NETWORK_TASK_PRIORITY,
                     NULL );
-            }
-
-            if( xStatus == pdFALSE )
-            {
-                vPortFree( pxParams );
-            }
         }
+        else
+        {
+            vPortFree( pxParams );
+        }
+    }
+    else
+    {
+        configPRINTF(( "Failed to allocate memory for List Network Request\n" ));
     }
 
     return xStatus;
 }
 
+static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, AddNetworkRequest_t* pxAddNetworkRequest )
+{
+
+    AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    BaseType_t xResult = pdTRUE;
+
+    xRet = bleMESSAGE_DECODER.init( &xDecoderObj, ( uint8_t * ) pucData, xLength );
+
+    if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+            ( xDecoderObj.type != AWS_IOT_SERIALIZER_CONTAINER_MAP ) )
+    {
+        configPRINTF(( "Failed to initialize the decoder, error = %d, object type = %d\n", xRet, xDecoderObj.type ));
+        xResult = pdFALSE;
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xValue.value.pString = NULL;
+        xValue.value.stringLength = 0;
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvSSID_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING ) )
+        {
+            configPRINTF(( "Failed to get SSID parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( xValue.value.stringLength >= wificonfigMAX_SSID_LEN )
+            {
+                configPRINTF(( "SSID, %.*s, exceeds maximum length %d\n",
+                        xValue.value.stringLength,
+                        ( const char * )xValue.value.pString,
+                        wificonfigMAX_SSID_LEN ));
+                xResult = pdFALSE;
+            }
+            else
+            {
+                strncpy( pxAddNetworkRequest->xNetwork.cSSID, ( const char * ) xValue.value.pString, wificonfigMAX_SSID_LEN );
+                pxAddNetworkRequest->xNetwork.ucSSIDLength = ( xValue.value.stringLength + 1 );
+            }
+        }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING;
+        xValue.value.pString = NULL;
+        xValue.value.stringLength = 0;
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvBSSID_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING ) )
+        {
+            configPRINTF(( "Failed to get BSSID parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( xValue.value.stringLength != wificonfigMAX_BSSID_LEN )
+            {
+                configPRINTF(( "Parameter BSSID length (%d) does not match BSSID length %d\n",
+                        xValue.value.stringLength,
+                        wificonfigMAX_BSSID_LEN ));
+                xResult = pdFALSE;
+            }
+            else
+            {
+                memcpy( pxAddNetworkRequest->xNetwork.ucBSSID, xValue.value.pString, wificonfigMAX_BSSID_LEN );
+            }
+        }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvKEY_MGMT_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get WIFI security parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            pxAddNetworkRequest->xNetwork.xSecurity = xValue.value.signedInt;
+        }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xValue.value.pString = NULL;
+          xValue.value.stringLength = 0;
+          xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvKEY_MGMT_KEY, &xValue );
+          if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                  ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING ) )
+          {
+              configPRINTF(( "Failed to get password parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+              xResult = pdFALSE;
+          }
+          else
+          {
+              if( xValue.value.stringLength >= wificonfigMAX_PASSPHRASE_LEN )
+              {
+                  configPRINTF(( "SSID, %.*s, exceeds maximum length %d\n",
+                          xValue.value.stringLength,
+                          ( const char * )xValue.value.pString,
+                          wificonfigMAX_SSID_LEN ));
+                  xResult = pdFALSE;
+              }
+              else
+              {
+                  strncpy( pxAddNetworkRequest->xNetwork.cPassword, ( const char * ) xValue.value.pString, wificonfigMAX_PASSPHRASE_LEN );
+                  pxAddNetworkRequest->xNetwork.ucPasswordLength = ( uint16_t )( xValue.value.stringLength + 1 );
+              }
+          }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get network index parameter, error = %d, value type = %d.\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( ( xValue.value.signedInt >= wifiProvINVALID_NETWORK_INDEX )
+                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+            {
+                pxAddNetworkRequest->sSavedIdx = xValue.value.signedInt;
+            }
+            else
+            {
+                configPRINTF(( "Network index parameter ( %d ) is out of range.\n", xValue.value.signedInt ));
+                xResult = pdFALSE;
+            }
+        }
+    }
+
+    bleMESSAGE_DECODER.destroy( &xValue );
+    bleMESSAGE_DECODER.destroy( &xDecoderObj );
+
+    return xResult;
+}
 
 /*-----------------------------------------------------------*/
 
 static BaseType_t prxHandleSaveNetworkRequest( uint8_t * pucData,
                                                size_t xLength )
 {
-    BaseType_t xStatus = pdTRUE;
-    jsmntok_t xTokens[ wifiProvMAX_TOKENS ];
-    int16_t sNumTokens;
-    const char * pcValue = NULL;
-    uint32_t ulValLen;
-    AddNetworkRequest_t * pxAddNetworkReq = NULL;
-    int16_t sSecurity;
+    BaseType_t xStatus = pdFALSE;
+    AddNetworkRequest_t *pxParams = pvPortMalloc( sizeof( AddNetworkRequest_t ));
 
-    if( ( sNumTokens = JsonUtils_Parse( ( char * ) pucData, xLength, xTokens, wifiProvMAX_TOKENS ) ) > 0 )
+    if( pxParams != NULL )
     {
-        pxAddNetworkReq = pvPortMalloc( sizeof( AddNetworkRequest_t ) );
+        xStatus = prxDeserializeAddNetworkRequest( pucData, xLength, pxParams );
 
-        if( pxAddNetworkReq != NULL )
+        if( xStatus == pdTRUE )
         {
-            memset( pxAddNetworkReq, 0x00, sizeof( AddNetworkRequest_t ) );
-            JsonUtils_GetStrValue( ( const char * ) pucData,
-                                   xTokens,
-                                   sNumTokens,
-                                   wifiProvSSID_KEY,
-                                   strlen( wifiProvSSID_KEY ),
-                                   &pcValue,
-                                   &ulValLen );
-
-            if( ( pcValue != NULL ) && ( ulValLen <= wificonfigMAX_SSID_LEN ) )
-            {
-                strncpy( pxAddNetworkReq->xNetwork.cSSID, pcValue, ulValLen );
-                pxAddNetworkReq->xNetwork.ucSSIDLength = ( ulValLen + 1 );
-            }
-            else
-            {
-                xStatus = pdFALSE;
-            }
-
-            if( xStatus == pdTRUE )
-            {
-            	/* Use an intermediary variable to avoid memory corruption. */
-                xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                                   xTokens,
-                                                   sNumTokens,
-                                                   wifiProvKEY_MGMT_KEY,
-                                                   strlen( wifiProvKEY_MGMT_KEY ),
-                                                   ( int16_t * ) &sSecurity );
-                pxAddNetworkReq->xNetwork.xSecurity = sSecurity;
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                JsonUtils_GetStrValue( ( const char * ) pucData,
-                                       xTokens,
-                                       sNumTokens,
-                                       wifiProvPSK_KEY,
-                                       strlen( wifiProvPSK_KEY ),
-                                       &pcValue,
-                                       &ulValLen );
-
-                if( ( pcValue != NULL ) && ( ulValLen <= wificonfigMAX_PASSPHRASE_LEN ) )
-                {
-                    strncpy( pxAddNetworkReq->xNetwork.cPassword, pcValue, ulValLen );
-                    pxAddNetworkReq->xNetwork.ucPasswordLength = ( ulValLen + 1 );
-                }
-                else
-                {
-                    xStatus = pdFALSE;
-                }
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                                   xTokens,
-                                                   sNumTokens,
-                                                   wifiProvINDEX_KEY,
-                                                   strlen( wifiProvINDEX_KEY ),
-                                                   ( int16_t * ) &pxAddNetworkReq->sSavedIdx );
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                JsonUtils_GetStrValue( ( const char * ) pucData,
-                                       xTokens,
-                                       sNumTokens,
-                                       wifiProvBSSID_KEY,
-                                       strlen( wifiProvBSSID_KEY ),
-                                       &pcValue,
-                                       &ulValLen );
-
-                if( ( pcValue != NULL ) && ( ulValLen == wifiProvBSSID_MAX_LEN ) )
-                {
-                    sscanf( pcValue, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &pxAddNetworkReq->xNetwork.ucBSSID[ 0 ],
-                            &pxAddNetworkReq->xNetwork.ucBSSID[ 1 ], &pxAddNetworkReq->xNetwork.ucBSSID[ 2 ],
-                            &pxAddNetworkReq->xNetwork.ucBSSID[ 3 ], &pxAddNetworkReq->xNetwork.ucBSSID[ 4 ], &pxAddNetworkReq->xNetwork.ucBSSID[ 5 ] );
-                }
-                else
-                {
-                    xStatus = pdFALSE;
-                }
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = xTaskCreate(
+            xStatus = xTaskCreate(
                     prvAddNetworkTask,
                     "WifiProvAddNetwork",
                     configMINIMAL_STACK_SIZE * 4,
-                    pxAddNetworkReq,
-					wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    pxParams,
+                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
-            }
-
-            if( xStatus == pdFALSE )
-            {
-                vPortFree( pxAddNetworkReq );
-            }
+        }
+        else
+        {
+            vPortFree( pxParams );
         }
     }
     else
     {
-        xStatus = pdFALSE;
+        configPRINTF(( "Failed to allocate memory for save network request\n " ));
     }
 
     return xStatus;
 }
 
+static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, EditNetworkRequest_t* pxEditNetworkRequest )
+{
+
+    AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    BaseType_t xResult = pdTRUE;
+
+    xRet = bleMESSAGE_DECODER.init( &xDecoderObj, ( uint8_t * ) pucData, xLength );
+
+    if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+            ( xDecoderObj.type != AWS_IOT_SERIALIZER_CONTAINER_MAP ) )
+    {
+        configPRINTF(( "Failed to initialize decoder, error = %d, object type = %d\n", xRet, xDecoderObj.type ));
+        xResult = pdFALSE;
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get network index parameter, error = %d, value type = %d.\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( ( xValue.value.signedInt >= 0 )
+                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+            {
+                pxEditNetworkRequest->sCurIdx = xValue.value.signedInt;
+            }
+            else
+            {
+                configPRINTF(( "Network index parameter ( %d ) is out of range.\n", xValue.value.signedInt ));
+                xResult = pdFALSE;
+            }
+        }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvNEWINDEX_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get new network index parameter, error = %d, value type = %d.\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( ( xValue.value.signedInt >= 0 )
+                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+            {
+                pxEditNetworkRequest->sNewIdx = xValue.value.signedInt;
+            }
+            else
+            {
+                configPRINTF(( "New Network index parameter ( %d ) is out of range.\n", xValue.value.signedInt ));
+                xResult = pdFALSE;
+            }
+        }
+    }
+
+    bleMESSAGE_DECODER.destroy( &xValue );
+    bleMESSAGE_DECODER.destroy( &xDecoderObj );
+
+    return xResult;
+}
+
 /*-----------------------------------------------------------*/
 
-static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData,
-                                               size_t xLength )
+static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData, size_t xLength )
 {
-    BaseType_t xStatus = pdTRUE;
-    jsmntok_t xTokens[ wifiProvMAX_TOKENS ];
-    int16_t sNumTokens;
-    EditNetworkRequest_t * pxEditNetworkReq = NULL;
+    BaseType_t xStatus = pdFALSE;
+    EditNetworkRequest_t *pxParams = pvPortMalloc( sizeof( EditNetworkRequest_t ));
 
-    if( ( sNumTokens = JsonUtils_Parse( ( char * ) pucData, xLength, xTokens, wifiProvMAX_TOKENS ) ) > 0 )
+    if( pxParams != NULL )
     {
-        pxEditNetworkReq = pvPortMalloc( sizeof( EditNetworkRequest_t ) );
+        xStatus = prxDeserializeEditNetworkRequest( pucData, xLength, pxParams );
 
-        if( pxEditNetworkReq != NULL )
+        if( xStatus == pdTRUE )
         {
-            xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                               xTokens,
-                                               sNumTokens,
-                                               wifiProvINDEX_KEY,
-                                               strlen( wifiProvINDEX_KEY ),
-                                               ( int16_t * ) &pxEditNetworkReq->sCurIdx );
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                                   xTokens,
-                                                   sNumTokens,
-                                                   wifiProvNEWINDEX_KEY,
-                                                   strlen( wifiProvNEWINDEX_KEY ),
-                                                   ( int16_t * ) &pxEditNetworkReq->sNewIdx );
-            }
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = xTaskCreate(
+            xStatus = xTaskCreate(
                     prvEditNetworkTask,
                     "WifiProvEditNetwork",
                     configMINIMAL_STACK_SIZE * 4,
-                    pxEditNetworkReq,
-					wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    pxParams,
+                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
-            }
-
-            if( xStatus == pdFALSE )
-            {
-                vPortFree( pxEditNetworkReq );
-            }
+        }
+        else
+        {
+            vPortFree( pxParams );
         }
     }
     else
     {
-        xStatus = pdFALSE;
+        configPRINTF(( "Failed to allocate memory for edit network request\n " ));
     }
 
     return xStatus;
+}
+
+static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, DeleteNetworkRequest_t* pxDeleteNetworkRequest )
+{
+
+    AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    BaseType_t xResult = pdTRUE;
+
+    xRet = bleMESSAGE_DECODER.init( &xDecoderObj, ( uint8_t * ) pucData, xLength );
+
+    if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+            ( xDecoderObj.type != AWS_IOT_SERIALIZER_CONTAINER_MAP ) )
+    {
+        configPRINTF(( "Failed to initialize decoder, error = %d, object type = %d\n", xRet, xDecoderObj.type ));
+        xResult = pdFALSE;
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get network index parameter, error = %d, value type = %d.\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+            if( ( xValue.value.signedInt >= 0 )
+                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+            {
+                pxDeleteNetworkRequest->sIdx = ( int16_t ) xValue.value.signedInt;
+            }
+            else
+            {
+                configPRINTF(( "Network index parameter ( %d ) is out of range.\n", xValue.value.signedInt ));
+                xResult = pdFALSE;
+            }
+        }
+    }
+
+    bleMESSAGE_DECODER.destroy( &xValue );
+    bleMESSAGE_DECODER.destroy( &xDecoderObj );
+
+    return xResult;
 }
 
 /*-----------------------------------------------------------*/
@@ -764,101 +939,174 @@ static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData,
 static BaseType_t prxHandleDeleteNetworkRequest( uint8_t * pucData,
                                                  size_t xLength )
 {
-    BaseType_t xStatus = pdTRUE;
-    jsmntok_t xTokens[ wifiProvMAX_TOKENS ];
-    int16_t sNumTokens;
-    DeleteNetworkRequest_t * pxDeleteNetworkReq = NULL;
+    BaseType_t xStatus = pdFALSE;
+    DeleteNetworkRequest_t *pxParams = pvPortMalloc( sizeof( DeleteNetworkRequest_t ));
 
-    if( ( sNumTokens = JsonUtils_Parse( ( char * ) pucData, xLength, xTokens, wifiProvMAX_TOKENS ) ) > 0 )
+    if( pxParams != NULL )
     {
-        pxDeleteNetworkReq = pvPortMalloc( sizeof( DeleteNetworkRequest_t ) );
+        xStatus = prxDeserializeDeleteNetworkRequest( pucData, xLength, pxParams );
 
-        if( pxDeleteNetworkReq != NULL )
+        if( xStatus == pdTRUE )
         {
-            xStatus = JsonUtils_GetInt16Value( ( char * ) pucData,
-                                               xTokens,
-                                               sNumTokens,
-                                               wifiProvINDEX_KEY,
-                                               strlen( wifiProvINDEX_KEY ),
-                                               ( int16_t * ) &pxDeleteNetworkReq->sIdx );
-
-            if( xStatus == pdTRUE )
-            {
-                xStatus = xTaskCreate(
+            xStatus = xTaskCreate(
                     prvDeleteNetworkTask,
                     "WifiProvDeleteNetwork",
                     configMINIMAL_STACK_SIZE * 4,
-                    pxDeleteNetworkReq,
-					wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    pxParams,
+                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
-            }
-
-            if( xStatus == pdFALSE )
-            {
-                vPortFree( pxDeleteNetworkReq );
-            }
+        }
+        else
+        {
+            vPortFree( pxParams );
         }
     }
     else
     {
-        xStatus = pdFALSE;
+        configPRINTF(( "Failed to allocate memory for delete network request\n " ));
     }
 
     return xStatus;
 }
 
-void prvSerializeNetwork( WifiNetworkInfo_t *pxNetwork, uint8_t *pucBuffer, uint32_t ulLen, uint32_t *pulLen )
+
+AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, uint8_t *pucBuffer, size_t *pxLength )
 {
-	char cBSSID[ wifiProvBSSID_MAX_LEN + 1 ];
+    AwsIotSerializerEncoderObject_t xContainer = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM;
+    AwsIotSerializerEncoderObject_t xNetworkMap = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_MAP;
+    AwsIotSerializerScalarData_t xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    size_t xLength = *pxLength;
 
-	if( ulLen >= wifProvLIST_NETWORK_RSP_LEN )
-	{
-		if( pxNetwork->xIsScan == pdTRUE )
-		{
-			snprintf( cBSSID, sizeof( cBSSID ), "%02x:%02x:%02x:%02x:%02x:%02x",  pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 0 ],
-					pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 1 ], pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 2 ],
-					pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 3 ], pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 4 ], pxNetwork->info.pxScannedNetworkInfo->ucBSSID[ 5 ] );
+    xRet = bleMESSAGE_ENCODER.init( &xContainer, pucBuffer, xLength );
+    if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xNetworkMap, 0 );
+    }
 
-			*pulLen = snprintf( (char *) pucBuffer,
-					ulLen,
-					wifiProvLISTNETWORK_RSP_FORMAT,
-					eWiFiSuccess,
-					strlen( pxNetwork->info.pxScannedNetworkInfo->cSSID ),
-					pxNetwork->info.pxScannedNetworkInfo->cSSID,
-					wifiProvBSSID_MAX_LEN,
-					cBSSID,
-					pxNetwork->info.pxScannedNetworkInfo->xSecurity,
-					( pxNetwork->info.pxScannedNetworkInfo->ucHidden == pdTRUE ) ? wifiProvTRUE : wifiProvFALSE,
-					pxNetwork->info.pxScannedNetworkInfo->cRSSI,
-					wifiProvFALSE,
-					INVALID_INDEX );
-		}
-		else
-		{
-			snprintf( cBSSID, sizeof( cBSSID ), "%02x:%02x:%02x:%02x:%02x:%02x",  pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 0 ],
-								pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 1 ], pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 2 ],
-								pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 3 ], pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 4 ], pxNetwork->info.pxSavedNetworkInfo->ucBSSID[ 5 ] );
-			*pulLen = snprintf( (char *) pucBuffer,
-					 ulLen,
-					 wifiProvLISTNETWORK_RSP_FORMAT,
-					 eWiFiSuccess,
-					 pxNetwork->info.pxSavedNetworkInfo->ucSSIDLength,
-					 pxNetwork->info.pxSavedNetworkInfo->cSSID,
-					 wifiProvBSSID_MAX_LEN,
-					 cBSSID,
-					 pxNetwork->info.pxSavedNetworkInfo->xSecurity,
-					 wifiProvTRUE,
-					 -100,
-					 ( pxNetwork->xConnected ) ? wifiProvTRUE : wifiProvFALSE,
-					 pxNetwork->sSavedIdx );
-		}
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = eWiFiSuccess;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvSTATUS_KEY, xValue );
+    }
 
-	}
-	else
-	{
-		*pulLen = 0;
-	}
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING;
+        xValue.value.pString = ( uint8_t * ) pxNetworkInfo->pcSSID;
+        xValue.value.stringLength = pxNetworkInfo->xSSIDLength;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvSSID_KEY, xValue );
+    }
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING;
+        xValue.value.pString = ( uint8_t * ) pxNetworkInfo->pucBSSID;
+        xValue.value.stringLength = pxNetworkInfo->xBSSIDLength;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvBSSID_KEY, xValue );
+    }
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = pxNetworkInfo->xSecurity;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvKEY_MGMT_KEY, xValue );
+    }
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = pxNetworkInfo->ucHidden;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvHIDDEN_KEY, xValue );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = pxNetworkInfo->cRSSI;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiRSSI_KEY, xValue );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = pxNetworkInfo->ucConnected;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvCONNECTED_KEY, xValue );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = pxNetworkInfo->sSavedIdx;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvINDEX_KEY, xValue );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xRet = bleMESSAGE_ENCODER.closeContainer( &xContainer, &xNetworkMap );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        if( pucBuffer == NULL )
+        {
+            *pxLength = bleMESSAGE_ENCODER.getExtraBufferSizeNeeded( &xContainer );
+        }
+        else
+        {
+            *pxLength = bleMESSAGE_ENCODER.getEncodedSize( &xContainer, pucBuffer );
+        }
+
+        bleMESSAGE_ENCODER.destroy( &xContainer );
+
+        xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    }
+
+    return xRet;
 }
+
+static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xStatus, uint8_t* pucBuffer, size_t* pxLength )
+{
+    AwsIotSerializerEncoderObject_t xContainer = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM;
+    AwsIotSerializerEncoderObject_t xResponseMap = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_MAP;
+    AwsIotSerializerScalarData_t xValue = { 0 };
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    size_t xLength = *pxLength;
+
+    xRet = bleMESSAGE_ENCODER.init( &xContainer, pucBuffer, xLength );
+    if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xResponseMap, 0 );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
+        xValue.value.signedInt = xStatus;
+        xRet = bleMESSAGE_ENCODER.appendKeyValue( &xResponseMap, wifiProvSTATUS_KEY, xValue );
+    }
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        xRet = bleMESSAGE_ENCODER.closeContainer( &xContainer, &xResponseMap );
+    }
+
+    if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
+    {
+        if( pucBuffer == NULL )
+        {
+            *pxLength = bleMESSAGE_ENCODER.getExtraBufferSizeNeeded( &xContainer );
+        }
+        else
+        {
+            *pxLength = bleMESSAGE_ENCODER.getEncodedSize( &xContainer, pucBuffer );
+        }
+
+        bleMESSAGE_ENCODER.destroy( &xContainer );
+
+        xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    }
+
+    return xRet;
+}
+
 
 /*-----------------------------------------------------------*/
 
@@ -866,10 +1114,36 @@ void prvSendStatusResponse( WifiProvCharacteristic_t xCharacteristic,
                             WIFIReturnCode_t xStatus )
 {
 
-    char cPayload[ wifiProvSTATUS_RSP_FORMAT_LEN + 1 ] = { 0 };
-    size_t xPayloadLen = snprintf( cPayload, wifiProvSTATUS_RSP_FORMAT_LEN,
-                            wifiProvSTATUS_RSP_FORMAT, xStatus );
-    prvSendResponse( xCharacteristic, (uint8_t*) cPayload, xPayloadLen );
+    uint8_t *pucBuffer = NULL;
+    size_t xMesgLen;
+    AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
+    xRet = prxSerializeStatusResponse( xStatus, NULL, &xMesgLen );
+    if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        pucBuffer = pvPortMalloc( xMesgLen );
+        if( pucBuffer != NULL )
+        {
+            xRet = prxSerializeStatusResponse( xStatus, pucBuffer, &xMesgLen );
+        }
+        else
+        {
+            xRet = AWS_IOT_SERIALIZER_OUT_OF_MEMORY;
+        }
+    }
+
+    if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        prvSendResponse( xCharacteristic, pucBuffer, xMesgLen );
+    }
+    else
+    {
+        configPRINTF(( "Failed to serialize status response, error = %d\n", xRet ));
+    }
+
+    if( pucBuffer != NULL )
+    {
+        vPortFree( pucBuffer );
+    }
 }
 
 void prvSendResponse( WifiProvCharacteristic_t xCharacteristic, uint8_t* pucData, size_t xLen )
@@ -935,7 +1209,7 @@ WIFIReturnCode_t prvPopNetwork( uint16_t usIndex,
         }
         else if( usIndex == xWifiProvService.sConnectedIdx )
         {
-            xWifiProvService.sConnectedIdx = INVALID_INDEX;
+            xWifiProvService.sConnectedIdx = wifiProvINVALID_NETWORK_INDEX;
         }
     }
 
@@ -1048,6 +1322,91 @@ WIFIReturnCode_t prvInsertNetwork( uint16_t usIndex,
     return xRet;
 }
 
+static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t usIdx )
+{
+    WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
+    uint8_t *pucMessage = NULL;
+    size_t xMessageLen;
+    AwsIotSerializerError_t xSerializerRet;
+
+    xNetworkInfo.pcSSID = pxSavedNetwork->cSSID;
+    xNetworkInfo.xSSIDLength = pxSavedNetwork->ucSSIDLength;
+    xNetworkInfo.pucBSSID = pxSavedNetwork->ucBSSID;
+    xNetworkInfo.xBSSIDLength = wificonfigMAX_BSSID_LEN;
+    xNetworkInfo.ucConnected = ( xWifiProvService.sConnectedIdx == usIdx ) ? 1 : 0;
+    xNetworkInfo.sSavedIdx = ( int32_t ) usIdx;
+
+    xSerializerRet = prxSerializeNetwork( &xNetworkInfo, NULL, &xMessageLen );
+    if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        pucMessage = pvPortMalloc( xMessageLen );
+        if( pucMessage != NULL )
+        {
+            xSerializerRet = prxSerializeNetwork( &xNetworkInfo, pucMessage, &xMessageLen );
+        }
+        else
+        {
+            xSerializerRet = AWS_IOT_SERIALIZER_OUT_OF_MEMORY;
+        }
+    }
+
+    if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        prvSendResponse( eListNetworkChar, pucMessage, xMessageLen );
+    }
+    else
+    {
+        configPRINTF(( "Failed to send network profile, SSID:%*s\n",
+                pxSavedNetwork->ucSSIDLength, pxSavedNetwork->cSSID ));
+    }
+
+    if( pucMessage != NULL )
+    {
+        vPortFree( pucMessage );
+    }
+}
+
+static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
+{
+    WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
+    uint8_t *pucMessage = NULL;
+    size_t xMessageLen;
+    AwsIotSerializerError_t xSerializerRet;
+
+    xNetworkInfo.pcSSID = pxScanNetwork->cSSID;
+    xNetworkInfo.xSSIDLength = strlen( pxScanNetwork->cSSID );
+    xNetworkInfo.pucBSSID = pxScanNetwork->ucBSSID;
+    xNetworkInfo.xBSSIDLength = wificonfigMAX_BSSID_LEN;
+
+    xSerializerRet = prxSerializeNetwork( &xNetworkInfo, NULL, &xMessageLen );
+    if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        pucMessage = pvPortMalloc( xMessageLen );
+        if( pucMessage != NULL )
+        {
+            xSerializerRet = prxSerializeNetwork( &xNetworkInfo, pucMessage, &xMessageLen );
+        }
+        else
+        {
+            xSerializerRet = AWS_IOT_SERIALIZER_OUT_OF_MEMORY;
+        }
+    }
+
+    if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
+    {
+        prvSendResponse( eListNetworkChar, pucMessage, xMessageLen );
+    }
+    else
+    {
+        configPRINTF(( "Failed to send network profile, SSID:%s\n",
+                pxScanNetwork->cSSID ));
+    }
+
+    if( pucMessage != NULL )
+    {
+        vPortFree( pucMessage );
+    }
+}
 /*-----------------------------------------------------------*/
 
 void prvListNetworkTask( void * pvParams )
@@ -1055,51 +1414,36 @@ void prvListNetworkTask( void * pvParams )
     ListNetworkRequest_t * pxListNetworReq = ( ListNetworkRequest_t * ) pvParams;
     WIFIScanResult_t xScanResults[ pxListNetworReq->sMaxNetworks ];
     WIFINetworkProfile_t xProfile;
-    WifiNetworkInfo_t xInfo;
-    char cMesg[ wifProvLIST_NETWORK_RSP_LEN + 1 ];
-    uint32_t ulMsgLen;
-    WIFIReturnCode_t xRet = eWiFiSuccess;
     uint16_t usIdx;
+    WIFIReturnCode_t xWifiRet;
 
     if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
     {
-    	xInfo.xIsScan = pdFALSE;
     	for( usIdx = 0; usIdx < xWifiProvService.usNumNetworks; usIdx++ )
     	{
-    		xRet = prvGetSavedNetwork( usIdx, &xProfile );
-    		if( xRet == eWiFiSuccess )
+    	    xWifiRet = prvGetSavedNetwork( usIdx, &xProfile );
+    		if( xWifiRet == eWiFiSuccess )
     		{
-    			xInfo.info.pxSavedNetworkInfo = &xProfile;
-    			xInfo.xConnected = ( xWifiProvService.sConnectedIdx == usIdx );
-    			xInfo.sSavedIdx = usIdx;
-    			prvSerializeNetwork( &xInfo, (uint8_t*)cMesg, sizeof( cMesg ), &ulMsgLen );
-    			prvSendResponse( eListNetworkChar, (uint8_t*)cMesg, ulMsgLen );
+    		    prvSendSavedNetwork( &xProfile, usIdx );
     		}
     	}
 
     	memset( xScanResults, 0x00, sizeof( WIFIScanResult_t ) * pxListNetworReq->sMaxNetworks );
-    	xRet = WIFI_Scan( xScanResults, pxListNetworReq->sMaxNetworks );
-    	if( xRet == eWiFiSuccess )
+    	xWifiRet = WIFI_Scan( xScanResults, pxListNetworReq->sMaxNetworks );
+    	if( xWifiRet == eWiFiSuccess )
     	{
-    		xInfo.xIsScan = pdTRUE;
-    		xInfo.xConnected = pdFALSE;
-    		xInfo.sSavedIdx = INVALID_INDEX;
-
     		for( usIdx = 0; usIdx < pxListNetworReq->sMaxNetworks; usIdx++ )
     		{
     			if( strlen( xScanResults[ usIdx ].cSSID ) > 0 )
     			{
-    				xInfo.info.pxScannedNetworkInfo = &xScanResults[ usIdx ];
-    				prvSerializeNetwork( &xInfo, (uint8_t*)cMesg, sizeof( cMesg ), &ulMsgLen );
-    				prvSendResponse( eListNetworkChar, (uint8_t*)cMesg, ulMsgLen );
+    			    prvSendScanNetwork( &xScanResults[ usIdx ] );
     			}
     		}
     	}
     	else
     	{
-    		prvSendStatusResponse( eListNetworkChar, xRet );
+    		prvSendStatusResponse( eListNetworkChar, xWifiRet );
     	}
-
 
     	xSemaphoreGive( xWifiProvService.xLock );
     }
@@ -1118,7 +1462,7 @@ void prvAddNetworkTask( void * pvParams )
     prvClearEvent( eWIFIPROVConnect );
     if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
     {
-        if( pxAddNetworkReq->sSavedIdx != INVALID_INDEX )
+        if( pxAddNetworkReq->sSavedIdx != wifiProvINVALID_NETWORK_INDEX )
         {
         	xRet = prvConnectSavedNetwork( pxAddNetworkReq->sSavedIdx );
         }
@@ -1160,7 +1504,7 @@ void prvDeleteNetworkTask( void * pvParams )
 
         if( xRet == eWiFiSuccess )
         {
-            if( xWifiProvService.sConnectedIdx == INVALID_INDEX )
+            if( xWifiProvService.sConnectedIdx == wifiProvINVALID_NETWORK_INDEX )
             {
                 ( void ) WIFI_Disconnect();
                 /* Reset the next connection index */
@@ -1218,7 +1562,7 @@ void prvConnectAPTask( void * pvParams )
         	xConnectionStatus = eWiFiFailure;
             if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
             {
-            	if( ( xWifiProvService.sConnectedIdx == INVALID_INDEX )
+            	if( ( xWifiProvService.sConnectedIdx == wifiProvINVALID_NETWORK_INDEX )
             			&& ( xWifiProvService.usNumNetworks > 0 ) )
             	{
             		xConnectionStatus = prvConnectSavedNetwork( xWifiProvService.usNextConnectIdx );
@@ -1338,7 +1682,7 @@ BaseType_t WIFI_PROVISION_Start( void )
 
     /* Initialize number of wifi networks */
     xWifiProvService.usNumNetworks = prvGetNumSavedNetworks();
-    xWifiProvService.sConnectedIdx = INVALID_INDEX;
+    xWifiProvService.sConnectedIdx = wifiProvINVALID_NETWORK_INDEX;
     xWifiProvService.usNextConnectIdx = 0;
 
     if( BLE_StartService( xWifiProvService.pxGattService, vServiceStartedCb ) == eBTStatusSuccess )

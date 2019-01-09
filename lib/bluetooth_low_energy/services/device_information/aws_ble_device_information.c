@@ -306,9 +306,6 @@ void vDeviceInfoBrokerEndpointCharCallback( BLEAttribute_t * pxAttribute,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp;
-    uint32_t ulMsgLen = deviceInfoBROKERENDPOINT_MSG_LEN + sizeof( clientcredentialMQTT_BROKER_ENDPOINT ) + 1;
-    uint8_t * pucData;
-    uint32_t ulSendLen;
 
     xResp.pxAttrData = &xAttrData;
     xResp.xRspErrorStatus = eBTRspErrorNone;
@@ -318,28 +315,11 @@ void vDeviceInfoBrokerEndpointCharCallback( BLEAttribute_t * pxAttribute,
 
     if( pxEventParam->xEventType == eBLERead )
     {
-        pucData = pvPortMalloc( ulMsgLen );
-
-        if( pucData != NULL )
-        {
-            ulSendLen = snprintf( ( char * ) pucData, ulMsgLen, deviceInfoBROKERENDPOINT_MSG_FORMAT,
-                                  strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
-                                  clientcredentialMQTT_BROKER_ENDPOINT );
-
-            {
-                xResp.xEventStatus = eBTStatusSuccess;
-                xResp.pxAttrData->pucData = pucData;
-                xResp.pxAttrData->xSize = ulSendLen;
-                xResp.xAttrDataOffset = 0;
-                BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
-            }
-
-            vPortFree( pucData );
-        }
-        else
-        {
-            configPRINTF( ( "Cannot allocate memory for sending Broker endpoint response \n" ) );
-        }
+        xResp.xEventStatus = eBTStatusSuccess;
+        xResp.pxAttrData->pucData = ( uint8_t *) clientcredentialMQTT_BROKER_ENDPOINT;
+        xResp.pxAttrData->xSize = strlen(  clientcredentialMQTT_BROKER_ENDPOINT );
+        xResp.xAttrDataOffset = 0;
+        BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
     }
 }
 
@@ -350,9 +330,6 @@ void vDeviceInfoVersionCharCallback( BLEAttribute_t * pxAttribute,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp;
-    uint32_t ulMsgLen = deviceInfoVERSION_MSG_LEN + strlen( tskKERNEL_VERSION_NUMBER ) + 1;
-    uint8_t * pucData;
-    uint32_t ulSendLen;
 
     xResp.pxAttrData = &xAttrData;
     xResp.xRspErrorStatus = eBTRspErrorNone;
@@ -362,28 +339,11 @@ void vDeviceInfoVersionCharCallback( BLEAttribute_t * pxAttribute,
 
     if( pxEventParam->xEventType == eBLERead )
     {
-        pucData = pvPortMalloc( ulMsgLen );
-
-        if( pucData != NULL )
-        {
-            ulSendLen = snprintf( ( char * ) pucData, ulMsgLen, deviceInfoVERSION_MSG_FORMAT,
-                                  strlen( tskKERNEL_VERSION_NUMBER ),
-                                  tskKERNEL_VERSION_NUMBER );
-
-            {
-                xResp.xEventStatus = eBTStatusSuccess;
-                xResp.pxAttrData->pucData = pucData;
-                xResp.pxAttrData->xSize = ulSendLen;
-                xResp.xAttrDataOffset = 0;
-                BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
-            }
-
-            vPortFree( pucData );
-        }
-        else
-        {
-            configPRINTF( ( "Cannot allocate memory for sending Broker endpoint response \n" ) );
-        }
+        xResp.xEventStatus = eBTStatusSuccess;
+        xResp.pxAttrData->pucData = ( uint8_t* ) tskKERNEL_VERSION_NUMBER;
+        xResp.pxAttrData->xSize = strlen( tskKERNEL_VERSION_NUMBER );
+        xResp.xAttrDataOffset = 0;
+        BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
     }
 }
 
@@ -395,21 +355,17 @@ void vDeviceInfoMTUCharCallback( BLEAttribute_t * pxAttribute,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp;
-    char cMTUMsg[ deviceInfoMTU_MSG_LEN + 1 ] = { 0 };
-    uint32_t ulSendLen;
 
-    ulSendLen = snprintf( cMTUMsg, deviceInfoMTU_MSG_LEN, deviceInfoMTU_MSG_FORMAT, xService.usBLEMtu );
     xResp.pxAttrData = &xAttrData;
     xResp.xRspErrorStatus = eBTRspErrorNone;
     xResp.xEventStatus = eBTStatusFail;
     xResp.xAttrDataOffset = 0;
     xResp.pxAttrData->xHandle = pxAttribute->pxCharacteristicDescr->xAttributeData.xHandle;
-
     if( pxEventParam->xEventType == eBLERead )
     {
         xResp.xEventStatus = eBTStatusSuccess;
-        xResp.pxAttrData->pucData = ( uint8_t * ) cMTUMsg;
-        xResp.pxAttrData->xSize = ulSendLen;
+        xResp.pxAttrData->pucData = ( uint8_t* ) &xService.usBLEMtu;
+        xResp.pxAttrData->xSize = sizeof( xService.usBLEMtu );
         xResp.xAttrDataOffset = 0;
         BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
     }
@@ -422,18 +378,15 @@ static void vMTUChangedCallback( uint16_t usConnId,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp = { 0 };
-    char cMTUMsg[ deviceInfoMTU_MSG_LEN + 1 ] = { 0 };
-    uint32_t ulSendLen;
+
 
     if( usMtu != xService.usBLEMtu )
     {
         xService.usBLEMtu = usMtu;
-        ulSendLen = snprintf( cMTUMsg, deviceInfoMTU_MSG_LEN, deviceInfoMTU_MSG_FORMAT, usMtu );
-
         xAttrData.xHandle = xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].xAttributeData.xHandle;
         xAttrData.xUuid = xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].xAttributeData.xUuid;
-        xAttrData.pucData = ( uint8_t * ) cMTUMsg;
-        xAttrData.xSize = ulSendLen;
+        xAttrData.pucData = ( uint8_t* ) &xService.usBLEMtu;
+        xAttrData.xSize = sizeof( xService.usBLEMtu );
 
         xResp.xAttrDataOffset = 0;
         xResp.xEventStatus = eBTStatusSuccess;

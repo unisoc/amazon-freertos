@@ -69,42 +69,6 @@ typedef enum
     eDeviceInfoMtuCharDescr = 0, /**< eDeviceInfoMtuCharDescr Client Characteristic configuration descriptor for MTU characteristic */
 } DeviceInfoDescriptor_t;
 
-/**
- *
- * JSON tokens used within the messages exchanged between GATT client and Server.
- *
- */
-
-#define INT_MAX_WIDTH                  ( 6 )
-#define deviceInfoMTU_WIDTH            ( INT_MAX_WIDTH )
-#define deviceInfoVERSION_WIDTH        ( INT_MAX_WIDTH )
-#define deviceInfoMTU                  "mtu"
-#define deviceInfoVerison              "version"
-#define deviceInfoBROKER_ENDPOIINT     "brokerEndpoint"
-
-#define JSON_STR( x )    STR( x )
-#define STR( x )         # x
-
-/**
- * JSON format for serializing the response payloads
- */
-#define deviceInfoMTU_MSG_FORMAT    \
-    "{"                             \
-    JSON_STR( deviceInfoMTU ) ":%d" \
-                              "}"
-#define deviceInfoMTU_MSG_LEN               ( sizeof( deviceInfoMTU_MSG_FORMAT ) + deviceInfoMTU_WIDTH )
-
-#define deviceInfoVERSION_MSG_FORMAT                \
-    "{"                                             \
-    JSON_STR( deviceInfoVerison      ) ":\"%.*s\""  \
-                                     "}"
-#define deviceInfoVERSION_MSG_LEN      ( sizeof( deviceInfoVERSION_MSG_FORMAT ) )
-
-#define deviceInfoBROKERENDPOINT_MSG_FORMAT            \
-    "{"                                                \
-    JSON_STR( deviceInfoBROKER_ENDPOIINT ) ":\"%.*s\"" \
-                                           "}"
-#define deviceInfoBROKERENDPOINT_MSG_LEN    ( sizeof( deviceInfoBROKERENDPOINT_MSG_FORMAT ) )
 
 /**
  * @brief Structure used for Device Information Service

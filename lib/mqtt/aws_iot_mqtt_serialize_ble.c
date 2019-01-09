@@ -39,11 +39,11 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 
-/* MQTT internal includes. */
-#include "private/aws_iot_mqtt_serialize_ble.h"
+#include "aws_iot_mqtt_serialize_ble.h"
+
+/* internal includes. */
 #include "private/aws_ble_service_internals.h"
 #include "private/aws_iot_mqtt_internal.h"
-#include "cbor.h"
 
 #define _INVALID_MQTT_PACKET_TYPE        ( 0xF0 )
 
@@ -901,7 +901,7 @@ AwsIotMqttError_t AwsIotMqttBLE_SerializePuback( uint16_t packetIdentifier,
 	}
 
 
-	pBuffer = AwsIotMqtt_MallocMessage( mqttBLEPUBACK_MSG_LEN );
+	pBuffer = AwsIotMqtt_MallocMessage( xBufLen );
 
 	/* If Memory cannot be allocated log an error and return */
 	if( pBuffer == NULL )

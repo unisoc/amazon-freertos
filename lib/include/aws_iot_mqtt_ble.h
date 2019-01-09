@@ -89,22 +89,9 @@ typedef enum
 } MQTTCharacteristicDescr_t;
 
 /**
- * @brief Used to set and retrieve the state of BLE proxy.
+ * @brief Used to enable and disable MQTT connection with the SDK.
  */
-#define mqttBLESTATE              "proxyState"
-#define mqttBLEMAX_TOKENS         ( 3 )
-
-#define JSON_STR(x)		STR(x)
-#define STR(x)		#x
-
-/**
- * JSON message format for enabling/disabling MQTT proxy.
- */
-#define mqttBLESTATE_MESSAGE 	   	            \
-		"{"      							    \
-	    JSON_STR(mqttBLESTATE)":%d" 		    \
-		"}"
-#define mqttBLESTATE_MSG_LEN ( sizeof( mqttBLESTATE_MESSAGE ) )
+#define mqttBLESTATE_KEY             "proxyState"
 
 /**
  * @brief Default MTU size for the BLE connection
