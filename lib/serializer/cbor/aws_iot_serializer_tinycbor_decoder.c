@@ -131,7 +131,7 @@ static AwsIotSerializerError_t _createDecoderObject(CborValue * pCborValue,
     AwsIotSerializerDataType_t dataType = _toSerializerType(cbor_value_get_type(pCborValue));
     CborError cborError;
     _cborDecoderInternal_t *pContainerDecoder;
-
+    CborValue next = { 0 };
 
     if (_undefinedType(dataType))
     {
@@ -155,57 +155,48 @@ static AwsIotSerializerError_t _createDecoderObject(CborValue * pCborValue,
             };
             break;
         }
-
+        case AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING:
         case AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING:
         {
-            size_t length;
 
-
-            /* user doesn't provide the buffer */
-            if (pValueObject->value.pString == NULL)
+            if( pValueObject->type == AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING )
             {
+                cborError = cbor_value_copy_byte_string(
+                        pCborValue,
+                        pValueObject->value.pString,
+                        &( pValueObject->value.stringLength ),
+                        &next );
+            }
+            else
+            {
+                cborError = cbor_value_copy_text_string(
+                                      pCborValue,
+                                      ( char* ) pValueObject->value.pString,
+                                      &( pValueObject->value.stringLength ),
+                                      &next );
+            }
 
+            if( pValueObject->value.pString == NULL )
+            {
                 if( cbor_value_is_length_known( pCborValue ) )
                 {
                     /*
-                     * If the length of the CBOR string is known, then its
-                     * a finite length string. We store the pointer to the start of the string
-                     * and length as the length of the string.
-                     *
+                     * If its a finite length string, and user have passed a null length buffer,
+                     * we avoid copying the string by storing pointer to the start of the string.
                      */
-                    cborError = cbor_value_get_string_length( pCborValue, &length );
-                    if( _noCborError( cborError ) )
-                    {
-                        pValueObject->value.pString =  ( uint8_t* ) cbor_value_get_next_byte( pCborValue ) - length;
-                        pValueObject->value.stringLength = length;
-                    }
-                    else
-                    {
-                        returnError = AWS_IOT_SERIALIZER_INTERNAL_FAILURE;
-                    }
-                }
-                else
-                {
-                    /*
-                     * This is an infinite length string.
-                     * Calculate and save required length to pValueObject, leave the pString pointer
-                     * as null so user can allocate the required buffer.
-                     */
-                    cbor_value_calculate_string_length(pCborValue, &length);
-                    pValueObject->value.stringLength = length;
-                    returnError = AWS_IOT_SERIALIZER_BUFFER_TOO_SMALL;
+                    pValueObject->value.pString = ( ( uint8_t* ) cbor_value_get_next_byte( &next ) - pValueObject->value.stringLength );
                 }
             }
-            else /* user provides the buffer */
+            else
             {
-                /* copy the string to the buffer */
-                cbor_value_copy_text_string(pCborValue, ( char * ) pValueObject->value.pString, &length, NULL);
-                pValueObject->value.stringLength = length;
+                if( !_noCborError( cborError ) )
+                {
+                    returnError = AWS_IOT_SERIALIZER_INTERNAL_FAILURE;
+                }
             }
 
             break;
         }
-
         case AWS_IOT_SERIALIZER_CONTAINER_MAP:
         case AWS_IOT_SERIALIZER_CONTAINER_ARRAY:
         {
