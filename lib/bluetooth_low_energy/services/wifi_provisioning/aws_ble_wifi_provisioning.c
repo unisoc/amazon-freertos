@@ -658,7 +658,8 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
             }
             else
             {
-                strncpy( pxAddNetworkRequest->xNetwork.cSSID, ( const char * ) xValue.value.pString, wificonfigMAX_SSID_LEN );
+                strncpy( pxAddNetworkRequest->xNetwork.cSSID, ( const char * ) xValue.value.pString, xValue.value.stringLength );
+                pxAddNetworkRequest->xNetwork.cSSID[ xValue.value.stringLength ] = '\0';
                 pxAddNetworkRequest->xNetwork.ucSSIDLength = ( xValue.value.stringLength + 1 );
             }
         }
@@ -711,7 +712,7 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
     {
         xValue.value.pString = NULL;
           xValue.value.stringLength = 0;
-          xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvKEY_MGMT_KEY, &xValue );
+          xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvPSK_KEY, &xValue );
           if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                   ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING ) )
           {
@@ -730,7 +731,8 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
               }
               else
               {
-                  strncpy( pxAddNetworkRequest->xNetwork.cPassword, ( const char * ) xValue.value.pString, wificonfigMAX_PASSPHRASE_LEN );
+                  strncpy( pxAddNetworkRequest->xNetwork.cPassword, ( const char * ) xValue.value.pString, xValue.value.stringLength );
+                  pxAddNetworkRequest->xNetwork.cPassword[ xValue.value.stringLength ] = '\0';
                   pxAddNetworkRequest->xNetwork.ucPasswordLength = ( uint16_t )( xValue.value.stringLength + 1 );
               }
           }
