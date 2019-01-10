@@ -691,7 +691,6 @@ AwsIotMqttError_t AwsIotMqttBLE_DeserializeConnack( const uint8_t * const pConna
     {
         AwsIotLogError( "Invalid CONNACK, response code decode failed, error = %d, decoded value type = %d", xError, xValue.type );
         ( *pBytesProcessed ) = 0;
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         return AWS_IOT_MQTT_BAD_RESPONSE;
     }
@@ -956,7 +955,6 @@ AwsIotMqttError_t AwsIotMqttBLE_DeserializePuback( const uint8_t * const pPuback
             ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
     {
         AwsIotLogError( "Message ID decode failed, error = %d, decoded value type = %d", xError, xValue.type );
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         ( *pBytesProcessed ) = 0;
         return AWS_IOT_MQTT_BAD_RESPONSE;
@@ -1047,7 +1045,6 @@ AwsIotMqttError_t AwsIotMqttBLE_DeserializeSuback( AwsIotMqttConnection_t mqttCo
             ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
     {
         AwsIotLogError( "Message ID decode failed, error = %d, decoded value type = %d", xError, xValue.type );
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         ( *pBytesProcessed ) = 0;
         return AWS_IOT_MQTT_BAD_RESPONSE;
@@ -1059,7 +1056,6 @@ AwsIotMqttError_t AwsIotMqttBLE_DeserializeSuback( AwsIotMqttConnection_t mqttCo
             ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
     {
         AwsIotLogError( "Status code decode failed, error = %d, decoded value type = %d", xError, xValue.type );
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         ( *pBytesProcessed ) = 0;
         return AWS_IOT_MQTT_BAD_RESPONSE;
@@ -1177,7 +1173,6 @@ AwsIotMqttError_t AwsIotMqttBLE_DeserializeUnsuback( const uint8_t * const pUnsu
             ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
     {
         AwsIotLogError( "UNSUBACK Message identifier decode failed, error = %d, decoded value type = %d", xError, xValue.type );
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         ( *pBytesProcessed ) = 0;
         return AWS_IOT_MQTT_BAD_RESPONSE;
@@ -1255,7 +1250,6 @@ uint8_t AwsIotMqttBLE_GetPacketType( const uint8_t * const pPacket, size_t packe
             ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
     {
         AwsIotLogError( "Packet type decode failed, error = %d, decoded value type = %d", xError, xValue.type );
-        bleMESSAGE_DECODER.destroy( &xValue );
         bleMESSAGE_DECODER.destroy( &xDecoderObj );
         return _INVALID_MQTT_PACKET_TYPE;
     }

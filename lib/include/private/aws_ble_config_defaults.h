@@ -167,7 +167,7 @@
 #define bleconfigCHAR_WRITE_PERM            eBTPermWrite
 #endif
 
-#define bleConfigENABLE_JSON_SERIALIZATION           ( 1 )
-#define bleConfigENABLE_CBOR_SERIALIZATION           ( 0 )
+#define bleConfigENABLE_JSON_SERIALIZATION           ( 0 )
+#define bleConfigENABLE_CBOR_SERIALIZATION           ( 1 )
 
 #endif /* _AWS_BLE_CONFIG_DEFAULTS_H_ */

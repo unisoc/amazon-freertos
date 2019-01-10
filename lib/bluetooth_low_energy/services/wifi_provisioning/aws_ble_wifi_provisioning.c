@@ -563,7 +563,7 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
             }
         }
     }
-    bleMESSAGE_DECODER.destroy( &xValue );
+
     bleMESSAGE_DECODER.destroy( &xDecoderObj );
     return xResult;
 }
@@ -743,7 +743,6 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
         }
     }
 
-    bleMESSAGE_DECODER.destroy( &xValue );
     bleMESSAGE_DECODER.destroy( &xDecoderObj );
 
     return xResult;
@@ -848,7 +847,6 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
         }
     }
 
-    bleMESSAGE_DECODER.destroy( &xValue );
     bleMESSAGE_DECODER.destroy( &xDecoderObj );
 
     return xResult;
@@ -928,7 +926,6 @@ static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t 
         }
     }
 
-    bleMESSAGE_DECODER.destroy( &xValue );
     bleMESSAGE_DECODER.destroy( &xDecoderObj );
 
     return xResult;
@@ -981,7 +978,7 @@ AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, u
     xRet = bleMESSAGE_ENCODER.init( &xContainer, pucBuffer, xLength );
     if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xNetworkMap, 0 );
+        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xNetworkMap, wifiProvNUM_NETWORK_INFO_MESG_PARAMS );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
@@ -1056,7 +1053,6 @@ AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, u
         }
 
         bleMESSAGE_ENCODER.destroy( &xContainer );
-
         xRet = AWS_IOT_SERIALIZER_SUCCESS;
     }
 
@@ -1074,7 +1070,7 @@ static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xSta
     xRet = bleMESSAGE_ENCODER.init( &xContainer, pucBuffer, xLength );
     if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xResponseMap, 0 );
+        xRet = bleMESSAGE_ENCODER.openContainer( &xContainer, &xResponseMap, wifiProvNUM_STATUS_MESG_PARAMS );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
@@ -1326,7 +1322,7 @@ static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t 
 {
     WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
     uint8_t *pucMessage = NULL;
-    size_t xMessageLen;
+    size_t xMessageLen = 0;
     AwsIotSerializerError_t xSerializerRet;
 
     xNetworkInfo.pcSSID = pxSavedNetwork->cSSID;
@@ -1370,7 +1366,7 @@ static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
 {
     WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
     uint8_t *pucMessage = NULL;
-    size_t xMessageLen;
+    size_t xMessageLen = 0;
     AwsIotSerializerError_t xSerializerRet;
 
     xNetworkInfo.pcSSID = pxScanNetwork->cSSID;

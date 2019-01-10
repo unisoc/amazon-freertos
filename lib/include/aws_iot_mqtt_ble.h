@@ -93,6 +93,8 @@ typedef enum
  */
 #define mqttBLESTATE_KEY             "proxyState"
 
+#define mqttBLE_NUM_CONTROL_MESG_PARAMS   ( 1 )
+
 /**
  * @brief Default MTU size for the BLE connection
  */
@@ -120,6 +122,7 @@ typedef enum
 #define mqttBLEDEFAULT_SEND_TIMEOUT_MS          ( 2000 )
 
 #define AWS_IOT_MQTT_BLE_CONNECTION_INITIALIZER       NULL       /* Initializer for MQTT connection over BLE */
+
 
 typedef struct MqttBLEConnection
 {

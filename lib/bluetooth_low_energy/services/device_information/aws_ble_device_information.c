@@ -35,9 +35,11 @@
 #include "FreeRTOS.h"
 #include "aws_ble_device_information.h"
 #include "semphr.h"
-#include "aws_json_utils.h"
 #include "aws_clientcredential.h"
 #include "task.h"
+
+#define INT64_WIDTH                         ( 20 )
+#define MAX_INTEGER_BUFFER_WIDTH            ( INT64_WIDTH + 1 )
 
 /*------------------------------------------------------------------------------------*/
 extern int snprintf( char *, size_t, const char *, ... );
@@ -98,14 +100,24 @@ void vDeviceInfoBrokerEndpointCharCallback( BLEAttribute_t * pxAttribute,
 
 /**
  * @brief Callback invoked when GATT client reads the device version Characteristic
- *
- * Returns the version for the device in a JSON payload as response.
+ * Sends the Kernel version string as the payload.
  *
  * @param[in] pxAttribute Device version characteristic attribute
  * @param[in] pxEventParam Write/Read request param to the attribute
  *
  */
 void vDeviceInfoVersionCharCallback( BLEAttribute_t * pxAttribute,
+                                        BLEAttributeEvent_t * pxEventParam );
+
+/**
+ * @brief Callback invoked when GATT client reads the encoding Characteristic
+ * Returns the version for the device in a JSON payload as response.
+ *
+ * @param[in] pxAttribute Device version characteristic attribute
+ * @param[in] pxEventParam Write/Read request param to the attribute
+ *
+ */
+void vDeviceInfoEncodingCallback( BLEAttribute_t * pxAttribute,
                                         BLEAttributeEvent_t * pxEventParam );
 
 /**
@@ -164,18 +176,18 @@ BaseType_t AFRDeviceInfoSvc_Init( void )
         .ucType  = eBTuuidType16
     };
     BLEEventsCallbacks_t xCallback;
-    size_t xNumDescrsPerChar[ deviceInfoMAX_CHARS ] = { 0, 0, 1 };
+    size_t xNumDescrsPerChar[ deviceInfoMAX_CHARS ] = { 0, 0, 1, 0 };
 
     xServiceInitLock = xSemaphoreCreateBinary();
 
     if( xServiceInitLock != NULL )
     {
-        xStatus = BLE_CreateService( &xService.pxBLEService, deviceInfoMAX_CHARS, deviceInfoMAX_CHARS, xNumDescrsPerChar, deviceInfoMAX_INC_SVCS );
+        xStatus = BLE_CreateService( &xService.pxBLEService, deviceInfoMAX_CHARS, deviceInfoMAX_DESCRS, xNumDescrsPerChar, deviceInfoMAX_INC_SVCS );
 
         if( xStatus == eBTStatusSuccess )
         {
             configASSERT( xService.pxBLEService->xNbCharacteristics == deviceInfoMAX_CHARS );
-            configASSERT( xService.pxBLEService->xNbDescriptors == deviceInfoMAX_CHARS );
+            configASSERT( xService.pxBLEService->xNbDescriptors == deviceInfoMAX_DESCRS );
             configASSERT( xService.pxBLEService->xNbIncludedServices == deviceInfoMAX_INC_SVCS );
 
             xService.pxBLEService->xAttributeData.xUuid = xDeviceInfoSvcUUID;
@@ -215,6 +227,17 @@ BaseType_t AFRDeviceInfoSvc_Init( void )
             xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].pxAttributeEventCallback = vDeviceInfoMTUCharCallback;
             xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].xNbDescriptors = 1;
             xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].pxDescriptors[ 0 ] = &xService.pxBLEService->pxDescriptors[ eDeviceInfoMtuCharDescr ];
+
+
+            xCharUUID.uu.uu16 = deviceInfoCHAR_ENCODING_UUID;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xAttributeData.xUuid = xCharUUID;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xAttributeData.pucData = NULL;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xAttributeData.xSize = 0;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xPermissions = ( bleconfigCHAR_READ_PERM );
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xProperties = ( eBTPropRead );
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].pxAttributeEventCallback = vDeviceInfoEncodingCallback;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].xNbDescriptors = 0;
+            xService.pxBLEService->pxCharacteristics[ eDeviceInfoEncodingChar ].pxDescriptors = NULL;
 
             xService.pxBLEService->xServiceType = eBTServiceTypePrimary;
             xService.pxBLEService->ucInstId = 0;
@@ -348,6 +371,42 @@ void vDeviceInfoVersionCharCallback( BLEAttribute_t * pxAttribute,
 }
 
 
+void vDeviceInfoEncodingCallback( BLEAttribute_t * pxAttribute,
+                                        BLEAttributeEvent_t * pxEventParam )
+
+{
+    BLEAttributeData_t xAttrData = { 0 };
+    BLEEventResponse_t xResp;
+    DeviceInfoSerializerType_t xType;
+    char cMessage[ MAX_INTEGER_BUFFER_WIDTH  ] = { 0 };
+    size_t xMessageLen;
+
+#if ( bleConfigENABLE_CBOR_SERIALIZATION == 1 )
+    xType = eDeviceInfoSerializerCBOR;
+#elif ( bleConfigENABLE_JSON_SERIALIZATION == 1 )
+    xType = eDeviceInfoSerializerJSON;
+#else
+    xType = eDeviceInfoSerializerUnknown;
+#endif
+
+
+    xResp.pxAttrData = &xAttrData;
+    xResp.xRspErrorStatus = eBTRspErrorNone;
+    xResp.xEventStatus = eBTStatusFail;
+    xResp.xAttrDataOffset = 0;
+    xResp.pxAttrData->xHandle = pxAttribute->pxCharacteristicDescr->xAttributeData.xHandle;
+
+    if( pxEventParam->xEventType == eBLERead )
+    {
+        xMessageLen = snprintf( cMessage, MAX_INTEGER_BUFFER_WIDTH, "%d", xType );
+        xResp.xEventStatus = eBTStatusSuccess;
+        xResp.pxAttrData->pucData = ( uint8_t * ) cMessage;
+        xResp.pxAttrData->xSize = xMessageLen;
+        xResp.xAttrDataOffset = 0;
+        BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
+    }
+}
+
 /*-----------------------------------------------------------*/
 
 void vDeviceInfoMTUCharCallback( BLEAttribute_t * pxAttribute,
@@ -355,6 +414,8 @@ void vDeviceInfoMTUCharCallback( BLEAttribute_t * pxAttribute,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp;
+    char cMessage[ MAX_INTEGER_BUFFER_WIDTH  ] = { 0 };
+    size_t xMessageLen;
 
     xResp.pxAttrData = &xAttrData;
     xResp.xRspErrorStatus = eBTRspErrorNone;
@@ -363,9 +424,10 @@ void vDeviceInfoMTUCharCallback( BLEAttribute_t * pxAttribute,
     xResp.pxAttrData->xHandle = pxAttribute->pxCharacteristicDescr->xAttributeData.xHandle;
     if( pxEventParam->xEventType == eBLERead )
     {
+        xMessageLen = snprintf( cMessage, MAX_INTEGER_BUFFER_WIDTH, "%d", xService.usBLEMtu );
         xResp.xEventStatus = eBTStatusSuccess;
-        xResp.pxAttrData->pucData = ( uint8_t* ) &xService.usBLEMtu;
-        xResp.pxAttrData->xSize = sizeof( xService.usBLEMtu );
+        xResp.pxAttrData->pucData = ( uint8_t* ) cMessage;
+        xResp.pxAttrData->xSize = xMessageLen;
         xResp.xAttrDataOffset = 0;
         BLE_SendResponse( &xResp, pxEventParam->pxParamRead->usConnId, pxEventParam->pxParamRead->ulTransId );
     }
@@ -378,15 +440,19 @@ static void vMTUChangedCallback( uint16_t usConnId,
 {
     BLEAttributeData_t xAttrData = { 0 };
     BLEEventResponse_t xResp = { 0 };
+    char cMessage[ MAX_INTEGER_BUFFER_WIDTH  ] = { 0 };
+    size_t xMessageLen;
 
 
     if( usMtu != xService.usBLEMtu )
     {
         xService.usBLEMtu = usMtu;
+        xMessageLen = snprintf( cMessage, MAX_INTEGER_BUFFER_WIDTH, "%d", xService.usBLEMtu );
+
         xAttrData.xHandle = xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].xAttributeData.xHandle;
         xAttrData.xUuid = xService.pxBLEService->pxCharacteristics[ eDeviceInfoMtuChar ].xAttributeData.xUuid;
-        xAttrData.pucData = ( uint8_t* ) &xService.usBLEMtu;
-        xAttrData.xSize = sizeof( xService.usBLEMtu );
+        xAttrData.pucData = ( uint8_t* ) cMessage;
+        xAttrData.xSize = xMessageLen;
 
         xResp.xAttrDataOffset = 0;
         xResp.xEventStatus = eBTStatusSuccess;

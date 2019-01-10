@@ -42,12 +42,13 @@
 #define deviceInfoCHAR_VERSION_UUID       ( 0xFF01 )
 #define deviceInfoBROKER_ENDPOINT_UUID    ( 0xFF02 )
 #define deviceInfoCHAR_MTU_UUID           ( 0xFF03 )
+#define deviceInfoCHAR_ENCODING_UUID      ( 0xFF04 )
 #define deviceInfoCLIENT_CHAR_CFG_UUID    ( 0x2902 )
 
 /**
  * @brief Number of characteristics, descriptors and included services for Device Information Service
  */
-#define deviceInfoMAX_CHARS               3
+#define deviceInfoMAX_CHARS               4
 #define deviceInfoMAX_DESCRS              1
 #define deviceInfoMAX_INC_SVCS            0
 
@@ -59,6 +60,7 @@ typedef enum
     eDeviceInfoVersionChar = 0,         /**< eDeviceInfoVersionChar Exposes the services version for the device */
     eDeviceInfoMQTTBrokerEndpointChar, /**< eDeviceInfoMQTTBrokerEndpointChar Exposes the IOT broker endpoint with which the device is provisioned */
     eDeviceInfoMtuChar,                /**< eDeviceInfoMtuChar Expose the BLE MTU for the device */
+    eDeviceInfoEncodingChar,           /**< eDeviceInfoEncodingChar Tells what type of encoding is used by the device. */
 } DeviceInfoCharacteristic_t;
 
 /**
@@ -80,6 +82,14 @@ typedef struct DeviceInfoService
     uint16_t usBLEConnId;
     uint16_t usBLEMtu;
 } DeviceInfoService_t;
+
+
+typedef enum
+{
+    eDeviceInfoSerializerUnknown = 0,
+    eDeviceInfoSerializerCBOR,
+    eDeviceInfoSerializerJSON
+} DeviceInfoSerializerType_t;
 
 /**
  * @Brief Creates and starts Amazon FreeRTOS device information service
