@@ -47,7 +47,7 @@
 static WifiProvService_t xWifiProvService = { 0 };
 
 #define STORAGE_INDEX( priority )    ( xWifiProvService.usNumNetworks - priority - 1 )
-#define NETWORK_INFO_DEFAULT_PARAMS        { .cRSSI = wifiProvINVALID_NETWORK_RSSI, .ucConnected = 0, .sSavedIdx = wifiProvINVALID_NETWORK_INDEX }
+#define NETWORK_INFO_DEFAULT_PARAMS        { .xStatus = eWiFiSuccess, .cRSSI = wifiProvINVALID_NETWORK_RSSI, .ucConnected = 0, .sSavedIdx = wifiProvINVALID_NETWORK_INDEX }
 /*---------------------------------------------------------------------------------------------------------*/
 
 /*
@@ -549,7 +549,8 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
         }
         else
         {
-            if( xValue.value.signedInt > bleconfigMAX_NETWORK )
+            if( ( xValue.value.signedInt < 0 )
+                    || ( xValue.value.signedInt > bleconfigMAX_NETWORK ) )
             {
                 configPRINTF(( "WARN: Max Networks (%d) exceeds configured Max networks (%d). Caping max networks to %d\n",
                         xValue.value.signedInt,
@@ -559,8 +560,24 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
             }
             else
             {
-                pxListNetworkRequest->sTimeoutMs = xValue.value.signedInt;
+                pxListNetworkRequest->sMaxNetworks = xValue.value.signedInt;
             }
+        }
+    }
+
+    if( xResult == pdTRUE )
+    {
+        xRet = bleMESSAGE_DECODER.find( &xDecoderObj, wifiProvSCAN_TIMEOUT_KEY, &xValue );
+        if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
+                ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
+        {
+            configPRINTF(( "Failed to get timeout parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            xResult = pdFALSE;
+        }
+        else
+        {
+
+            pxListNetworkRequest->sTimeoutMs = xValue.value.signedInt;
         }
     }
 
@@ -984,7 +1001,7 @@ AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, u
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = eWiFiSuccess;
+        xValue.value.signedInt = pxNetworkInfo->xStatus;
         xRet = bleMESSAGE_ENCODER.appendKeyValue( &xNetworkMap, wifiProvSTATUS_KEY, xValue );
     }
 
@@ -1373,6 +1390,9 @@ static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
     xNetworkInfo.xSSIDLength = strlen( pxScanNetwork->cSSID );
     xNetworkInfo.pucBSSID = pxScanNetwork->ucBSSID;
     xNetworkInfo.xBSSIDLength = wificonfigMAX_BSSID_LEN;
+    xNetworkInfo.cRSSI = pxScanNetwork->cRSSI;
+    xNetworkInfo.ucHidden = pxScanNetwork->ucHidden;
+    xNetworkInfo.xSecurity = pxScanNetwork->xSecurity;
 
     xSerializerRet = prxSerializeNetwork( &xNetworkInfo, NULL, &xMessageLen );
     if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )

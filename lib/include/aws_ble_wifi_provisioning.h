@@ -100,7 +100,7 @@ typedef enum
 #define wifiProvINDEX_KEY           "index"
 #define wifiProvNEWINDEX_KEY        "newIndex"
 
-#define wifiProvNUM_NETWORK_INFO_MESG_PARAMS  ( 7 )
+#define wifiProvNUM_NETWORK_INFO_MESG_PARAMS  ( 8 )
 #define wifiProvNUM_STATUS_MESG_PARAMS        ( 1 )
 
 /**
@@ -145,6 +145,7 @@ typedef struct DeleteNetworkRequest
 
 typedef struct WifiNetworkInfo
 {
+    WIFIReturnCode_t xStatus;
 	const char* pcSSID;
 	size_t xSSIDLength;
 	const uint8_t* pucBSSID;
