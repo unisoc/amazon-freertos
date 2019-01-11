@@ -40,19 +40,19 @@
  *  Keys for MQTT message parameters exchanged between device and the companion BLE device SDK.
  */
 /** @{ */
-#define mqttBLEMSG_TYPE        "type"
-#define mqttBLECLIENT_ID       "clientID"
-#define mqttBLEBROKER_EP       "brokerEndpoint"
-#define mqttBLEBROKER_PORT     "brokerPort"
-#define mqttBLEUSER            "userName"
-#define mqttBLECLEAN_SESSION   "cleanSession"
-#define mqttBLETOPIC           "topic"
-#define mqttBLETOPIC_LIST      "topics"
-#define mqttBLEQOS             "qoS"
-#define mqttBLEQOS_LIST        "qoSs"
-#define mqttBLEMESSAGE_ID      "msgID"
-#define mqttBLEPAYLOAD         "payloadVal"
-#define mqttBLESTATUS          "status"
+#define mqttBLEMSG_TYPE        "m"
+#define mqttBLECLIENT_ID       "c"
+#define mqttBLEBROKER_EP       "b"
+#define mqttBLEBROKER_PORT     "po"
+#define mqttBLEUSER            "u"
+#define mqttBLECLEAN_SESSION   "cs"
+#define mqttBLETOPIC           "t"
+#define mqttBLETOPIC_LIST      "ts"
+#define mqttBLEQOS             "q"
+#define mqttBLEQOS_LIST        "qs"
+#define mqttBLEMESSAGE_ID      "i"
+#define mqttBLEPAYLOAD         "p"
+#define mqttBLESTATUS          "s"
 /** @} */
 
 /**
