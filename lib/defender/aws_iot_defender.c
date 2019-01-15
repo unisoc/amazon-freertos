@@ -204,7 +204,7 @@ AwsIotDefenderError_t AwsIotDefender_Start( AwsIotDefenderStartInfo_t * pStartIn
 
         if( metricsMutexCreateSuccess )
         {
-            /* in test mode, the timer is kicked off almost immediately. */
+            /* The timer is kicked off almost immediately. */
             publishTimerArmSuccess = AwsIotClock_TimerArm( &_metricsPublishTimer,
                                                            _DEFENDER_SHORT_RELATIVE_MILLISECONDS,
                                                            _periodMilliSecond );

@@ -184,12 +184,23 @@ static bool _serialize( AwsIotSerializerEncoderObject_t * pEncoderObject,
 
     if( _defenderSerializeSuccess( serializerError, ignoreTooSmallBuffer ) )
     {
+        /* Define a "snapshot" global array of metrics flag. */
+        static uint32_t metricsFlagSnapshot[ _DEFENDER_METRICS_GROUP_COUNT ];
+
+        /* Copy the metrics flags to snapshot so that it is unlocked quicker. */
         AwsIotMutex_Lock( &_AwsIotDefenderMetrics.mutex );
 
         for( uint8_t i = 0; i < _DEFENDER_METRICS_GROUP_COUNT; i++ )
         {
+            metricsFlagSnapshot[ i ] = _AwsIotDefenderMetrics.metricsFlag[ i ];
+        }
+
+        AwsIotMutex_Unlock( &_AwsIotDefenderMetrics.mutex );
+
+        for( uint8_t i = 0; i < _DEFENDER_METRICS_GROUP_COUNT; i++ )
+        {
             /* if no specified metircs in this group, simply skip. */
-            if( _AwsIotDefenderMetrics.metricsFlag[ i ] )
+            if( metricsFlagSnapshot[ i ] )
             {
                 switch( i )
                 {
@@ -198,7 +209,8 @@ static bool _serialize( AwsIotSerializerEncoderObject_t * pEncoderObject,
                         break;
 
                     default:
-                        ;
+                        /* The index of metricsFlagSnapshot must be one of the metrics group. */
+                        AwsIotDefender_Assert( 0 );
                 }
             }
 
@@ -207,8 +219,6 @@ static bool _serialize( AwsIotSerializerEncoderObject_t * pEncoderObject,
                 break;
             }
         }
-
-        AwsIotMutex_Unlock( &_AwsIotDefenderMetrics.mutex );
     }
 
     if( _defenderSerializeSuccess( serializerError, ignoreTooSmallBuffer ) )
