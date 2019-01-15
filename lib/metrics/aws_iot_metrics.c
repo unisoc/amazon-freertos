@@ -1,4 +1,4 @@
-#include "aws_iot_metrics.h"
+#include "iot_metrics.h"
 
 static AwsIotList_t _connectionsList;
 

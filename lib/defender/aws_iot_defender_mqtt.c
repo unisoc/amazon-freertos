@@ -25,16 +25,16 @@
 /*
  * 30 seconds is the minimum allowed in AFR MQTT
  */
-#define _DEFENDER_MQTT_KEEP_ALIVE_SECONDS             30
+#define _DEFENDER_MQTT_KEEP_ALIVE_SECONDS    30
 
 /* Define topics segments used by defender. */
-#define _TOPIC_PREFIX             "$aws/things/"
+#define _TOPIC_PREFIX                        "$aws/things/"
 
-#define _TOPIC_SUFFIX_PUBLISH     "/defender/metrics/" _DEFENDER_FORMAT
+#define _TOPIC_SUFFIX_PUBLISH                "/defender/metrics/" _DEFENDER_FORMAT
 
-#define _TOPIC_SUFFIX_ACCEPTED    _TOPIC_SUFFIX_PUBLISH "/accepted"
+#define _TOPIC_SUFFIX_ACCEPTED               _TOPIC_SUFFIX_PUBLISH "/accepted"
 
-#define _TOPIC_SUFFIX_REJECTED    _TOPIC_SUFFIX_PUBLISH "/rejected"
+#define _TOPIC_SUFFIX_REJECTED               _TOPIC_SUFFIX_PUBLISH "/rejected"
 
 /* defender internally manages network and mqtt connection */
 static AwsIotNetworkConnection_t _networkConnection = AWS_IOT_NETWORK_CONNECTION_INITIALIZER;
@@ -58,18 +58,19 @@ bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
     size_t rejectTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_REJECTED ) + 1;
 
     /* allocate memory for each of them. */
-    char * pPublishTopic = pvPortMalloc( publishTopicLength * sizeof( char ) );
-    char * pAcceptTopic = pvPortMalloc( acceptTopicLength * sizeof( char ) );
-    char * pRejectTopic = pvPortMalloc( rejectTopicLength * sizeof( char ) );
+    char * pPublishTopic = AwsIotDefender_MallocTopic( publishTopicLength * sizeof( char ) );
+    char * pAcceptTopic = AwsIotDefender_MallocTopic( acceptTopicLength * sizeof( char ) );
+    char * pRejectTopic = AwsIotDefender_MallocTopic( rejectTopicLength * sizeof( char ) );
 
     bool result = false;
 
     /* free memory if any allocation failed */
     if( ( pPublishTopic == NULL ) || ( pAcceptTopic == NULL ) || ( pRejectTopic == NULL ) )
     {
-        vPortFree( pPublishTopic );
-        vPortFree( pAcceptTopic );
-        vPortFree( pRejectTopic );
+        /* Null pointer is safe for "free" function. */
+        AwsIotDefender_FreeTopic( pPublishTopic );
+        AwsIotDefender_FreeTopic( pAcceptTopic );
+        AwsIotDefender_FreeTopic( pRejectTopic );
         result = false;
         *error = AWS_IOT_DEFENDER_ERROR_NO_MEMORY;
     }
@@ -101,9 +102,9 @@ bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
 
 void AwsIotDefenderInternal_DeleteTopicsNames()
 {
-    vPortFree( _pPublishTopic );
-    vPortFree( _pAcceptTopic );
-    vPortFree( _pRejectTopic );
+    AwsIotDefender_FreeTopic( _pPublishTopic );
+    AwsIotDefender_FreeTopic( _pAcceptTopic );
+    AwsIotDefender_FreeTopic( _pRejectTopic );
     _pPublishTopic = NULL;
     _pAcceptTopic = NULL;
     _pRejectTopic = NULL;
@@ -113,52 +114,23 @@ void AwsIotDefenderInternal_DeleteTopicsNames()
 
 bool AwsIotDefenderInternal_NetworkConnect( const char * pAwsIotEndpoint,
                                             uint16_t port,
-                                            AwsIotNetworkTlsInfo_t * pTlsInfo,
-                                            AwsIotDefenderEventType_t * pEventType )
+                                            AwsIotNetworkTlsInfo_t * pTlsInfo )
 {
-    bool connectSuccessful = false;
-
-    if( AwsIotNetwork_CreateConnection( &_networkConnection,
-                                        pAwsIotEndpoint,
-                                        port,
-                                        pTlsInfo ) == AWS_IOT_NETWORK_SUCCESS )
-    {
-        connectSuccessful = true;
-    }
-    else
-    {
-        if (pEventType != NULL)
-        {
-            *pEventType = AWS_IOT_DEFENDER_NETWORK_CONNECTION_FAILED;
-        }
-    }
-
-    return connectSuccessful;
+    return AwsIotNetwork_CreateConnection( &_networkConnection,
+                                           pAwsIotEndpoint,
+                                           port,
+                                           pTlsInfo ) == AWS_IOT_NETWORK_SUCCESS;
 }
 
 /**
  * TODO: this will be simplified.
  */
-bool AwsIotDefenderInternal_SetMqttCallback( AwsIotDefenderEventType_t * pEventType )
+bool AwsIotDefenderInternal_SetMqttCallback()
 {
-    bool setCallbackSuccessful = false;
-
-    if( AwsIotNetwork_SetMqttReceiveCallback(
-            _networkConnection,
-            &_mqttConnection,
-            AwsIotMqtt_ReceiveCallback ) == AWS_IOT_NETWORK_SUCCESS )
-    {
-        setCallbackSuccessful = true;
-    }
-    else
-    {
-        if (pEventType != NULL)
-        {
-            *pEventType = AWS_IOT_DEFENDER_NETWORK_SET_CALLBACK_FAILED;
-        }
-    }
-
-    return setCallbackSuccessful;
+    return AwsIotNetwork_SetMqttReceiveCallback(
+        _networkConnection,
+        &_mqttConnection,
+        AwsIotMqtt_ReceiveCallback) == AWS_IOT_NETWORK_SUCCESS;
 }
 
 /*-----------------------------------------------------------*/
@@ -276,6 +248,8 @@ void AwsIotDefenderInternal_MqttDisconnect()
 {
     AwsIotMqtt_Disconnect( _mqttConnection, false );
 }
+
+/*-----------------------------------------------------------*/
 
 void AwsIotDefenderInternal_NetworkClose()
 {

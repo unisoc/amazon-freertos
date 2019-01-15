@@ -38,9 +38,10 @@
  * Amazon FreeRTOS provides a library that allows your Amazon FreeRTOS-based devices to work with AWS IoT Device Defender.
  *
  ## Dependencies
- ##- MQTT library
- ##- Serializer library
- ##- Platform(POSIX) libraries
+  - MQTT library
+  - Serializer library
+  - Platform(POSIX) libraries
+  - Metrics library
  */
 
 #ifndef _AWS_IOT_DEFENDER_H_

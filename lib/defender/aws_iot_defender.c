@@ -40,13 +40,6 @@
  */
 #define _DEFENDER_STOP_SLEEP_SECONDS             1
 
-/*
- * This mode is supposed to be used by test, demo or debug.
- */
-#ifndef _DEFENDER_TEST_MODE
-    #define _DEFENDER_TEST_MODE    false
-#endif
-
 /**
  * Clean up resources in the end of each iteration of timer execution.
  */
@@ -163,12 +156,13 @@ AwsIotDefenderError_t AwsIotDefender_Start( AwsIotDefenderStartInfo_t * pStartIn
         /* First, attempt to connect to AWS IoT endpoint to valid input. */
         networkConnectSuccess = AwsIotDefenderInternal_NetworkConnect( pStartInfo->pAwsIotEndpoint,
                                                                        pStartInfo->port,
-                                                                       &pStartInfo->tlsInfo,
-        /* TODO: this is a hack, set MQTT callback is needed to close network properly. */                                                              NULL );
-        AwsIotDefenderInternal_SetMqttCallback( NULL );
+                                                                       &pStartInfo->tlsInfo );
 
         if( networkConnectSuccess )
         {
+            /* TODO: this is a hack, set MQTT callback is needed to close network properly. */
+            AwsIotDefender_Assert( AwsIotDefenderInternal_SetMqttCallback() );
+
             /* Clean the network connection. */
             AwsIotDefenderInternal_NetworkClose();
             AwsIotDefenderInternal_NetworkDestroy();
@@ -231,11 +225,6 @@ AwsIotDefenderError_t AwsIotDefender_Start( AwsIotDefenderStartInfo_t * pStartIn
             /* reset _startInfo to empty; otherwise next time defender might start with incorrect information. */
             _startInfo = ( AwsIotDefenderStartInfo_t ) AWS_IOT_DEFENDER_START_INFO_INITIALIZER;
 
-            if( networkConnectSuccess )
-            {
-                AwsIotDefenderInternal_NetworkDestroy();
-            }
-
             if( buildTopicsNamesSuccess )
             {
                 AwsIotDefenderInternal_DeleteTopicsNames();
@@ -288,16 +277,16 @@ AwsIotDefenderError_t AwsIotDefender_Stop( void )
     _startInfo = ( AwsIotDefenderStartInfo_t ) AWS_IOT_DEFENDER_START_INFO_INITIALIZER;
 
     /* Reset _periodMilliSecond to default value. */
-    _periodMilliSecond = _defenderToMilliseconds(AWS_IOT_DEFENDER_DEFAULT_PERIOD_SECONDS);
+    _periodMilliSecond = _defenderToMilliseconds( AWS_IOT_DEFENDER_DEFAULT_PERIOD_SECONDS );
 
     /* Reset metrics flag array to 0. */
-    for (uint8_t i = 0; i < _DEFENDER_METRICS_GROUP_COUNT; i++)
+    for( uint8_t i = 0; i < _DEFENDER_METRICS_GROUP_COUNT; i++ )
     {
-        _AwsIotDefenderMetrics.metricsFlag[i] = 0;
+        _AwsIotDefenderMetrics.metricsFlag[ i ] = 0;
     }
-    
+
     /* Destroy metrics' mutex. */
-    AwsIotMutex_Destroy(&_AwsIotDefenderMetrics.mutex);
+    AwsIotMutex_Destroy( &_AwsIotDefenderMetrics.mutex );
 
     /* Destroying will cancel timers that are active but not in process. */
     AwsIotClock_TimerDestroy( &_metricsPublishTimer );
@@ -313,8 +302,6 @@ AwsIotDefenderError_t AwsIotDefender_Stop( void )
     /* Metrics timer callback should be waiting for _timerSem till now. */
     AwsIotSemaphore_Destroy( &_timerSem );
 
-   
-
     _started = false;
 
     AwsIotLogInfo( "Defender agent has stopped." );
@@ -329,7 +316,7 @@ AwsIotDefenderError_t AwsIotDefender_SetPeriod( uint64_t periodSeconds )
     AwsIotDefenderError_t defenderError = AWS_IOT_DEFENDER_INTERNAL_FAILURE;
 
     /* period can not be too short unless this is test mode. */
-    if( ( periodSeconds < AWS_IOT_DEFENDER_DEFAULT_PERIOD_SECONDS ) && !_DEFENDER_TEST_MODE )
+    if( periodSeconds < AWS_IOT_DEFENDER_DEFAULT_PERIOD_SECONDS )
     {
         defenderError = AWS_IOT_DEFENDER_PERIOD_TOO_SHORT;
         AwsIotLogError( "Input period is too short. It must be greater than %d seconds.", AWS_IOT_DEFENDER_DEFAULT_PERIOD_SECONDS );
@@ -346,8 +333,7 @@ AwsIotDefenderError_t AwsIotDefender_SetPeriod( uint64_t periodSeconds )
 
         if( _started )
         {
-            if( AwsIotClock_TimerArm( &_metricsPublishTimer,
-                                      _DEFENDER_TEST_MODE ? _DEFENDER_SHORT_RELATIVE_MILLISECONDS : _periodMilliSecond, _periodMilliSecond ) )
+            if( AwsIotClock_TimerArm( &_metricsPublishTimer, _DEFENDER_SHORT_RELATIVE_MILLISECONDS, _periodMilliSecond ) )
             {
                 defenderError = AWS_IOT_DEFENDER_SUCCESS;
                 AwsIotLogInfo( "Period has been updated to %d seconds successfully.", periodSeconds );
@@ -424,11 +410,10 @@ static void _metricsPublishTimerExpirationRoutine( void * pArgument )
 
     if( AwsIotDefenderInternal_NetworkConnect( _startInfo.pAwsIotEndpoint,
                                                _startInfo.port,
-                                               &_startInfo.tlsInfo,
-                                               &eventType ) )
+                                               &_startInfo.tlsInfo ) )
     {
         /* SetMqttReceiveCallback must be invoked to have MQTT agent receive response from broker. */
-        if( AwsIotDefenderInternal_SetMqttCallback( &eventType ) )
+        if( AwsIotDefenderInternal_SetMqttCallback() )
         {
             if( AwsIotDefenderInternal_MqttConnect( _startInfo.pThingName,
                                                     _startInfo.thingNameLength,
@@ -445,6 +430,14 @@ static void _metricsPublishTimerExpirationRoutine( void * pArgument )
                 }
             }
         }
+        else
+        {
+            eventType = AWS_IOT_DEFENDER_NETWORK_SET_CALLBACK_FAILED;
+        }
+    }
+    else
+    {
+        eventType = AWS_IOT_DEFENDER_NETWORK_CONNECTION_FAILED;
     }
 
     /* Something is wrong during the metrics publish process. */
@@ -486,8 +479,8 @@ static void _guardTimerExpirationRoutine( void * pArgument )
 void _acceptCallback( void * pArgument,
                       AwsIotMqttCallbackParam_t * const pPublish )
 {
-    (void)pArgument;
-    
+    ( void ) pArgument;
+
     AwsIotLogInfo( "Metrics report was accepted by defender service." );
 
     AwsIotDefenderCallbackInfo_t callbackInfo;

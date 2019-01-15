@@ -27,7 +27,7 @@
 #include "aws_secure_sockets.h"
 #include "aws_secure_sockets_internal.h"
 
-#include "aws_iot_metrics.h"
+#include "iot_metrics.h"
 
 /*-----------------------------------------------------------*/
 

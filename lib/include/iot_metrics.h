@@ -19,16 +19,35 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _AWS_IOT_METRICS_H_
-#define _AWS_IOT_METRICS_H_
+/**
+ * @file iot_metrics.h
+ * @brief User-facing functions and structs of Metrics library
+ *
+ *
+ */
+
+#ifndef _IOT_METRICS_H_
+#define _IOT_METRICS_H_
 
 #include <stdint.h>
 #include "aws_iot_queue.h"
 
+/**
+ * @page Metrics_constants Constants
+ * @brief Defined constants of the Metrics library.
+ * - @ref MetricsTcpConnectionOffset "TCP connections offset"
+ */
+
+/**
+ * @anchor MetricsTcpConnectionOffset
+ * @name TCP connections offset
+ *
+ * @brief Offset constant used for list operations.
+ */
 #define IOT_METRICS_TCP_CONNECTION_OFFSET    AwsIotLink_Offset( IotMetricsTcpConnection_t, link )
 
 #ifndef IOT_METRICS_ENABLED
-    #define IOT_METRICS_ENABLED              ( 1 )
+    #define IOT_METRICS_ENABLED    ( 1 )
 #endif
 
 /**
@@ -71,4 +90,4 @@ void IotMetrics_RemoveTcpConnection( void * pTcpConnectionHandle );
  */
 void * IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCallback );
 
-#endif /* ifndef _AWS_IOT_DEFENDER_METRICS_SOCKET_H_ */
+#endif /* ifndef _IOT_METRICS_H_ */
