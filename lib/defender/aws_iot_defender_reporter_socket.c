@@ -114,7 +114,8 @@ void * AwsIotDefenderInternal_TcpConnectionsCallback( void * param1,
                     /* add remote address */
                     if( hasRemoteAddr && _defenderSerializeSuccess( error, ignoreTooSmallBuffer ) )
                     {
-                        SOCKETS_inet_ntoa( pConnection->remoteIP, remoteAddr );
+                        /* Remote IP is with host endian. So it is converted to network endian and passed into SOCKETS_inet_ntoa. */
+                        SOCKETS_inet_ntoa( SOCKETS_htonl( pConnection->remoteIP ), remoteAddr );
                         sprintf( remoteAddr, "%s:%d", remoteAddr, pConnection->remotePort );
 
                         error = _AwsIotDefenderEncoder.appendKeyValue( &connectionMap, _REMOTE_ADDR_TAG,
@@ -155,4 +156,3 @@ void * AwsIotDefenderInternal_TcpConnectionsCallback( void * param1,
     /* Cast AwsIotSerializerError_t to void pointer explicitly. */
     return ( void * ) error;
 }
-

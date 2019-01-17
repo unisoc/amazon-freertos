@@ -23,22 +23,25 @@
  * http://www.FreeRTOS.org
  */
 
+/*
+ * This file implements common logic for portable secure sockets implemntations.
+ * It updates metrics of sockets in relevant socket functions.
+ */
+
 /* Secure Sockets includes. */
 #include "aws_secure_sockets.h"
 #include "aws_secure_sockets_internal.h"
 
+/* Metrics includes. */
 #include "iot_metrics.h"
 
 /*-----------------------------------------------------------*/
-
-/*
- * Interface routines.
- */
 
 int32_t SOCKETS_Close( Socket_t xSocket )
 {
     return SocketsInternal_Close( xSocket );
 }
+
 /*-----------------------------------------------------------*/
 
 int32_t SOCKETS_Connect( Socket_t xSocket,
@@ -53,8 +56,14 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
             IotMetricsTcpConnection_t connection;
             /* Cast the Socket_t to void pointer as handle. */
             connection.pHandle = ( void * ) xSocket;
+
+            /* The port passed to SocketsSockaddr_t is with network endian.
+             * Therefor it must convert back for metrics: from network endian to host endian. */
             connection.remotePort = SOCKETS_ntohs( pxAddress->usPort );
-            connection.remoteIP = pxAddress->ulAddress;
+
+            /* The IP passed to SocketsSockaddr_t is with network endian.
+             * Therefor it must convert back for metrics: from network endian to host endian. */
+            connection.remoteIP = SOCKETS_ntohl( pxAddress->ulAddress );
 
             IotMetrics_AddTcpConnection( &connection );
         }
@@ -126,9 +135,10 @@ Socket_t SOCKETS_Socket( int32_t lDomain,
 BaseType_t SOCKETS_Init( void )
 {
     #if IOT_METRICS_ENABLED == 1
+        /* Return fail if metrics init fails. */
         if( IotMetrics_Init() == pdFAIL )
         {
-            return;
+            return pdFAIL;
         }
     #endif
 

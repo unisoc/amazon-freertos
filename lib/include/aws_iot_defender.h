@@ -38,10 +38,10 @@
  * Amazon FreeRTOS provides a library that allows your Amazon FreeRTOS-based devices to work with AWS IoT Device Defender.
  *
  ## Dependencies
-  - MQTT library
-  - Serializer library
-  - Platform(POSIX) libraries
-  - Metrics library
+ ##- MQTT library
+ ##- Serializer library
+ ##- Platform(POSIX) libraries
+ ##- Metrics library
  */
 
 #ifndef _AWS_IOT_DEFENDER_H_
@@ -94,10 +94,11 @@
 
 /**
  * Connections metrics including only remote address. Local port number is not supported.
- * 
+ *
  */
-#define AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_CONNECTIONS                                                                   \
+#define AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_CONNECTIONS \
     ( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_REMOTE_ADDR ) \
+
 
 /**
  * Established connections metrics including connections metrics and total count.
@@ -150,9 +151,7 @@ typedef enum
     AWS_IOT_DEFENDER_INVALID_INPUT,      /**< At least one input parameter is invalid. */
     AWS_IOT_DEFENDER_CONNECTION_FAILURE, /**< Connection to AWS IoT failed. */
     AWS_IOT_DEFENDER_ALREADY_STARTED,    /**< Defender has been already started. */
-    AWS_IOT_DEFENDER_NOT_STARTED,        /**< Defender is not yet started. */
     AWS_IOT_DEFENDER_PERIOD_TOO_SHORT,   /**< Given period is too short. */
-    AWS_IOT_DEFENDER_PERIOD_TOO_LONG,    /**< Given period is too long. */
     AWS_IOT_DEFENDER_ERROR_NO_MEMORY,    /**< Defender operation failed due to memory allocation failure. */
     AWS_IOT_DEFENDER_INTERNAL_FAILURE    /**< Defender operation failed due to internal unexpected cause. */
 } AwsIotDefenderError_t;
@@ -350,15 +349,11 @@ AwsIotDefenderError_t AwsIotDefender_Start( AwsIotDefenderStartInfo_t * pStartIn
  * @snippet this declare_defender_stop
  * @brief Stop the defender agent.
  *
- * @return
- * * On success, #AWS_IOT_DEFENDER_SUCCESS is returned.
- * * If defender is not started yet, AWS_IOT_DEFENDER_NOT_STARTED is returned.
- *
  * @warning This function must be called after successfully calling @ref Defender_function_Start "AwsIotDefender_Start".
  * @warning This function is not thread safe.
  */
 /* @[declare_defender_stop] */
-AwsIotDefenderError_t AwsIotDefender_Stop( void );
+void AwsIotDefender_Stop( void );
 /* @[declare_defender_stop] */
 
 /**

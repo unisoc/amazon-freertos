@@ -23,7 +23,6 @@
  * @file iot_metrics.h
  * @brief User-facing functions and structs of Metrics library
  *
- *
  */
 
 #ifndef _IOT_METRICS_H_
@@ -31,6 +30,21 @@
 
 #include <stdint.h>
 #include "aws_iot_queue.h"
+
+/**
+ * @def IotMetrics_Assert( expression )
+ * @brief Assertion macro for the Metrics library.
+ *
+ * @param[in] expression Expression to be evaluated.
+ */
+#if AWS_IOT_METRICS_ENABLE_ASSERTS == 1
+    #ifndef IotMetrics_Assert
+        #include <assert.h>
+        #define IotMetrics_Assert( expression )    assert( expression )
+    #endif
+#else
+    #define IotMetrics_Assert( expression )
+#endif
 
 /**
  * @page Metrics_constants Constants
@@ -47,7 +61,7 @@
 #define IOT_METRICS_TCP_CONNECTION_OFFSET    AwsIotLink_Offset( IotMetricsTcpConnection_t, link )
 
 #ifndef IOT_METRICS_ENABLED
-    #define IOT_METRICS_ENABLED    ( 1 )
+    #define IOT_METRICS_ENABLED              ( 1 )
 #endif
 
 /**
@@ -67,7 +81,7 @@ typedef struct IotMetricsTcpConnection
 typedef struct IotMetricsListCallback
 {
     void * param1;
-    void * ( *function )( void * param1, AwsIotList_t * pMetricsList );
+    void * ( *function )( void * param1, AwsIotList_t * pMetricsList ); /* pMetricsList is guaranteed a valid metrics list. */
 } IotMetricsListCallback_t;
 
 /**

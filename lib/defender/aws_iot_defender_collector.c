@@ -33,20 +33,52 @@
 #define  _METRICS_TAG     AwsIotDefenderInternal_SelectTag( "metrics", "met" )
 
 /**
+ * Structure to hold a metrics report.
+ */
+typedef struct _metricsReport
+{
+    AwsIotSerializerEncoderObject_t object; /* Encoder object handle. */
+    uint8_t * pDataBuffer;                  /* Raw data buffer to be published with MQTT. */
+    size_t size;                            /* Raw data size. */
+} _metricsReport_t;
+
+/* Initialize metrics report. */
+static _metricsReport_t _report =
+{
+    .object = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM,
+    .pDataBuffer = NULL,
+    .size = 0
+};
+
+/**
  * Attempt to serialize metrics report with given data buffer.
  */
 static bool _serialize( AwsIotSerializerEncoderObject_t * pEncoderObject,
                         uint8_t * pDataBuffer,
                         size_t dataSize );
 
+
+uint8_t * AwsIotDefenderInternal_GetReportBuffer()
+{
+    return _report.pDataBuffer;
+}
+
+/**
+ * Get the buffer size of report.
+ */
+size_t AwsIotDefenderInternal_GetReportBufferSize()
+{
+    return _report.size;
+}
+
 /*-----------------------------------------------------------*/
 
-bool AwsIotDefenderInternal_CreateReport( _defenderReport_t * pReport,
-                                          AwsIotDefenderEventType_t * pEventType )
+AwsIotDefenderEventType_t AwsIotDefenderInternal_CreateReport()
 {
-    AwsIotSerializerEncoderObject_t * pEncoderObject = &( pReport->object );
+    AwsIotDefenderEventType_t returnedEvent = 0;
+    
+    AwsIotSerializerEncoderObject_t * pEncoderObject = &(_report.object );
     size_t dataSize = 0;
-    bool result = false;
     uint8_t * pReportBuffer = NULL;
 
     /* first-round serialization to calculate the size */
@@ -66,36 +98,42 @@ bool AwsIotDefenderInternal_CreateReport( _defenderReport_t * pReport,
             /* second-round serialization to do the actual encoding */
             if( _serialize( pEncoderObject, pReportBuffer, dataSize ) )
             {
-                pReport->pDataBuffer = pReportBuffer;
-                pReport->size = dataSize;
-                result = true;
+                _report.pDataBuffer = pReportBuffer;
+                _report.size = dataSize;
             }
             else
             {
-                *pEventType = AWS_IOT_DEFENDER_METRICS_SERIALIZATION_FAILED;
+                AwsIotDefender_FreeReport(pReportBuffer);
+                returnedEvent = AWS_IOT_DEFENDER_METRICS_SERIALIZATION_FAILED;
             }
         }
         else
         {
-            *pEventType = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
+            returnedEvent = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
         }
     }
     else
     {
-        *pEventType = AWS_IOT_DEFENDER_METRICS_SERIALIZATION_FAILED;
+        returnedEvent = AWS_IOT_DEFENDER_METRICS_SERIALIZATION_FAILED;
     }
 
-    return result;
+    return returnedEvent;
 }
 
 /*-----------------------------------------------------------*/
 
-void AwsIotDefenderInternal_DeleteReport( _defenderReport_t * report )
+void AwsIotDefenderInternal_DeleteReport()
 {
-    _AwsIotDefenderEncoder.destroy( &( report->object ) );
-    AwsIotDefender_FreeReport( report->pDataBuffer );
-    report->pDataBuffer = NULL;
-    report->size = 0;
+    /* Destroy the encoder object. */
+    _AwsIotDefenderEncoder.destroy( &(_report.object ) );
+
+    /* Free the memory of data buffer. */
+    AwsIotDefender_FreeReport(_report.pDataBuffer );
+
+    /* Reset report members. */
+    _report.pDataBuffer = NULL;
+    _report.size = 0;
+    _report.object = ( AwsIotSerializerEncoderObject_t ) AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM;
 }
 
 /*
@@ -190,10 +228,8 @@ static bool _serialize( AwsIotSerializerEncoderObject_t * pEncoderObject,
         /* Copy the metrics flags to snapshot so that it is unlocked quicker. */
         AwsIotMutex_Lock( &_AwsIotDefenderMetrics.mutex );
 
-        for( uint8_t i = 0; i < _DEFENDER_METRICS_GROUP_COUNT; i++ )
-        {
-            metricsFlagSnapshot[ i ] = _AwsIotDefenderMetrics.metricsFlag[ i ];
-        }
+        /* Memory copy from the metricsFlag array to metricsFlagSnapshot array. */
+        memcpy( metricsFlagSnapshot, _AwsIotDefenderMetrics.metricsFlag, sizeof( metricsFlagSnapshot ) );
 
         AwsIotMutex_Unlock( &_AwsIotDefenderMetrics.mutex );
 

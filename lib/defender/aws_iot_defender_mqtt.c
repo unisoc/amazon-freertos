@@ -48,10 +48,11 @@ static char * _pRejectTopic = NULL;
 
 /*-----------------------------------------------------------*/
 
-bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
-                                              uint16_t thingNameLength,
-                                              AwsIotDefenderError_t * error )
+AwsIotDefenderError_t AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
+                                                               uint16_t thingNameLength )
 {
+    AwsIotDefenderError_t returnedError = AWS_IOT_DEFENDER_SUCCESS;
+
     /* calculate topics lengths. */
     size_t publishTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_PUBLISH ) + 1;
     size_t acceptTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_ACCEPTED ) + 1;
@@ -62,8 +63,6 @@ bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
     char * pAcceptTopic = AwsIotDefender_MallocTopic( acceptTopicLength * sizeof( char ) );
     char * pRejectTopic = AwsIotDefender_MallocTopic( rejectTopicLength * sizeof( char ) );
 
-    bool result = false;
-
     /* free memory if any allocation failed */
     if( ( pPublishTopic == NULL ) || ( pAcceptTopic == NULL ) || ( pRejectTopic == NULL ) )
     {
@@ -71,8 +70,7 @@ bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
         AwsIotDefender_FreeTopic( pPublishTopic );
         AwsIotDefender_FreeTopic( pAcceptTopic );
         AwsIotDefender_FreeTopic( pRejectTopic );
-        result = false;
-        *error = AWS_IOT_DEFENDER_ERROR_NO_MEMORY;
+        returnedError = AWS_IOT_DEFENDER_ERROR_NO_MEMORY;
     }
     else
     {
@@ -91,11 +89,9 @@ bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
         strcpy( _pRejectTopic, _TOPIC_PREFIX );
         strncat( _pRejectTopic, pThingName, thingNameLength );
         strcat( _pRejectTopic, _TOPIC_SUFFIX_REJECTED );
-
-        result = true;
     }
 
-    return result;
+    return returnedError;
 }
 
 /*-----------------------------------------------------------*/
@@ -127,17 +123,15 @@ bool AwsIotDefenderInternal_NetworkConnect( const char * pAwsIotEndpoint,
  */
 bool AwsIotDefenderInternal_SetMqttCallback()
 {
-    return AwsIotNetwork_SetMqttReceiveCallback(
-        _networkConnection,
-        &_mqttConnection,
-        AwsIotMqtt_ReceiveCallback) == AWS_IOT_NETWORK_SUCCESS;
+    return AwsIotNetwork_SetMqttReceiveCallback( _networkConnection,
+                                                 &_mqttConnection,
+                                                 AwsIotMqtt_ReceiveCallback ) == AWS_IOT_NETWORK_SUCCESS;
 }
 
 /*-----------------------------------------------------------*/
 
 bool AwsIotDefenderInternal_MqttConnect( const char * pThingName,
-                                         uint16_t thingNameLength,
-                                         AwsIotDefenderEventType_t * pEventType )
+                                         uint16_t thingNameLength )
 {
     AwsIotMqttNetIf_t networkInterface = AWS_IOT_MQTT_NETIF_INITIALIZER;
     AwsIotMqttConnectInfo_t connectInfo = AWS_IOT_MQTT_CONNECT_INFO_INITIALIZER;
@@ -155,28 +149,17 @@ bool AwsIotDefenderInternal_MqttConnect( const char * pThingName,
     connectInfo.pClientIdentifier = pThingName;
     connectInfo.clientIdentifierLength = thingNameLength;
 
-    if( AwsIotMqtt_Connect(
-            &_mqttConnection,
-            &networkInterface,
-            &connectInfo,
-            NULL,
-            _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_CONNECT_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS )
-    {
-        connectSuccessful = true;
-    }
-    else
-    {
-        *pEventType = AWS_IOT_DEFENDER_MQTT_CONNECTION_FAILED;
-    }
-
-    return connectSuccessful;
+    return AwsIotMqtt_Connect( &_mqttConnection,
+                               &networkInterface,
+                               &connectInfo,
+                               NULL,
+                               _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_CONNECT_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS;
 }
 
 /*-----------------------------------------------------------*/
 
 bool AwsIotDefenderInternal_MqttSubscribe( AwsIotMqttCallbackInfo_t acceptCallback,
-                                           AwsIotMqttCallbackInfo_t rejectCallback,
-                                           AwsIotDefenderEventType_t * pEventType )
+                                           AwsIotMqttCallbackInfo_t rejectCallback )
 {
     bool subscribeSuccessful = false;
 
@@ -195,27 +178,17 @@ bool AwsIotDefenderInternal_MqttSubscribe( AwsIotMqttCallbackInfo_t acceptCallba
     subscriptions[ 1 ].callback.function = rejectCallback.function;
     subscriptions[ 1 ].callback.param1 = rejectCallback.param1;
 
-    if( AwsIotMqtt_TimedSubscribe( _mqttConnection,
-                                   subscriptions,
-                                   2,
-                                   0,
-                                   _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_SUBSCRIBE_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS )
-    {
-        subscribeSuccessful = true;
-    }
-    else
-    {
-        *pEventType = AWS_IOT_DEFENDER_MQTT_SUBSCRIPTION_FAILED;
-    }
-
-    return subscribeSuccessful;
+    return AwsIotMqtt_TimedSubscribe( _mqttConnection,
+                                      subscriptions,
+                                      2,
+                                      0,
+                                      _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_SUBSCRIBE_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS;
 }
 
 /*-----------------------------------------------------------*/
 
 bool AwsIotDefenderInternal_MqttPublish( uint8_t * pData,
-                                         size_t dataLength,
-                                         AwsIotDefenderEventType_t * pEventType )
+                                         size_t dataLength )
 {
     bool publishSuccessful = false;
 
@@ -227,19 +200,10 @@ bool AwsIotDefenderInternal_MqttPublish( uint8_t * pData,
     publishInfo.pPayload = pData;
     publishInfo.payloadLength = dataLength;
 
-    if( AwsIotMqtt_TimedPublish( _mqttConnection,
-                                 &publishInfo,
-                                 0,
-                                 _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_PUBLISH_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS )
-    {
-        publishSuccessful = true;
-    }
-    else
-    {
-        *pEventType = AWS_IOT_DEFENDER_MQTT_PUBLISH_FAILED;
-    }
-
-    return publishSuccessful;
+    return AwsIotMqtt_TimedPublish( _mqttConnection,
+                                    &publishInfo,
+                                    0,
+                                    _defenderToMilliseconds( AWS_IOT_DEFENDER_MQTT_PUBLISH_TIMEOUT_SECONDS ) ) == AWS_IOT_MQTT_SUCCESS;
 }
 
 /*-----------------------------------------------------------*/

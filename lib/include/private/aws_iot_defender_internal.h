@@ -82,38 +82,38 @@
 #if AWS_IOT_STATIC_MEMORY_ONLY == 1
     #include "platform/aws_iot_static_memory.h"
 
-    /**
-     * @brief Allocate an array of uint8_t. This function should have the same
-     * signature as [malloc]
-     * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/malloc.html).
-     */
+/**
+ * @brief Allocate an array of uint8_t. This function should have the same
+ * signature as [malloc]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/malloc.html).
+ */
     #ifndef AwsIotDefender_MallocReport
         #define AwsIotDefender_MallocReport    AwsIot_MallocDefenderReport
     #endif
 
-    /**
-     * @brief Free an array of uint8_t. This function should have the same
-     * signature as [free]
-     * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/free.html).
-     */
+/**
+ * @brief Free an array of uint8_t. This function should have the same
+ * signature as [free]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/free.html).
+ */
     #ifndef AwsIotDefender_FreeReport
         #define AwsIotDefender_FreeReport    AwsIot_FreeDefenderReport
     #endif
 
-    /**
-     * @brief Allocate an array of char. This function should have the same
-     * signature as [malloc]
-     * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/malloc.html).
-     */
+/**
+ * @brief Allocate an array of char. This function should have the same
+ * signature as [malloc]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/malloc.html).
+ */
     #ifndef AwsIotDefender_MallocTopic
         #define AwsIotDefender_MallocTopic    AwsIot_MallocDefenderTopic
     #endif
 
-    /**
-     * @brief Free an array of char. This function should have the same
-     * signature as [free]
-     * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/free.html).
-     */
+/**
+ * @brief Free an array of char. This function should have the same
+ * signature as [free]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/free.html).
+ */
     #ifndef AwsIotDefender_FreeTopic
         #define AwsIotDefender_FreeTopic    AwsIot_FreeDefenderTopic
     #endif
@@ -259,16 +259,6 @@
 
 
 /**
- * Structure to hold a metrics report.
- */
-typedef struct _defenderReport
-{
-    AwsIotSerializerEncoderObject_t object; /* Encoder object handle. */
-    uint8_t * pDataBuffer;                  /* Raw data buffer to be published with MQTT. */
-    size_t size;                            /* Raw data size. */
-} _defenderReport_t;
-
-/**
  * Structure to hold the metrics.
  */
 typedef struct _defenderMetrics
@@ -298,13 +288,22 @@ typedef struct _defenderMetricsCallbackInfo
 /**
  * Create a report, memory is allocated inside the function.
  */
-bool AwsIotDefenderInternal_CreateReport( _defenderReport_t * pReport,
-                                          AwsIotDefenderEventType_t * pEventType );
+AwsIotDefenderEventType_t AwsIotDefenderInternal_CreateReport();
+
+/**
+ * Get the buffer pointer of report.
+ */
+uint8_t * AwsIotDefenderInternal_GetReportBuffer();
+
+/**
+ * Get the buffer size of report.
+ */
+size_t AwsIotDefenderInternal_GetReportBufferSize();
 
 /**
  * Delete a report when it is useless. Internally, memory will be freed.
  */
-void AwsIotDefenderInternal_DeleteReport( _defenderReport_t * report );
+void AwsIotDefenderInternal_DeleteReport();
 
 void * AwsIotDefenderInternal_TcpConnectionsCallback( void * param1,
                                                       AwsIotList_t * pTcpConnectionsMetricsList );
@@ -312,9 +311,8 @@ void * AwsIotDefenderInternal_TcpConnectionsCallback( void * param1,
 /**
  * Build three topics names used by defender library.
  */
-bool AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
-                                              uint16_t thingNameLength,
-                                              AwsIotDefenderError_t * error );
+AwsIotDefenderError_t AwsIotDefenderInternal_BuildTopicsNames( const char * pThingName,
+                                                               uint16_t thingNameLength );
 
 /**
  * Free the memory of three topics names.
@@ -337,22 +335,19 @@ bool AwsIotDefenderInternal_SetMqttCallback();
  * Connect to AWS with MQTT.
  */
 bool AwsIotDefenderInternal_MqttConnect( const char * pThingName,
-                                         uint16_t thingNameLength,
-                                         AwsIotDefenderEventType_t * pEventType );
+                                         uint16_t thingNameLength );
 
 /**
  * Subscribe accept/reject defender topics.
  */
 bool AwsIotDefenderInternal_MqttSubscribe( AwsIotMqttCallbackInfo_t acceptCallback,
-                                           AwsIotMqttCallbackInfo_t rejectCallback,
-                                           AwsIotDefenderEventType_t * pEventType );
+                                           AwsIotMqttCallbackInfo_t rejectCallback );
 
 /**
  * Publish metrics data to defender topic.
  */
 bool AwsIotDefenderInternal_MqttPublish( uint8_t * pData,
-                                         size_t dataLength,
-                                         AwsIotDefenderEventType_t * pEventType );
+                                         size_t dataLength );
 
 /**
  * Disconnect with AWS MQTT.
