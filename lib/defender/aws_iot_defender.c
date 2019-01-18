@@ -173,7 +173,7 @@ AwsIotDefenderError_t AwsIotDefender_Start( AwsIotDefenderStartInfo_t * pStartIn
         else
         {
             /* TODO: this is a hack, set MQTT callback is needed to close network properly. */
-            AwsIotDefender_Assert( AwsIotDefenderInternal_SetMqttCallback() );
+            AwsIotDefenderInternal_SetMqttCallback();
 
             /* Clean the network connection. */
             AwsIotDefenderInternal_NetworkClose();

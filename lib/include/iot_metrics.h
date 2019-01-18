@@ -81,7 +81,8 @@ typedef struct IotMetricsTcpConnection
 typedef struct IotMetricsListCallback
 {
     void * param1;
-    void * ( *function )( void * param1, AwsIotList_t * pMetricsList ); /* pMetricsList is guaranteed a valid metrics list. */
+    void ( * function )( void * param1,
+                         AwsIotList_t * pMetricsList );               /* pMetricsList is guaranteed a valid metrics list. */
 } IotMetricsListCallback_t;
 
 /**
@@ -102,6 +103,6 @@ void IotMetrics_RemoveTcpConnection( void * pTcpConnectionHandle );
 /**
  * Use a callback to process a list of TCP connections
  */
-void * IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCallback );
+void IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCallback );
 
 #endif /* ifndef _IOT_METRICS_H_ */

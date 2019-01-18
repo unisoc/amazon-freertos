@@ -53,9 +53,6 @@ static void _defenderTask( void * param );
 static void _defenderCallback( void * param1,
                                AwsIotDefenderCallbackInfo_t * const pCallbackInfo );
 
-/* Helper function to open a new socket on specific port number. */
-static void _listenSocket( uint16_t portNumber );
-
 /* Deserialze the data and print out in more readable way. */
 static void _print( uint8_t * pDataBuffer,
                     size_t dataSize );
@@ -111,26 +108,19 @@ static void _defenderTask( void * param )
 
     AwsIotNetwork_Init();
 
-    /* create a socket in listening state, on port 10000. */
-    _listenSocket( 10000 );
-
     AwsIotLogInfo( "----Device Defender Demo Start----.\r\n" );
 
-    /* provide metrics: all metrics in "tcp connections" group
-     * and all metrics in "listening tcp" group
-     */
+    /* provide metrics: all metrics in "tcp connections" group */
     AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS,
                                AWS_IOT_DEFENDER_METRICS_ALL );
-    AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_LISTENING_TCP,
-                               AWS_IOT_DEFENDER_METRICS_ALL );
 
-    /* set metrics report period to 5 seconds */
-    AwsIotDefender_SetPeriod( 5 );
+    /* set metrics report period to 5 minutes */
+    AwsIotDefender_SetPeriod( 300 );
 
     _startDefender();
 
     /* let it run for 10 seconds */
-    vTaskDelay( pdMS_TO_TICKS( 10000 ) );
+    sleep( pdMS_TO_TICKS( 10000 ) );
 
     /* stop the defender*/
     AwsIotDefender_Stop();
@@ -144,29 +134,10 @@ static void _startDefender()
 {
     const AwsIotDefenderCallback_t callback = { .function = _defenderCallback, .param1 = NULL };
 
-    AwsIotNetworkTlsInfo_t tlsInfo = AWS_IOT_NETWORK_TLS_INFO_INITIALIZER;
-    AwsIotNetworkTlsInfo_t * pTlsInfo = &tlsInfo;
-
-    /* Use the default root CA provided with Amazon FreeRTOS. */
-    tlsInfo.pRootCa = NULL;
-    tlsInfo.rootCaLength = 0;
-
-    /* Set client credentials. */
-    tlsInfo.pClientCert = clientcredentialCLIENT_CERTIFICATE_PEM;
-    tlsInfo.clientCertLength = ( size_t ) clientcredentialCLIENT_CERTIFICATE_LENGTH;
-    tlsInfo.pPrivateKey = clientcredentialCLIENT_PRIVATE_KEY_PEM;
-    tlsInfo.privateKeyLength = ( size_t ) clientcredentialCLIENT_PRIVATE_KEY_LENGTH;
-
-    /* If not connecting over port 443, disable ALPN. */
-    if( clientcredentialMQTT_BROKER_PORT != 443 )
-    {
-        tlsInfo.pAlpnProtos = NULL;
-    }
-
     /* start the defender */
-    const AwsIotDefenderStartInfo_t startInfo =
+    AwsIotDefenderStartInfo_t startInfo =
     {
-        .pTlsInfo        = pTlsInfo,
+        .tlsInfo        = AWS_IOT_NETWORK_TLS_INFO_INITIALIZER,
         .pAwsIotEndpoint = clientcredentialMQTT_BROKER_ENDPOINT,
         .port            = clientcredentialMQTT_BROKER_PORT,
         .pThingName      = clientcredentialIOT_THING_NAME,
@@ -174,30 +145,23 @@ static void _startDefender()
         .callback        = callback
     };
 
+    /* Use the default root CA provided with Amazon FreeRTOS. */
+    startInfo.tlsInfo.pRootCa = NULL;
+    startInfo.tlsInfo.rootCaLength = 0;
+
+    /* Set client credentials. */
+    startInfo.tlsInfo.pClientCert = clientcredentialCLIENT_CERTIFICATE_PEM;
+    startInfo.tlsInfo.clientCertLength = (size_t)clientcredentialCLIENT_CERTIFICATE_LENGTH;
+    startInfo.tlsInfo.pPrivateKey = clientcredentialCLIENT_PRIVATE_KEY_PEM;
+    startInfo.tlsInfo.privateKeyLength = (size_t)clientcredentialCLIENT_PRIVATE_KEY_LENGTH;
+
+    /* If not connecting over port 443, disable ALPN. */
+    if (clientcredentialMQTT_BROKER_PORT != 443)
+    {
+        startInfo.tlsInfo.pAlpnProtos = NULL;
+    }
+
     AwsIotDefender_Start( &startInfo );
-}
-
-/*-----------------------------------------------------------*/
-
-static void _listenSocket( uint16_t portNumber )
-{
-    struct freertos_sockaddr xBindAddress;
-    Socket_t xListeningSocket;
-
-    /* Attempt to open the socket. */
-    xListeningSocket = FreeRTOS_socket( PF_INET,
-                                        SOCK_STREAM, /* SOCK_STREAM for TCP. */
-                                        IPPROTO_TCP );
-
-    xBindAddress.sin_port = portNumber;
-    xBindAddress.sin_port = FreeRTOS_htons( xBindAddress.sin_port );
-
-    /* Bind the socket to the port that the client RTOS task will send to. */
-    FreeRTOS_bind( xListeningSocket, &xBindAddress, sizeof( xBindAddress ) );
-
-    /* Set the socket into a listening state so it can accept connections.
-     * The maximum number of simultaneous connections is limited to 20. */
-    FreeRTOS_listen( xListeningSocket, 10 );
 }
 
 /*-----------------------------------------------------------*/
@@ -205,7 +169,7 @@ static void _listenSocket( uint16_t portNumber )
 static void _print( uint8_t * pDataBuffer,
                     size_t dataSize )
 {
-    #if ( AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR )
+    #if AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR
         CborParser cborParser;
         CborValue cborValue;
 
@@ -218,5 +182,8 @@ static void _print( uint8_t * pDataBuffer,
 
         /* output to standard out */
         cbor_value_to_pretty( stdout, &cborValue );
+        AwsIotLogInfo("\r\n");
+    #elif AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_JSON
+        AwsIotLogInfo( "%.*s\r\n", dataSize, pDataBuffer );
     #endif /* if ( AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR ) */
 }

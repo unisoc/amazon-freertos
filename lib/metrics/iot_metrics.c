@@ -89,7 +89,7 @@ void IotMetrics_RemoveTcpConnection( void * pTcpConnectionHandle )
 
 /*-----------------------------------------------------------*/
 
-void * IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCallback )
+void IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCallback )
 {
     /* If no callback function is provided, simply return. */
     if( tcpConnectionsCallback.function == NULL )
@@ -100,9 +100,7 @@ void * IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnections
     AwsIotMutex_Lock( &_connectionsList.mutex );
 
     /* Execute the callback function. */
-    void * pResult = tcpConnectionsCallback.function( tcpConnectionsCallback.param1, &_connectionsList );
+    tcpConnectionsCallback.function( tcpConnectionsCallback.param1, &_connectionsList );
 
     AwsIotMutex_Unlock( &_connectionsList.mutex );
-
-    return pResult;
 }

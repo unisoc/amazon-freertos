@@ -248,14 +248,7 @@
  * Convert seconds to milliseconds and vice versa.
  */
 #define _defenderToMilliseconds( secondValue )    ( secondValue ) * 1000
-#define _defenderToSeconds( millisecondValue )    ( millisecondValue ) / 1000
-
-/**
- * Determine if serialization succeeds based on whether ignoring "small buffer" error.
- */
-#define _defenderSerializeSuccess( serializerError, ignoreTooSmallBuffer )                                                           \
-    ( ignoreTooSmallBuffer ? serializerError == AWS_IOT_SERIALIZER_SUCCESS || serializerError == AWS_IOT_SERIALIZER_BUFFER_TOO_SMALL \
-      : serializerError == AWS_IOT_SERIALIZER_SUCCESS )                                                                              \
+#define _defenderToSeconds( millisecondValue )    ( millisecondValue ) / 1000                                                                            \
 
 
 /**
@@ -275,15 +268,6 @@ typedef struct _defenderMetrics
      */
     AwsIotMutex_t mutex;
 } _defenderMetrics_t;
-
-/**
- * Callback parameters passed into IotMetricsListCallback_t.
- */
-typedef struct _defenderMetricsCallbackInfo
-{
-    bool ignoreTooSmallBuffer;
-    AwsIotSerializerEncoderObject_t * pEncoderObject;
-} _defenderMetricsCallbackInfo_t;
 
 /**
  * Create a report, memory is allocated inside the function.

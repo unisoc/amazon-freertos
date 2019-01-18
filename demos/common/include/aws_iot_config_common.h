@@ -63,9 +63,10 @@
 #define AWS_IOT_SEMAPHORE_TYPE    sem_t
 
 /* Standard library function overrides. */
-#define AwsIotLogging_Puts( str )           configPRINTF( ( "%s\n", str ) )
-#define AwsIotQueue_Assert( expression )    configASSERT( expression )
-#define AwsIotMqtt_Assert( expression )     configASSERT( expression )
+#define AwsIotLogging_Puts( str )              configPRINTF( ( "%s\n", str ) )
+#define AwsIotQueue_Assert( expression )       configASSERT( expression )
+#define AwsIotMqtt_Assert( expression )        configASSERT( expression )
+#define AwsIotDefender_Assert( expression )    configASSERT( expression )
 
 /* Control the usage of dynamic memory allocation. */
 #ifndef AWS_IOT_STATIC_MEMORY_ONLY
@@ -174,7 +175,9 @@
 #define AWS_IOT_DEFENDER_FORMAT                     AWS_IOT_DEFENDER_FORMAT_CBOR
 /* Use long tag better readability while short tag will save network cost. */
 #define AWS_IOT_DEFENDER_USE_LONG_TAG               1
-/* Test mode of defender allows short period. */
-#define _DEFENDER_TEST_MODE                         true
+
+#ifndef AWS_IOT_DEFENDER_ENABLE_ASSERTS
+    #define AWS_IOT_DEFENDER_ENABLE_ASSERTS         ( 1 )
+#endif
 
 #endif /* ifndef _AWS_IOT_CONFIG_COMMON_H_ */
