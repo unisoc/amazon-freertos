@@ -340,7 +340,7 @@ static void freeMetricsData()
 {
     if( _metricsFlagSnapshot[ AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS ] )
     {
-        vPortFree( _metrics.tcpConns.pArray );
+        AwsIotMetrics_FreeTcpConnection( _metrics.tcpConns.pArray );
         _metrics.tcpConns.pArray = NULL;
         _metrics.tcpConns.count = 0;
     }
@@ -368,7 +368,7 @@ static void tcpConnectionsCallback( void * param1,
     if( total > 0 )
     {
         /* Allocate memory to copy TCP connections metrics data. */
-        _metrics.tcpConns.pArray = pvPortMalloc( total * sizeof( IotMetricsTcpConnection_t ) );
+        _metrics.tcpConns.pArray = AwsIotMetrics_MallocTcpConnection( total * sizeof( IotMetricsTcpConnection_t ) );
 
         if( _metrics.tcpConns.pArray != NULL )
         {

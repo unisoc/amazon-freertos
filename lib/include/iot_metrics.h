@@ -46,6 +46,44 @@
     #define IotMetrics_Assert( expression )
 #endif
 
+/*
+ * Provide default values for undefined memory allocation functions based on
+ * the usage of dynamic memory allocation.
+ */
+#if AWS_IOT_STATIC_MEMORY_ONLY == 1
+    #include "platform/aws_iot_static_memory.h"
+
+/**
+ * @brief Allocate an array of uint8_t. This function should have the same
+ * signature as [malloc]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/malloc.html).
+ */
+    #ifndef AwsIotMetrics_MallocTcpConnection
+        #define AwsIotMetrics_MallocTcpConnection    AwsIot_MallocMetricsTcpConnection
+    #endif
+
+/**
+ * @brief Free an array of uint8_t. This function should have the same
+ * signature as [free]
+ * (http://pubs.opengroup.org/onlinepubs/9699919799/functions/free.html).
+ */
+    #ifndef AwsIotMetrics_FreeTcpConnection
+        #define AwsIotMetrics_FreeTcpConnection    AwsIot_FreeMetricsTcpConnection
+    #endif
+
+#else /* if AWS_IOT_STATIC_MEMORY_ONLY */
+    #include <stdlib.h>
+
+    #ifndef AwsIotMetrics_MallocTcpConnection
+        #define AwsIotMetrics_MallocTcpConnection    malloc
+    #endif
+
+    #ifndef AwsIotMetrics_FreeTcpConnection
+        #define AwsIotMetrics_FreeTcpConnection    free
+    #endif
+
+#endif /* if AWS_IOT_STATIC_MEMORY_ONLY */
+
 /**
  * @page Metrics_constants Constants
  * @brief Defined constants of the Metrics library.
@@ -82,7 +120,7 @@ typedef struct IotMetricsListCallback
 {
     void * param1;
     void ( * function )( void * param1,
-                         AwsIotList_t * pMetricsList );               /* pMetricsList is guaranteed a valid metrics list. */
+                         AwsIotList_t * pMetricsList ); /* pMetricsList is guaranteed a valid metrics list. */
 } IotMetricsListCallback_t;
 
 /**

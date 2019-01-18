@@ -48,7 +48,7 @@ void IotMetrics_AddTcpConnection( IotMetricsTcpConnection_t * pTcpConnection )
     /* Only add if it doesn't exist. */
     if( pFoundConnection == NULL )
     {
-        IotMetricsTcpConnection_t * pNewTcpConnection = pvPortMalloc( sizeof( IotMetricsTcpConnection_t ) );
+        IotMetricsTcpConnection_t * pNewTcpConnection = AwsIotMetrics_MallocTcpConnection( sizeof( IotMetricsTcpConnection_t ) );
 
         if( pNewTcpConnection != NULL )
         {
@@ -81,7 +81,7 @@ void IotMetrics_RemoveTcpConnection( void * pTcpConnectionHandle )
     if( pFoundConnection != NULL )
     {
         AwsIotList_Remove( &_connectionsList, &( pFoundConnection->link ), IOT_METRICS_TCP_CONNECTION_OFFSET );
-        vPortFree( pFoundConnection );
+        AwsIotMetrics_FreeTcpConnection( pFoundConnection );
     }
 
     AwsIotMutex_Unlock( &_connectionsList.mutex );
