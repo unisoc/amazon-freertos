@@ -289,9 +289,6 @@ size_t AwsIotDefenderInternal_GetReportBufferSize();
  */
 void AwsIotDefenderInternal_DeleteReport();
 
-void * AwsIotDefenderInternal_TcpConnectionsCallback( void * param1,
-                                                      AwsIotList_t * pTcpConnectionsMetricsList );
-
 /**
  * Build three topics names used by defender library.
  */

@@ -94,7 +94,7 @@ void IotMetrics_ProcessTcpConnections( IotMetricsListCallback_t tcpConnectionsCa
     /* If no callback function is provided, simply return. */
     if( tcpConnectionsCallback.function == NULL )
     {
-        return NULL;
+        return;
     }
 
     AwsIotMutex_Lock( &_connectionsList.mutex );

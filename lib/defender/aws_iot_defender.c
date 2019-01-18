@@ -454,8 +454,7 @@ static void _metricsPublishTimerExpirationRoutine( void * pArgument )
             {
                 /* Step 4: subscribe to accept/reject MQTT topics. */
                 if( AwsIotDefenderInternal_MqttSubscribe( acceptCallbackInfo,
-                                                          rejectCallbackInfo,
-                                                          &eventType ) )
+                                                          rejectCallbackInfo ) )
                 {
                     /* Step 5: create serialized metrics report. */
                     eventType = AwsIotDefenderInternal_CreateReport();
@@ -572,6 +571,8 @@ void _acceptCallback( void * pArgument,
 void _rejectCallback( void * pArgument,
                       AwsIotMqttCallbackParam_t * const pPublish )
 {
+    ( void ) pArgument;
+
     AwsIotLogError( "Metrics report was rejected by defender service." );
 
     /* In rejected case, report and MQTT message must exist. */

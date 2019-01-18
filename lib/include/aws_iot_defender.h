@@ -84,7 +84,7 @@
  * @anchor DefenderMetricsFlags
  * @name Metrics Flags
  *
- * @brief Bit flags or metrics used by @ref AwsIotDefender_SetMetrics function.
+ * @brief Bit flags or metrics used by @ref Defender_function_SetMetrics function.
  */
 /**@{ */
 #define AWS_IOT_DEFENDER_METRICS_ALL                                        0xffffffff /**< Flag to indicate including all metrics. */
@@ -106,7 +106,7 @@
 #define AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED                                                                          \
     ( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_CONNECTIONS | AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_TOTAL ) \
 
-/**@} end of MetricsFlags */
+/**@} */
 
 /**
  * @anchor DefenderInitializers
@@ -115,7 +115,7 @@
  * @brief Intializers of data handles.
  */
 /**@{ */
-#define AWS_IOT_DEFENDER_START_INFO_INITIALIZER    { 0 }
+#define AWS_IOT_DEFENDER_START_INFO_INITIALIZER    { 0 } /**< Initializer of #AwsIotDefenderCallbackInfo_t. */
 /**@} */
 
 /**
@@ -248,6 +248,7 @@ typedef struct AwsIotDefenderStartInfo
  * * If metricsGroup is invalid, #AWS_IOT_DEFENDER_INVALID_INPUT is returned.
  * @note This function is thread safe.
  */
+
 /* @[declare_defender_setmetrics] */
 AwsIotDefenderError_t AwsIotDefender_SetMetrics( AwsIotDefenderMetricsGroup_t metricsGroup,
                                                  uint32_t metrics );
@@ -301,7 +302,7 @@ AwsIotDefenderError_t AwsIotDefender_SetMetrics( AwsIotDefenderMetricsGroup_t me
  *
  *     // define parameters of AwsIotDefender_Start function
  *     const AwsIotDefenderStartInfo_t startInfo = {
- *           .pTlsInfo = &tlsInfo,
+ *           .tlsInfo = tlsInfo,                                    // copy TLS info
  *           .pAwsIotEndpoint = "iot endpoint",
  *           .port = 8883,
  *           .pThingName = "some thing name",

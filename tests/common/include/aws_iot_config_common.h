@@ -102,12 +102,18 @@
     #define AwsIotMqtt_FreeSubscription        vPortFree
     #define AwsIotMqtt_MallocTimerEvent        pvPortMalloc
     #define AwsIotMqtt_FreeTimerEvent          vPortFree
+
     #define AwsIotShadow_MallocOperation       pvPortMalloc
     #define AwsIotShadow_FreeOperation         vPortFree
     #define AwsIotShadow_MallocString          pvPortMalloc
     #define AwsIotShadow_FreeString            vPortFree
     #define AwsIotShadow_MallocSubscription    pvPortMalloc
     #define AwsIotShadow_FreeSubscription      vPortFree
+
+    #define AwsIotDefender_MallocReport        pvPortMalloc
+    #define AwsIotDefender_FreeReport          vPortFree
+    #define AwsIotDefender_MallocTopic         pvPortMalloc
+    #define AwsIotDefender_FreeTopic           vPortFree
 #endif /* if AWS_IOT_STATIC_MEMORY_ONLY == 0 */
 
 /* Settings required to build the libraries for testing. */
@@ -116,6 +122,7 @@
 #define AWS_IOT_MQTT_ENABLE_SERIALIZER_OVERRIDES    ( 1 )
 #define AWS_IOT_MQTT_TEST                           ( 1 )
 #define AWS_IOT_SHADOW_ENABLE_ASSERTS               ( 1 )
+#define AWS_IOT_METRICS_ENABLE_ASSERTS              ( 1 )
 
 /* Static memory configuration. */
 #if AWS_IOT_STATIC_MEMORY_ONLY == 1
@@ -188,10 +195,9 @@
 #define AWS_IOT_TEST_SHADOW_THING_NAME     clientcredentialIOT_THING_NAME
 
 /* Set format to CBOR */
+#define AWS_IOT_DEFENDER_ENABLE_ASSERTS    ( 1 )
 #define AWS_IOT_DEFENDER_FORMAT            AWS_IOT_DEFENDER_FORMAT_CBOR
 /* Use long tag better readability while short tag will save network cost. */
-#define AWS_IOT_DEFENDER_USE_LONG_TAG      1
-/* Test mode of defender allows short period. */
-#define _DEFENDER_TEST_MODE                true
+#define AWS_IOT_DEFENDER_USE_LONG_TAG      ( 1 )
 
 #endif /* ifndef _AWS_IOT_CONFIG_COMMON_H_ */

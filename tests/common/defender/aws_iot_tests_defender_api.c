@@ -36,10 +36,18 @@
 
 #include "aws_iot_serializer.h"
 
+/* Time interval to wait for a state to be true. */
 #define _WAIT_STATE_INTERVAL_SECONDS          1
 
+/* Total time to wait for a state to be true. */
+#define _WAIT_STATE_TOTAL_SECONDS             5
+
+/* Time interval for defender agent to publish metrics. It will be throttled if too frequent.
+ * TODO: add "retry on throttle logic"
+ */
 #define _DEFENDER_PUBLISH_INTERVAL_SECONDS    8
 
+/* Define a decoder based on chosen format. */
 #if AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR
 
     #define _Decoder    _AwsIotSerializerCborDecoder /**< Global defined in aws_iot_serializer.h . */
@@ -50,16 +58,11 @@
 
 #endif
 
-#define _WAIT_TIME_SECONDS             5
-
 #define _CALLBACK_PARAM_INITIALIZER    { 0 }
 
 static const AwsIotDefenderCallback_t _EMPTY_CALLBACK = { .function = NULL, .param1 = NULL };
 
-typedef struct _testCallbackParam
-{
-    uint32_t metricsFlag[ _DEFENDER_METRICS_GROUP_COUNT ];
-} _testCallbackParam_t;
+/*------------------ global variables -----------------------------*/
 
 static AwsIotDefenderCallback_t _testCallback;
 
@@ -68,14 +71,12 @@ static AwsIotDefenderStartInfo_t _startInfo = AWS_IOT_DEFENDER_START_INFO_INITIA
 static bool _reportAccepted;
 static bool _reportRejected;
 
-static bool _defenderStarted;
+/*------------------ functions -----------------------------*/
 
-static void _verifyCallbackFunction( void * param1,
-                                     AwsIotDefenderCallbackInfo_t * const pCallbackInfo );
+static bool _waitForMetricsAcceptedWithRetry( uint32_t timeoutSec );
 
-/* Wait a state to be true for certain timeout. Return true if the wait succeeds. */
-static bool _waitForState( bool * pState,
-                           uint32_t timeoutSec );
+/* Indicate this test doesn't actually publish report. */
+static void _publishMetricsNotNeeded();
 
 static void _verifyAcceptedMessage( AwsIotDefenderCallbackInfo_t * const pCallbackInfo );
 
@@ -83,8 +84,8 @@ static void _verifyMetricsReport( AwsIotDefenderCallbackInfo_t * const pCallback
 
 static void _verifyTcpConections( AwsIotSerializerDecoderObject_t * pMetricsObject );
 
-/* Indicate this test doesn't actually publish report. */
-static void _publishMetricsNotNeeded();
+static void _verifyCallbackFunction( void * param1,
+                                     AwsIotDefenderCallbackInfo_t * const pCallbackInfo );
 
 TEST_GROUP( Full_DEFENDER_API );
 
@@ -137,25 +138,103 @@ TEST_TEAR_DOWN( Full_DEFENDER_API )
 
 TEST_GROUP_RUNNER( Full_DEFENDER_API )
 {
-    /* These tests do not require any network connectivity. */
+    /*
+     * Setup: none
+     * Action: call Start API with invliad IoT endpoint
+     * Expectation: Start API returns network connection failure
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, Start_with_wrong_network_information );
 
-    RUN_TEST_CASE( Full_DEFENDER_API, Stop_should_return_err_when_not_started );
-
+    /*
+     * Setup: defender not started yet
+     * Action: call SetMetrics API with an invalid big integer as metrics group
+     * Expectation:
+     * - SetMetrics API return invalid input
+     * - global metrics flag array are untouched
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, SetMetrics_with_invalid_metrics_group );
+
+    /*
+     * Setup: defender not started yet
+     * Action: call SetMetrics API with Tcp connections group and "All Metrics" flag value
+     * Expectation:
+     * - SetMetrics API return success
+     * - global metrics flag array are updated correctly
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, SetMetrics_with_TCP_connections_all );
 
-    /* These tests do not publish metrics report. */
+    /*
+     * Setup: defender not started yet
+     * Action: call SetPeriod API with small value less than 300
+     * Expectation:
+     * - SetPeriod API return "period too short" error
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, SetPeriod_too_short );
 
+    /*
+     * Setup: defender not started yet
+     * Action: call SetPeriod API with 301
+     * Expectation:
+     * - SetPeriod API return success
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, SetPeriod_with_proper_value );
+
+    /*
+     * Setup: kept from publishing metrics report
+     * Action: call Start API with correct network information
+     * Expectation: Start API return success
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Start_should_return_success );
+
+    /*
+     * Setup: call Start API the first time; kept from publishing metrics report
+     * Action: call Start API second time
+     * Expectation: Start API return "already started" error
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Start_should_return_err_if_already_started );
 
-    RUN_TEST_CASE( Full_DEFENDER_API, Stop_should_return_success_when_started );
-
-    /* This tests that the agent successfully reports to the service */
+    /*
+     * Setup: not set any metrics; register test callback
+     * Action: call Start API
+     * Expectation: metrics are accepted by defender service
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Metrics_empty_are_published );
+
+    /*
+     * Setup: set "tcp connections" with "all metrics"; register test callback
+     * Action: call Start API
+     * Expectation:
+     * - metrics are accepted by defender service
+     * - verify metrics report has correct content
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Metrics_TCP_connections_all_are_published );
+
+    /*
+     * Setup: set "tcp connections" with "total count"; register test callback
+     * Action: call Start API
+     * Expectation:
+     * - metrics are accepted by defender service
+     * - verify metrics report has correct content
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Metrics_TCP_connections_total_are_published );
+
+    /*
+     * Setup: set "tcp connections" with "remote address"; register test callback
+     * Action: call Start API
+     * Expectation:
+     * - metrics are accepted by defender service
+     * - verify metrics report has correct content
+     */
     RUN_TEST_CASE( Full_DEFENDER_API, Metrics_TCP_connections_remote_addr_are_published );
+
+    /*
+     * Setup: set "tcp connections" with "total count"; register test callback; call Start API
+     * Action: call Stop API; set "tcp connections" with "all metrics"; call Start again
+     * Expectation:
+     * - metrics are accepted by defender service in both times
+     * - verify metrics report has correct content respectively in both times
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, Restart_and_updated_metrics_are_published );
 }
 
 TEST( Full_DEFENDER_API, SetMetrics_with_invalid_metrics_group )
@@ -185,6 +264,16 @@ TEST( Full_DEFENDER_API, SetMetrics_with_TCP_connections_all )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_METRICS_ALL, _AwsIotDefenderMetrics.metricsFlag[ AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS ] );
 }
 
+TEST( Full_DEFENDER_API, Start_with_wrong_network_information )
+{
+    /* Given a dummy IoT endpoint to fail network connection. */
+    _startInfo.pAwsIotEndpoint = "dummy endpoint";
+
+    AwsIotDefenderError_t error = AwsIotDefender_Start( &_startInfo );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_CONNECTION_FAILURE, error );
+}
+
 TEST( Full_DEFENDER_API, Start_should_return_success )
 {
     _publishMetricsNotNeeded();
@@ -208,26 +297,6 @@ TEST( Full_DEFENDER_API, Start_should_return_err_if_already_started )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_ALREADY_STARTED, error );
 }
 
-TEST( Full_DEFENDER_API, Stop_should_return_success_when_started )
-{
-    _publishMetricsNotNeeded();
-
-    AwsIotDefenderError_t error = AwsIotDefender_Start( &_startInfo );
-
-    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
-
-    error = AwsIotDefender_Stop();
-
-    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
-}
-
-TEST( Full_DEFENDER_API, Stop_should_return_err_when_not_started )
-{
-    AwsIotDefenderError_t error = AwsIotDefender_Stop();
-
-    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_NOT_STARTED, error );
-}
-
 TEST( Full_DEFENDER_API, Metrics_empty_are_published )
 {
     AwsIotDefenderError_t error;
@@ -241,7 +310,7 @@ TEST( Full_DEFENDER_API, Metrics_empty_are_published )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
 
     /* Wait certain time for _reportAccepted to be true. */
-    TEST_ASSERT_TRUE( _waitForState( &_reportAccepted, _WAIT_TIME_SECONDS ) );
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
 }
 
 TEST( Full_DEFENDER_API, Metrics_TCP_connections_all_are_published )
@@ -263,14 +332,14 @@ TEST( Full_DEFENDER_API, Metrics_TCP_connections_all_are_published )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
 
     /* Wait certain time for _reportAccepted to be true. */
-    TEST_ASSERT_TRUE( _waitForState( &_reportAccepted, _WAIT_TIME_SECONDS ) );
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
 }
 
 TEST( Full_DEFENDER_API, Metrics_TCP_connections_total_are_published )
 {
     AwsIotDefenderError_t error;
 
-    /* Set "all metrics" for TCP connections metrics group. */
+    /* Set "total count" for TCP connections metrics group. */
     error = AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS,
                                        AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_TOTAL );
 
@@ -285,14 +354,14 @@ TEST( Full_DEFENDER_API, Metrics_TCP_connections_total_are_published )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
 
     /* Wait certain time for _reportAccepted to be true. */
-    TEST_ASSERT_TRUE( _waitForState( &_reportAccepted, _WAIT_TIME_SECONDS ) );
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
 }
 
 TEST( Full_DEFENDER_API, Metrics_TCP_connections_remote_addr_are_published )
 {
     AwsIotDefenderError_t error;
 
-    /* Set "all metrics" for TCP connections metrics group. */
+    /* Set "remote address" for TCP connections metrics group. */
     error = AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS,
                                        AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_REMOTE_ADDR );
 
@@ -307,7 +376,46 @@ TEST( Full_DEFENDER_API, Metrics_TCP_connections_remote_addr_are_published )
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
 
     /* Wait certain time for _reportAccepted to be true. */
-    TEST_ASSERT_TRUE( _waitForState( &_reportAccepted, _WAIT_TIME_SECONDS ) );
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
+}
+
+TEST( Full_DEFENDER_API, Restart_and_updated_metrics_are_published )
+{
+    /* Set "total count" for TCP connections metrics group. */
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS,
+                       AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS, AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_TOTAL ) );
+
+    /* Set test callback to verify report. */
+    _startInfo.callback = _testCallback;
+
+    /* Start defender. */
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_Start( &_startInfo ) );
+
+    /* Wait certain time for _reportAccepted to be true. */
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
+
+    AwsIotDefender_Stop();
+
+    sleep( _DEFENDER_PUBLISH_INTERVAL_SECONDS );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS,
+                       AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS, AWS_IOT_DEFENDER_METRICS_ALL ) );
+
+    /* Restart defender. */
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_Start( &_startInfo ) );
+
+    /* Wait certain time for _reportAccepted to be true. */
+    _waitForMetricsAcceptedWithRetry( _WAIT_STATE_TOTAL_SECONDS );
+}
+
+TEST( Full_DEFENDER_API, SetPeriod_too_short )
+{
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_PERIOD_TOO_SHORT, AwsIotDefender_SetPeriod( 299 ) );
+}
+
+TEST( Full_DEFENDER_API, SetPeriod_with_proper_value )
+{
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_SetPeriod( 301 ) );
 }
 
 /*-----------------------------------------------------------*/
@@ -338,20 +446,34 @@ static void _publishMetricsNotNeeded()
 
 /*-----------------------------------------------------------*/
 
-static bool _waitForState( bool * pState,
-                           uint32_t timeoutSec )
+static bool _waitForMetricsAcceptedWithRetry( uint32_t timeoutSec )
 {
     uint32_t totalTime = 0;
+    uint8_t retry = 0;
 
-    while( !( *pState ) )
+    while( !_reportAccepted )
     {
         if( totalTime >= timeoutSec )
         {
             return false;
         }
 
-        totalTime += _WAIT_STATE_INTERVAL_SECONDS;
-        sleep( _WAIT_STATE_INTERVAL_SECONDS );
+        /* TODO: only retry if it is throttle. */
+        if( _reportRejected )
+        {
+            retry++;
+            /* Restart defender agent. */
+            AwsIotDefender_Stop();
+            TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_Start( &_startInfo ) );
+
+            totalTime = 0;
+            sleep( _DEFENDER_PUBLISH_INTERVAL_SECONDS * retry );
+        }
+        else
+        {
+            totalTime += _WAIT_STATE_INTERVAL_SECONDS;
+            sleep( _WAIT_STATE_INTERVAL_SECONDS );
+        }
     }
 
     return true;
@@ -385,20 +507,6 @@ static void _verifyAcceptedMessage( AwsIotDefenderCallbackInfo_t * const pCallba
     TEST_ASSERT_EQUAL( AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING, statusObject.type );
 
     TEST_ASSERT_EQUAL( 0, strcmp( statusObject.value.pString, "ACCEPTED" ) );
-
-    /*AwsIotSerializerDecoderObject_t thingNameObject = AWS_IOT_SERIALIZER_DECODER_INITIALIZER;
-     *
-     *  char thingName[10] = "";
-     *  thingNameObject.value.pString = (uint8_t *)thingName;
-     *  thingNameObject.value.stringLength = 10;
-     *
-     *  error = _Decoder.find(&decoderObject, "status", &statusObject);
-     *
-     *  TEST_ASSERT_EQUAL(AWS_IOT_SERIALIZER_SUCCESS, error);
-     *
-     *  TEST_ASSERT_EQUAL(AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING, statusObject.type);
-     *
-     *  TEST_ASSERT_EQUAL(0, strcmp(statusObject.value.pString, clientcredentialIOT_THING_NAME));*/
 }
 
 /*-----------------------------------------------------------*/

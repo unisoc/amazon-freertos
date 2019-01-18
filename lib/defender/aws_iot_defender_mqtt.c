@@ -53,17 +53,17 @@ AwsIotDefenderError_t AwsIotDefenderInternal_BuildTopicsNames( const char * pThi
 {
     AwsIotDefenderError_t returnedError = AWS_IOT_DEFENDER_SUCCESS;
 
-    /* calculate topics lengths. */
+    /* Calculate topics lengths. Plus one for string terminator. */
     size_t publishTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_PUBLISH ) + 1;
     size_t acceptTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_ACCEPTED ) + 1;
     size_t rejectTopicLength = strlen( _TOPIC_PREFIX ) + thingNameLength + strlen( _TOPIC_SUFFIX_REJECTED ) + 1;
 
-    /* allocate memory for each of them. */
+    /* Allocate memory for each of them. */
     char * pPublishTopic = AwsIotDefender_MallocTopic( publishTopicLength * sizeof( char ) );
     char * pAcceptTopic = AwsIotDefender_MallocTopic( acceptTopicLength * sizeof( char ) );
     char * pRejectTopic = AwsIotDefender_MallocTopic( rejectTopicLength * sizeof( char ) );
 
-    /* free memory if any allocation failed */
+    /* Free memory if any allocation failed. */
     if( ( pPublishTopic == NULL ) || ( pAcceptTopic == NULL ) || ( pRejectTopic == NULL ) )
     {
         /* Null pointer is safe for "free" function. */

@@ -80,11 +80,9 @@ static _metrics_t _metrics = { 0 };
 /* Define a "snapshot" global array of metrics flag. */
 static uint32_t _metricsFlagSnapshot[ _DEFENDER_METRICS_GROUP_COUNT ];
 
-static AwsIotDefenderEventType_t _error = 0;
-
 static void copyMetricsFlag();
 
-static void getLatestMetricsData();
+static AwsIotDefenderEventType_t getLatestMetricsData();
 
 static void freeMetricsData();
 
@@ -138,6 +136,8 @@ AwsIotDefenderEventType_t AwsIotDefenderInternal_CreateReport()
     /* Assert report buffer is not allocated. */
     AwsIotDefender_Assert( _report.pDataBuffer == NULL && _report.size == 0 );
 
+    AwsIotDefenderEventType_t eventError = 0;
+
     AwsIotSerializerEncoderObject_t * pEncoderObject = &( _report.object );
     size_t dataSize = 0;
     uint8_t * pReportBuffer = NULL;
@@ -146,9 +146,9 @@ AwsIotDefenderEventType_t AwsIotDefenderInternal_CreateReport()
     copyMetricsFlag();
 
     /* Get latest metrics data. */
-    getLatestMetricsData();
+    eventError = getLatestMetricsData();
 
-    if( !_error )
+    if( !eventError )
     {
         /* Dry-run serialization to calculate the required size. */
         _serialize();
@@ -172,14 +172,14 @@ AwsIotDefenderEventType_t AwsIotDefenderInternal_CreateReport()
         }
         else
         {
-            _error = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
+            eventError = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
         }
+
+        /* Metrics data can be freed. */
+        freeMetricsData();
     }
 
-    /* Metrics data is not useful now. */
-    freeMetricsData();
-
-    return _error;
+    return eventError;
 }
 
 /*-----------------------------------------------------------*/
@@ -200,8 +200,6 @@ void AwsIotDefenderInternal_DeleteReport()
     _metrics = ( _metrics_t ) {
         0
     };
-
-    _error = 0;
 }
 
 /*
@@ -317,18 +315,23 @@ static void copyMetricsFlag()
 
 /*-----------------------------------------------------------*/
 
-static void getLatestMetricsData()
+static AwsIotDefenderEventType_t getLatestMetricsData()
 {
+    AwsIotDefenderEventType_t eventError = 0;
+
     /* Get TCP connections metrics data. */
     if( _metricsFlagSnapshot[ AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS ] )
     {
         IotMetricsListCallback_t tcpConnectionscallback;
 
+
         tcpConnectionscallback.function = tcpConnectionsCallback;
-        tcpConnectionscallback.param1 = NULL;
+        tcpConnectionscallback.param1 = ( void * ) &eventError;
 
         IotMetrics_ProcessTcpConnections( tcpConnectionscallback );
     }
+
+    return eventError;
 }
 
 /*-----------------------------------------------------------*/
@@ -348,7 +351,7 @@ static void freeMetricsData()
 static void tcpConnectionsCallback( void * param1,
                                     AwsIotList_t * pTcpConnectionsMetricsList )
 {
-    ( void ) param1;
+    AwsIotDefenderEventType_t * pEventError = ( AwsIotDefenderEventType_t * ) param1;
 
     uint8_t total = 0;
     AwsIotLink_t * pConnectionLink = pTcpConnectionsMetricsList->pHead;
@@ -382,7 +385,7 @@ static void tcpConnectionsCallback( void * param1,
         }
         else
         {
-            _error = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
+            *pEventError = AWS_IOT_DEFENDER_EVENT_NO_MEMORY;
         }
     }
 }
