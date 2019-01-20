@@ -28,29 +28,28 @@
  * It updates metrics of sockets in relevant socket functions.
  */
 
+/* Define _SECURE_SOCKETS_WRAPPER_NOT_REDEFINE to prevent secure sockets functions
+ * from redefining in aws_secure_sockets_wrapper_metrics.h */
+#define _SECURE_SOCKETS_WRAPPER_NOT_REDEFINE
+
 /* Secure Sockets includes. */
 #include "aws_secure_sockets.h"
-#include "aws_secure_sockets_internal.h"
 
 /* Metrics includes. */
 #include "iot_metrics.h"
 
-/*-----------------------------------------------------------*/
+#undef _SECURE_SOCKETS_WRAPPER_NOT_REDEFINE
 
-int32_t SOCKETS_Close( Socket_t xSocket )
-{
-    return SocketsInternal_Close( xSocket );
-}
+#ifdef AWS_IOT_SECURE_SOCKETS_METRICS_ENABLED
 
 /*-----------------------------------------------------------*/
 
-int32_t SOCKETS_Connect( Socket_t xSocket,
-                         SocketsSockaddr_t * pxAddress,
-                         Socklen_t xAddressLength )
-{
-    int32_t result = SocketsInternal_Connect( xSocket, pxAddress, xAddressLength );
+    int32_t Sockets_MetricsConnect( Socket_t xSocket,
+                                    SocketsSockaddr_t * pxAddress,
+                                    Socklen_t xAddressLength )
+    {
+        int32_t result = SOCKETS_Connect( xSocket, pxAddress, xAddressLength );
 
-    #if IOT_METRICS_ENABLED == 1
         if( result == SOCKETS_ERROR_NONE )
         {
             IotMetricsTcpConnection_t connection;
@@ -67,80 +66,23 @@ int32_t SOCKETS_Connect( Socket_t xSocket,
 
             IotMetrics_AddTcpConnection( &connection );
         }
-    #endif /* if IOT_METRICS_ENABLED == 1 */
 
-    return result;
-}
+        return result;
+    }
+
 /*-----------------------------------------------------------*/
 
-uint32_t SOCKETS_GetHostByName( const char * pcHostName )
-{
-    return SocketsInternal_GetHostByName( pcHostName );
-}
-/*-----------------------------------------------------------*/
+    int32_t Sockets_MetricsShutdown( Socket_t xSocket,
+                                     uint32_t ulHow )
+    {
+        int32_t result = SOCKETS_Shutdown( xSocket, ulHow );
 
-int32_t SOCKETS_Recv( Socket_t xSocket,
-                      void * pvBuffer,
-                      size_t xBufferLength,
-                      uint32_t ulFlags )
-{
-    return SocketsInternal_Recv( xSocket, pvBuffer, xBufferLength, ulFlags );
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Send( Socket_t xSocket,
-                      const void * pvBuffer,
-                      size_t xDataLength,
-                      uint32_t ulFlags )
-{
-    return SocketsInternal_Send( xSocket, pvBuffer, xDataLength, ulFlags );
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
-                            int32_t lLevel,
-                            int32_t lOptionName,
-                            const void * pvOptionValue,
-                            size_t xOptionLength )
-{
-    return SocketsInternal_SetSockOpt( xSocket, lLevel, lOptionName, pvOptionValue, xOptionLength );
-}
-/*-----------------------------------------------------------*/
-
-int32_t SOCKETS_Shutdown( Socket_t xSocket,
-                          uint32_t ulHow )
-{
-    int32_t result = SocketsInternal_Shutdown( xSocket, ulHow );
-
-    #if IOT_METRICS_ENABLED == 1
         if( result == SOCKETS_ERROR_NONE )
         {
             IotMetrics_RemoveTcpConnection( ( void * ) xSocket );
         }
-    #endif
 
-    return result;
-}
-/*-----------------------------------------------------------*/
+        return result;
+    }
 
-Socket_t SOCKETS_Socket( int32_t lDomain,
-                         int32_t lType,
-                         int32_t lProtocol )
-{
-    return SocketsInternal_Socket( lDomain, lType, lProtocol );
-}
-
-/*-----------------------------------------------------------*/
-
-BaseType_t SOCKETS_Init( void )
-{
-    #if IOT_METRICS_ENABLED == 1
-        /* Return fail if metrics init fails. */
-        if( IotMetrics_Init() == pdFAIL )
-        {
-            return pdFAIL;
-        }
-    #endif
-
-    return SocketsInternal_Init();
-}
+#endif /* ifdef AWS_IOT_SECURE_SOCKETS_METRICS_ENABLED */

@@ -136,8 +136,6 @@ bool AwsIotDefenderInternal_MqttConnect( const char * pThingName,
     AwsIotMqttNetIf_t networkInterface = AWS_IOT_MQTT_NETIF_INITIALIZER;
     AwsIotMqttConnectInfo_t connectInfo = AWS_IOT_MQTT_CONNECT_INFO_INITIALIZER;
 
-    bool connectSuccessful = false;
-
     networkInterface.pDisconnectContext = ( void * ) _networkConnection;
     networkInterface.pSendContext = ( void * ) _networkConnection;
     networkInterface.disconnect = AwsIotNetwork_CloseConnection;
@@ -161,8 +159,6 @@ bool AwsIotDefenderInternal_MqttConnect( const char * pThingName,
 bool AwsIotDefenderInternal_MqttSubscribe( AwsIotMqttCallbackInfo_t acceptCallback,
                                            AwsIotMqttCallbackInfo_t rejectCallback )
 {
-    bool subscribeSuccessful = false;
-
     /* subscribe to two topics: accept and reject. */
     AwsIotMqttSubscription_t subscriptions[ 2 ] = { AWS_IOT_MQTT_SUBSCRIPTION_INITIALIZER };
 
@@ -190,8 +186,6 @@ bool AwsIotDefenderInternal_MqttSubscribe( AwsIotMqttCallbackInfo_t acceptCallba
 bool AwsIotDefenderInternal_MqttPublish( uint8_t * pData,
                                          size_t dataLength )
 {
-    bool publishSuccessful = false;
-
     AwsIotMqttPublishInfo_t publishInfo = AWS_IOT_MQTT_PUBLISH_INFO_INITIALIZER;
 
     publishInfo.QoS = 0;

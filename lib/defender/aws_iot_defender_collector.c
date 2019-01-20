@@ -405,7 +405,9 @@ static void _serializeTcpConnections( AwsIotSerializerEncoderObject_t * pMetrics
     uint32_t tcpConnFlag = _AwsIotDefenderMetrics.metricsFlag[ AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS ];
 
     uint8_t hasEstablishedConnections = ( tcpConnFlag & AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED ) > 0;
-    uint8_t hasConnections = ( tcpConnFlag & AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_CONNECTIONS ) > 0;
+    /* Whether "connections" should show up is not only determined by user input, but also if there is at least 1 connection. */
+    uint8_t hasConnections = ( tcpConnFlag & AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_CONNECTIONS ) > 0 &&
+                             ( _metrics.tcpConns.count > 0 );
     uint8_t hasTotal = ( tcpConnFlag & AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_TOTAL ) > 0;
     uint8_t hasRemoteAddr = ( tcpConnFlag & AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS_ESTABLISHED_REMOTE_ADDR ) > 0;
 
@@ -425,7 +427,7 @@ static void _serializeTcpConnections( AwsIotSerializerEncoderObject_t * pMetrics
     /* if user specify any metrics under "established_connections" */
     if( hasEstablishedConnections )
     {
-        /* create map "established_connections" under "tcp_connections". */
+        /* Create the "established_connections" map with "total" and/or "connections". */
         serializerError = _AwsIotDefenderEncoder.openContainerWithKey( &tcpConnectionMap,
                                                                        _EST_CONN_TAG,
                                                                        &establishedMap,
@@ -433,7 +435,7 @@ static void _serializeTcpConnections( AwsIotSerializerEncoderObject_t * pMetrics
         assertNoError( serializerError );
 
         /* if user specify any metrics under "connections" and there are at least one connection */
-        if( hasConnections && ( _metrics.tcpConns.count > 0 ) )
+        if( hasConnections )
         {
             AwsIotDefender_Assert( _metrics.tcpConns.pArray != NULL );
 

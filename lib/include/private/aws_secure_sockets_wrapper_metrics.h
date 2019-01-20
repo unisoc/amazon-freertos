@@ -1,6 +1,6 @@
 /*
  * Amazon FreeRTOS System Initialization
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,34 +22,21 @@
  * http://aws.amazon.com/freertos
  * http://www.FreeRTOS.org
  */
-#include "FreeRTOS.h"
-#include "aws_system_init.h"
 
-/* Library code. */
-extern BaseType_t MQTT_AGENT_Init( void );
-extern BaseType_t SOCKETS_Init( void );
-extern BaseType_t IotMetrics_Init( void );
+#ifndef _AWS_SECURE_SOCKETS_WRAPPER_METRICS_
+#define _AWS_SECURE_SOCKETS_WRAPPER_METRICS_
 
-/*-----------------------------------------------------------*/
+/* This file redefines Secure Sockets functions to be called through a wrapper macro,
+ * but only if metrics is enabled explicitly. */
+#ifdef AWS_IOT_SECURE_SOCKETS_METRICS_ENABLED
 
-/**
- * @brief Initializes Amazon FreeRTOS libraries.
- */
-BaseType_t SYSTEM_Init()
-{
-    BaseType_t xResult = pdPASS;
+/* This macro is included in aws_secure_socket.c and aws_secure_socket_wrapper_metrics.c.
+It will prevent the redefine in those source files. */
+    #ifndef _SECURE_SOCKETS_WRAPPER_NOT_REDEFINE
+        #define SOCKETS_Connect     Sockets_MetricsConnect
+        #define SOCKETS_Shutdown    Sockets_MetricsShutdown
+    #endif
 
-    xResult = MQTT_AGENT_Init();
+#endif
 
-    if( xResult == pdPASS )
-    {
-        xResult = SOCKETS_Init();
-    }
-
-    if( xResult == pdPASS )
-    {
-        xResult = IotMetrics_Init();
-    }
-
-    return xResult;
-}
+#endif /* ifndef _AWS_SECURE_SOCKETS_WRAPPER_METRICS_ */
