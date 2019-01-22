@@ -164,6 +164,15 @@ TEST_GROUP_RUNNER( Full_DEFENDER_API )
     RUN_TEST_CASE( Full_DEFENDER_API, SetMetrics_with_TCP_connections_all );
 
     /*
+     * Setup: defender is started
+     * Action: call SetMetrics API with Tcp connections group and "All Metrics" flag value
+     * Expectation:
+     * - SetMetrics API return success
+     * - global metrics flag array are updated correctly
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, SetMetrics_after_defender_started );
+
+    /*
      * Setup: defender not started yet
      * Action: call SetPeriod API with small value less than 300
      * Expectation:
@@ -178,6 +187,14 @@ TEST_GROUP_RUNNER( Full_DEFENDER_API )
      * - SetPeriod API return success
      */
     RUN_TEST_CASE( Full_DEFENDER_API, SetPeriod_with_proper_value );
+
+    /*
+     * Setup: defender is started
+     * Action: call SetPeriod API with 600
+     * Expectation:
+     * - SetPeriod API return success
+     */
+    RUN_TEST_CASE( Full_DEFENDER_API, SetPeriod_after_started );
 
     /*
      * Setup: kept from publishing metrics report
@@ -258,6 +275,23 @@ TEST( Full_DEFENDER_API, SetMetrics_with_TCP_connections_all )
     /* Set "all metrics" for TCP connections metrics group. */
     AwsIotDefenderError_t error = AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS,
                                                              AWS_IOT_DEFENDER_METRICS_ALL );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_METRICS_ALL, _AwsIotDefenderMetrics.metricsFlag[ AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS ] );
+}
+
+TEST( Full_DEFENDER_API, SetMetrics_after_defender_started )
+{
+    _publishMetricsNotNeeded();
+
+    AwsIotDefenderError_t error = AwsIotDefender_Start( &_startInfo );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
+
+    /* Set "all metrics" for TCP connections metrics group. */
+    error = AwsIotDefender_SetMetrics( AWS_IOT_DEFENDER_METRICS_TCP_CONNECTIONS,
+                                       AWS_IOT_DEFENDER_METRICS_ALL );
 
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, error );
 
@@ -416,6 +450,20 @@ TEST( Full_DEFENDER_API, SetPeriod_too_short )
 TEST( Full_DEFENDER_API, SetPeriod_with_proper_value )
 {
     TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_SetPeriod( 301 ) );
+
+    TEST_ASSERT_EQUAL( 301, AwsIotDefender_GetPeriod() );
+}
+
+TEST( Full_DEFENDER_API, SetPeriod_after_started )
+{
+    _publishMetricsNotNeeded();
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS,
+                       AwsIotDefender_Start( &_startInfo ) );
+
+    TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_SetPeriod( 600 ) );
+
+    TEST_ASSERT_EQUAL( 600, AwsIotDefender_GetPeriod() );
 }
 
 /*-----------------------------------------------------------*/
@@ -450,6 +498,9 @@ static bool _waitForMetricsAcceptedWithRetry( uint32_t timeoutSec )
 {
     uint32_t totalTime = 0;
     uint8_t retry = 0;
+    uint32_t localMetricsFlag[ _DEFENDER_METRICS_GROUP_COUNT ];
+
+    /*_AwsIotDefenderMetrics.metricsFlag */
 
     while( !_reportAccepted )
     {
@@ -462,8 +513,12 @@ static bool _waitForMetricsAcceptedWithRetry( uint32_t timeoutSec )
         if( _reportRejected )
         {
             retry++;
+
+            memcpy( localMetricsFlag, _AwsIotDefenderMetrics.metricsFlag, sizeof( localMetricsFlag ) );
             /* Restart defender agent. */
             AwsIotDefender_Stop();
+            memcpy( _AwsIotDefenderMetrics.metricsFlag, localMetricsFlag, sizeof( localMetricsFlag ) );
+
             TEST_ASSERT_EQUAL( AWS_IOT_DEFENDER_SUCCESS, AwsIotDefender_Start( &_startInfo ) );
 
             totalTime = 0;
