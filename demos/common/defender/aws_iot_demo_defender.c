@@ -40,9 +40,8 @@
 /* Defender includes. */
 #include "aws_iot_defender.h"
 
-/* FreeRTOS+TCP includes. */
-#include "FreeRTOS_Sockets.h"
-#include "FreeRTOS_IP.h"
+/* POSIX sleep include. */
+#include "FreeRTOS_POSIX/unistd.h"
 
 /* Cbor includes. */
 #include "cbor.h"
@@ -54,7 +53,7 @@ static void _defenderCallback( void * param1,
                                AwsIotDefenderCallbackInfo_t * const pCallbackInfo );
 
 /* Deserialze the data and print out in more readable way. */
-static void _print( uint8_t * pDataBuffer,
+static void _print( const uint8_t * pDataBuffer,
                     size_t dataSize );
 
 static void _startDefender();
@@ -76,6 +75,8 @@ void vStartDefenderDemo( void )
 void _defenderCallback( void * param1,
                         AwsIotDefenderCallbackInfo_t * const pCallbackInfo )
 {
+    ( void ) param1;
+
     AwsIotLogInfo( "User's callback is invoked on event %d.", pCallbackInfo->eventType );
 
     /* Print out the sent metrics report if there is. */
@@ -119,8 +120,8 @@ static void _defenderTask( void * param )
 
     _startDefender();
 
-    /* let it run for 10 seconds */
-    sleep( pdMS_TO_TICKS( 10000 ) );
+    /* let it run for 3 seconds */
+    sleep( 3 );
 
     /* stop the defender*/
     AwsIotDefender_Stop();
@@ -137,7 +138,7 @@ static void _startDefender()
     /* start the defender */
     AwsIotDefenderStartInfo_t startInfo =
     {
-        .tlsInfo        = AWS_IOT_NETWORK_TLS_INFO_INITIALIZER,
+        .tlsInfo         = AWS_IOT_NETWORK_TLS_INFO_INITIALIZER,
         .pAwsIotEndpoint = clientcredentialMQTT_BROKER_ENDPOINT,
         .port            = clientcredentialMQTT_BROKER_PORT,
         .pThingName      = clientcredentialIOT_THING_NAME,
@@ -151,12 +152,12 @@ static void _startDefender()
 
     /* Set client credentials. */
     startInfo.tlsInfo.pClientCert = clientcredentialCLIENT_CERTIFICATE_PEM;
-    startInfo.tlsInfo.clientCertLength = (size_t)clientcredentialCLIENT_CERTIFICATE_LENGTH;
+    startInfo.tlsInfo.clientCertLength = ( size_t ) clientcredentialCLIENT_CERTIFICATE_LENGTH;
     startInfo.tlsInfo.pPrivateKey = clientcredentialCLIENT_PRIVATE_KEY_PEM;
-    startInfo.tlsInfo.privateKeyLength = (size_t)clientcredentialCLIENT_PRIVATE_KEY_LENGTH;
+    startInfo.tlsInfo.privateKeyLength = ( size_t ) clientcredentialCLIENT_PRIVATE_KEY_LENGTH;
 
     /* If not connecting over port 443, disable ALPN. */
-    if (clientcredentialMQTT_BROKER_PORT != 443)
+    if( clientcredentialMQTT_BROKER_PORT != 443 )
     {
         startInfo.tlsInfo.pAlpnProtos = NULL;
     }
@@ -166,7 +167,7 @@ static void _startDefender()
 
 /*-----------------------------------------------------------*/
 
-static void _print( uint8_t * pDataBuffer,
+static void _print( const uint8_t * pDataBuffer,
                     size_t dataSize )
 {
     #if AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR
@@ -182,7 +183,7 @@ static void _print( uint8_t * pDataBuffer,
 
         /* output to standard out */
         cbor_value_to_pretty( stdout, &cborValue );
-        AwsIotLogInfo("\r\n");
+        AwsIotLogInfo( "\r\n" );
     #elif AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_JSON
         AwsIotLogInfo( "%.*s\r\n", dataSize, pDataBuffer );
     #endif /* if ( AWS_IOT_DEFENDER_FORMAT == AWS_IOT_DEFENDER_FORMAT_CBOR ) */

@@ -336,7 +336,8 @@ AwsIotDefenderError_t AwsIotDefender_SetPeriod( uint64_t periodSeconds )
 
         if( _started )
         {
-            if( AwsIotClock_TimerArm( &_metricsPublishTimer, _DEFENDER_SHORT_RELATIVE_MILLISECONDS, _periodMilliSecond ) )
+            /* Re-arm metrics timer to new period. */
+            if( AwsIotClock_TimerArm( &_metricsPublishTimer, _periodMilliSecond, _periodMilliSecond ) )
             {
                 defenderError = AWS_IOT_DEFENDER_SUCCESS;
                 AwsIotLogInfo( "Period has been updated to %d seconds successfully.", periodSeconds );
