@@ -28,8 +28,8 @@
  * @brief BLE GAP and GATT API.
  */
 
-#ifndef _AWS_BLE_H_
-#define _AWS_BLE_H_
+#ifndef _IOT_BLE_H_
+#define _IOT_BLE_H_
 
 #include <stddef.h>
 #include "bt_hal_manager_adapter_ble.h"
@@ -492,4 +492,4 @@ BTStatus_t IotBle_On( void );
  */
 BTStatus_t IotBle_Off( void );
 
-#endif /* _AWS_BLE_H_*/
+#endif /* _IOT_BLE_H_*/

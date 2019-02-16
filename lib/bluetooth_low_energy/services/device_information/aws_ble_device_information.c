@@ -51,24 +51,24 @@ static DeviceInfoService_t xService =
     .usCCFGVal    = { 0 }
 };
 
-#define deviceInfoCHAR_VERSION_UUID_TYPE \
+#define IOT_BLE_DEVICE_INFO_VERSION_UUID_TYPE \
 { \
-    .uu.uu128 = deviceInfoCHAR_VERSION_UUID,\
+    .uu.uu128 = IOT_BLE_DEVICE_INFO_VERSION_UUID,\
     .ucType   = eBTuuidType128 \
 }
-#define deviceInfoBROKER_ENDPOINT_UUID_TYPE \
+#define IOT_BLE_DEVICE_INFO_BROKER_ENDPOINT_UUID_TYPE \
 {  \
-    .uu.uu128 = deviceInfoBROKER_ENDPOINT_UUID,\
+    .uu.uu128 = IOT_BLE_DEVICE_INFO_BROKER_ENDPOINT_UUID,\
     .ucType  = eBTuuidType128\
 }
-#define deviceInfoCLIENT_CHAR_CFG_UUID_TYPE \
+#define IOT_BLE_DEVICE_INFO_CLIENT_CHAR_CFG_UUID_TYPE \
 {\
-    .uu.uu16 = deviceInfoCLIENT_CHAR_CFG_UUID,\
+    .uu.uu16 = IOT_BLE_DEVICE_INFO_CLIENT_CHAR_CFG_UUID,\
     .ucType  = eBTuuidType16\
 }
-#define deviceInfoCHAR_MTU_UUID_TYPE \
+#define IOT_BLE_DEVICE_INFO_CHAR_MTU_UUID_TYPE \
 {\
-    .uu.uu128 = deviceInfoCHAR_MTU_UUID,\
+    .uu.uu128 = IOT_BLE_DEVICE_INFO_CHAR_MTU_UUID,\
     .ucType  = eBTuuidType128\
 }
 /**
@@ -102,7 +102,7 @@ static const BTAttribute_t pxAttributeTable[] = {
          .xAttributeType = eBTDbCharacteristic,
          .xCharacteristic = 
          {
-              .xUuid = deviceInfoCHAR_VERSION_UUID_TYPE,
+              .xUuid = IOT_BLE_DEVICE_INFO_VERSION_UUID_TYPE,
               .xPermissions = ( IOT_BLE_CHAR_READ_PERM ),
               .xProperties = ( eBTPropRead )
           }
@@ -111,7 +111,7 @@ static const BTAttribute_t pxAttributeTable[] = {
          .xAttributeType = eBTDbCharacteristic,
          .xCharacteristic = 
          {
-              .xUuid = deviceInfoBROKER_ENDPOINT_UUID_TYPE,
+              .xUuid = IOT_BLE_DEVICE_INFO_BROKER_ENDPOINT_UUID_TYPE,
               .xPermissions = ( IOT_BLE_CHAR_READ_PERM ),
               .xProperties = ( eBTPropRead )
           }
@@ -120,7 +120,7 @@ static const BTAttribute_t pxAttributeTable[] = {
          .xAttributeType = eBTDbCharacteristic,
          .xCharacteristic = 
          {
-              .xUuid = deviceInfoCHAR_MTU_UUID_TYPE,
+              .xUuid = IOT_BLE_DEVICE_INFO_CHAR_MTU_UUID_TYPE,
               .xPermissions = ( IOT_BLE_CHAR_READ_PERM ),
               .xProperties = ( eBTPropRead | eBTPropNotify )
           }
@@ -129,7 +129,7 @@ static const BTAttribute_t pxAttributeTable[] = {
          .xAttributeType = eBTDbDescriptor,
          .xCharacteristicDescr =
          {
-             .xUuid = deviceInfoCLIENT_CHAR_CFG_UUID_TYPE,
+             .xUuid = IOT_BLE_DEVICE_INFO_CLIENT_CHAR_CFG_UUID_TYPE,
              .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM )
           }
      }
@@ -164,7 +164,7 @@ void vDeviceInfoCCFGCallback( IotBleAttributeEvent_t * pEventParam );
  * @param[in] pEventParam Write/Read request param to the attribute
  *
  */
-void vDeviceInfoMTUCharCallback( IotBleAttributeEvent_t * pEventParam );
+void vIOT_BLE_DEVICE_INFO_MTUCharCallback( IotBleAttributeEvent_t * pEventParam );
 
 /**
  * @brief Callback invoked when GATT client reads Broker Endpoint Characteristic
@@ -222,7 +222,7 @@ static const IotBleAttributeEventCallback_t pxCallBackArray[bledeviceinfoATTR_NU
   NULL,
   vDeviceInfoVersionCharCallback,
   vDeviceInfoBrokerEndpointCharCallback,
-  vDeviceInfoMTUCharCallback,
+  vIOT_BLE_DEVICE_INFO_MTUCharCallback,
   vDeviceInfoCCFGCallback
 };
 
@@ -277,7 +277,7 @@ void vDeviceInfoCCFGCallback( IotBleAttributeEvent_t * pEventParam )
         xResp.pAttrData->handle = pxWriteParam->attrHandle;
         if( pxWriteParam->length == 2 )
         {
-            xService.usCCFGVal[ eDeviceInfoMtuCharDescr ] = ( pxWriteParam->pValue[ 1 ] << 8 ) | pxWriteParam->pValue[ 0 ];
+            xService.usCCFGVal[ IOT_BLE_DEVICE_INFO_MTU_CHARDescr ] = ( pxWriteParam->pValue[ 1 ] << 8 ) | pxWriteParam->pValue[ 0 ];
             xResp.eventStatus = eBTStatusSuccess;
         }
 
@@ -293,7 +293,7 @@ void vDeviceInfoCCFGCallback( IotBleAttributeEvent_t * pEventParam )
     {
         xResp.eventStatus = eBTStatusSuccess;
         xResp.pAttrData->handle = pEventParam->pParamRead->attrHandle;
-        xResp.pAttrData->pData = ( uint8_t * ) &xService.usCCFGVal[ eDeviceInfoMtuCharDescr ];
+        xResp.pAttrData->pData = ( uint8_t * ) &xService.usCCFGVal[ IOT_BLE_DEVICE_INFO_MTU_CHARDescr ];
         xResp.pAttrData->size = 2;
         xResp.attrDataOffset = 0;
         IotBle_SendResponse( &xResp, pEventParam->pParamRead->connId, pEventParam->pParamRead->transId );
@@ -389,14 +389,14 @@ void vDeviceInfoVersionCharCallback( IotBleAttributeEvent_t * pEventParam )
 
 /*-----------------------------------------------------------*/
 
-void vDeviceInfoMTUCharCallback( IotBleAttributeEvent_t * pEventParam )
+void vIOT_BLE_DEVICE_INFO_MTUCharCallback( IotBleAttributeEvent_t * pEventParam )
 {
     IotBleAttributeData_t xAttrData = { 0 };
     IotBleEventResponse_t xResp;
-    char cMTUMsg[ deviceInfoMTU_MSG_LEN + 1 ] = { 0 };
+    char cMTUMsg[ IOT_BLE_DEVICE_INFO_MTU_MSG_LEN + 1 ] = { 0 };
     uint32_t ulSendLen;
 
-    ulSendLen = snprintf( cMTUMsg, deviceInfoMTU_MSG_LEN, deviceInfoMTU_MSG_FORMAT, xService.usBLEMtu );
+    ulSendLen = snprintf( cMTUMsg, IOT_BLE_DEVICE_INFO_MTU_MSG_LEN, IOT_BLE_DEVICE_INFO_MTU_MSG_FORMAT, xService.usBLEMtu );
     xResp.pAttrData = &xAttrData;
     xResp.rspErrorStatus = eBTRspErrorNone;
     xResp.eventStatus = eBTStatusFail;
@@ -420,13 +420,13 @@ static void vMTUChangedCallback( uint16_t connId,
 {
     IotBleAttributeData_t xAttrData = { 0 };
     IotBleEventResponse_t xResp = { 0 };
-    char cMTUMsg[ deviceInfoMTU_MSG_LEN + 1 ] = { 0 };
+    char cMTUMsg[ IOT_BLE_DEVICE_INFO_MTU_MSG_LEN + 1 ] = { 0 };
     uint32_t ulSendLen;
 
     if( usMtu != xService.usBLEMtu )
     {
         xService.usBLEMtu = usMtu;
-        ulSendLen = snprintf( cMTUMsg, deviceInfoMTU_MSG_LEN, deviceInfoMTU_MSG_FORMAT, usMtu );
+        ulSendLen = snprintf( cMTUMsg, IOT_BLE_DEVICE_INFO_MTU_MSG_LEN, IOT_BLE_DEVICE_INFO_MTU_MSG_FORMAT, usMtu );
 
         xAttrData.handle = xDeviceInformationService.pusHandlesBuffer[bledeviceinfoATTR_CHAR_MTU];
         xAttrData.uuid = xDeviceInformationService.pxBLEAttributes[bledeviceinfoATTR_CHAR_MTU].xCharacteristic.xUuid;

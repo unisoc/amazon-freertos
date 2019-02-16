@@ -25,11 +25,11 @@
 
 
 /**
- * @file aws_ble_device_information.h
+ * @file iot_ble_device_information.h
  * @brief GATT service which exposes Amazon FreeRTOS device information
  */
-#ifndef AWS_BLE_DEVICE_INFORMATION_H_
-#define AWS_BLE_DEVICE_INFORMATION_H_
+#ifndef IOT_BLE_DEVICE_INFORMATION_H_
+#define IOT_BLE_DEVICE_INFORMATION_H_
 
 #include "iot_ble.h"
 #include "iot_ble_config.h"
@@ -38,36 +38,36 @@
 /**
  * @brief Service, characteristic and descriptor UUIDS for Device information Service
  */
-#define deviceInfoCHAR_UUID_BASE          IOT_BLE_DEVICE_INFO_SERVICE_UUID
-#define deviceInfoCHAR_VERSION_UUID       { 0x01, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK }
-#define deviceInfoBROKER_ENDPOINT_UUID    { 0x02, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK }
-#define deviceInfoCHAR_MTU_UUID           { 0x03, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK } 
-#define deviceInfoCLIENT_CHAR_CFG_UUID    0x2902 
+#define IOT_BLE_DEVICE_INFO_CHAR_UUID_BASE          IOT_BLE_DEVICE_INFO_SERVICE_UUID
+#define IOT_BLE_DEVICE_INFO_VERSION_UUID       { 0x01, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK }
+#define IOT_BLE_DEVICE_INFO_BROKER_ENDPOINT_UUID    { 0x02, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK }
+#define IOT_BLE_DEVICE_INFO_CHAR_MTU_UUID           { 0x03, 0xFF, IOT_BLE_DEVICE_INFO_SERVICE_UUID_MASK } 
+#define IOT_BLE_DEVICE_INFO_CLIENT_CHAR_CFG_UUID    0x2902 
 
 /**
  * @brief Number of characteristics, descriptors and included services for Device Information Service
  */
-#define deviceInfoMAX_CHARS               3
-#define deviceInfoMAX_DESCRS              1
-#define deviceInfoMAX_INC_SVCS            0
+#define IOT_BLE_DEVICE_INFO_MAX_CHARS               3
+#define IOT_BLE_DEVICE_INFO_MAX_DESCRS              1
+#define IOT_BLE_DEVICE_INFO_MAX_INC_SVCS            0
 
 /**
  * @brief Characteristics for Device Inforamtion Service.
  */
 typedef enum
 {
-    eDeviceInfoVersionChar = 0,         /**< eDeviceInfoVersionChar Exposes the services version for the device */
-    eDeviceInfoMQTTBrokerEndpointChar, /**< eDeviceInfoMQTTBrokerEndpointChar Exposes the IOT broker endpoint with which the device is provisioned */
-    eDeviceInfoMtuChar,                /**< eDeviceInfoMtuChar Expose the BLE MTU for the device */
-} DeviceInfoCharacteristic_t;
+    IOT_BLE_DEVICE_INFO_VERSION_CHAR = 0,         /**< IOT_BLE_DEVICE_INFO_VERSION_CHAR Exposes the services version for the device */
+    IOT_BLE_DEVICE_INFO_MQTT_BROKER_END_POINT_CHAR, /**< IOT_BLE_DEVICE_INFO_MQTT_BROKER_END_POINT_CHAR Exposes the IOT broker endpoint with which the device is provisioned */
+    IOT_BLE_DEVICE_INFO_MTU_CHAR,                /**< IOT_BLE_DEVICE_INFO_MTU_CHAR Expose the BLE MTU for the device */
+} IotBleDeviceInfoCharacteristic_t;
 
 /**
  * @brief Descriptors for Device Information Service
  */
 typedef enum
 {
-    eDeviceInfoMtuCharDescr = 0, /**< eDeviceInfoMtuCharDescr Client Characteristic configuration descriptor for MTU characteristic */
-} DeviceInfoDescriptor_t;
+    IOT_BLE_DEVICE_INFO_MTU_CHARDescr = 0, /**< IOT_BLE_DEVICE_INFO_MTU_CHARDescr Client Characteristic configuration descriptor for MTU characteristic */
+} IotBleDeviceInfoDescriptor_t;
 
 /**
  *
@@ -75,34 +75,34 @@ typedef enum
  *
  */
 
-#define INT_MAX_WIDTH                  ( 6 )
-#define deviceInfoMTU_WIDTH            ( INT_MAX_WIDTH )
-#define deviceInfoVERSION_WIDTH        ( INT_MAX_WIDTH )
-#define deviceInfoMTU                  "mtu"
-#define deviceInfoVerison              "version"
-#define deviceInfoBROKER_ENDPOIINT     "brokerEndpoint"
+#define IOT_BLE_DEVICE_INFO_INT_MAX_WIDTH                  ( 6 )
+#define IOT_BLE_DEVICE_INFO_MTU_WIDTH            ( IOT_BLE_DEVICE_INFO_INT_MAX_WIDTH )
+#define IOT_BLE_DEVICE_INFO_VERSION_WIDTH        ( IOT_BLE_DEVICE_INFO_INT_MAX_WIDTH )
+#define IOT_BLE_DEVICE_INFO_MTU                  "mtu"
+#define IOT_BLE_DEVICE_INFO_VERSION              "version"
+#define IOT_BLE_DEVICE_INFO_BROKER_ENDPOIINT     "brokerEndpoint"
 
-#define deviceInfoJSON_STR( x )    deviceInfoSTR( x )
-#define deviceInfoSTR( x )         # x
+#define IOT_BLE_DEVICE_INFO_JSON_STR( x )    IOT_BLE_DEVICE_INFO_STR( x )
+#define IOT_BLE_DEVICE_INFO_STR( x )         # x
 
 /**
  * JSON format for serializing the response payloads
  */
-#define deviceInfoMTU_MSG_FORMAT    \
+#define IOT_BLE_DEVICE_INFO_MTU_MSG_FORMAT    \
     "{"                             \
-    deviceInfoJSON_STR( deviceInfoMTU ) ":%d" \
+    IOT_BLE_DEVICE_INFO_JSON_STR( IOT_BLE_DEVICE_INFO_MTU ) ":%d" \
                               "}"
-#define deviceInfoMTU_MSG_LEN               ( sizeof( deviceInfoMTU_MSG_FORMAT ) + deviceInfoMTU_WIDTH )
+#define IOT_BLE_DEVICE_INFO_MTU_MSG_LEN               ( sizeof( IOT_BLE_DEVICE_INFO_MTU_MSG_FORMAT ) + IOT_BLE_DEVICE_INFO_MTU_WIDTH )
 
 #define deviceInfoVERSION_MSG_FORMAT                \
     "{"                                             \
-    deviceInfoJSON_STR( deviceInfoVerison      ) ":\"%.*s\""  \
+    IOT_BLE_DEVICE_INFO_JSON_STR( IOT_BLE_DEVICE_INFO_VERSION      ) ":\"%.*s\""  \
                                      "}"
 #define deviceInfoVERSION_MSG_LEN      ( sizeof( deviceInfoVERSION_MSG_FORMAT ) )
 
 #define deviceInfoBROKERENDPOINT_MSG_FORMAT            \
     "{"                                                \
-    deviceInfoJSON_STR( deviceInfoBROKER_ENDPOIINT ) ":\"%.*s\"" \
+    IOT_BLE_DEVICE_INFO_JSON_STR( IOT_BLE_DEVICE_INFO_BROKER_ENDPOIINT ) ":\"%.*s\"" \
                                            "}"
 #define deviceInfoBROKERENDPOINT_MSG_LEN    ( sizeof( deviceInfoBROKERENDPOINT_MSG_FORMAT ) )
 
@@ -112,7 +112,7 @@ typedef enum
 typedef struct DeviceInfoService
 {
     BTService_t * pxBLEService;
-    uint16_t usCCFGVal[ deviceInfoMAX_DESCRS ];
+    uint16_t usCCFGVal[ IOT_BLE_DEVICE_INFO_MAX_DESCRS ];
     uint16_t usBLEConnId;
     uint16_t usBLEMtu;
 } DeviceInfoService_t;
@@ -125,4 +125,4 @@ typedef struct DeviceInfoService
 extern BaseType_t AFRDeviceInfoSvc_Init( void );
 
 
-#endif /* AWS_BLE_DEVICE_INFORMATION_H_ */
+#endif /* IOT_BLE_DEVICE_INFORMATION_H_ */

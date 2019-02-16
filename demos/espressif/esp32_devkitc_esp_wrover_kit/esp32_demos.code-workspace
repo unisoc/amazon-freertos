@@ -24,7 +24,14 @@
 		},
 		"files.associations": {
 			"freertos.h": "c",
-			"task.h": "c"
+			"task.h": "c",
+			"iot_ble.h": "c",
+			"bt_hal_manager_adapter_ble.h": "c",
+			"bt_hal_manager.h": "c",
+			"stddef.h": "c",
+			"bt_hal_gatt_server.h": "c",
+			"iot_ble_internal.h": "c",
+			"iot_ble_device_information.h": "c"
 		}
 	}
 }
