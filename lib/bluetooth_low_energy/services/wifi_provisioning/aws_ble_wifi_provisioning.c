@@ -1342,7 +1342,7 @@ static void prvSendScanNetwork( WIFIScanResult_t *pScanNetwork )
 {
     IotBleWifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
     uint8_t *pucMessage = NULL;
-    size_t xMessageLen = 0;
+    size_t xMessageLen = 0;v
     AwsIotSerializerError_t xSerializerRet;
 
     xNetworkInfo.pSSID = pScanNetwork->cSSID;
@@ -1358,7 +1358,7 @@ static void prvSendScanNetwork( WIFIScanResult_t *pScanNetwork )
     {
         pucMessage = pvPortMalloc( xMessageLen );
         if( pucMessage != NULL )
-        {
+        {ccc
             xSerializerRet = prxSerializeNetwork( &xNetworkInfo, pucMessage, &xMessageLen );
         }
         else
