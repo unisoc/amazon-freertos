@@ -201,15 +201,15 @@ static bool prbCreateBLEConnection(
         void** ppvConnection )
 {
     bool xStatus = false;
-    AwsIotMqttBLEConnection_t xBLEConnection = AWS_IOT_MQTT_BLE_CONNECTION_INITIALIZER;
+    IotBleMqttConnection_t xBLEConnection = IOT_BLE_MQTT_CONNECTION_INITIALIZER;
 
-    if( AwsIotMqttBLE_CreateConnection( pxMqttConnection, &xBLEConnection ) == pdTRUE )
+    if( IotBleMqtt_CreateConnection( pxMqttConnection, &xBLEConnection ) == pdTRUE )
     {
         AWS_IOT_MQTT_BLE_INIT_SERIALIZER( pxNetworkInterface );
-        pxNetworkInterface->send          = AwsIotMqttBLE_Send;
+        pxNetworkInterface->send          = IotBleMqtt_Send;
         pxNetworkInterface->pSendContext  = ( void * ) xBLEConnection;
         pxNetworkInterface->pDisconnectContext = ( void * ) xBLEConnection;
-        pxNetworkInterface->disconnect = AwsIotMqttBLE_CloseConnection;
+        pxNetworkInterface->disconnect = IotBleMqtt_CloseConnection;
 
         *ppvConnection = ( void* ) xBLEConnection;
         xStatus = true;
@@ -310,8 +310,8 @@ void AwsIotDemo_DeleteNetworkConnection( AwsIotDemoNetworkConnection_t xNetworkC
 #if BLE_ENABLED
         if( pxNetwork->ulType == AWSIOT_NETWORK_TYPE_BLE )
         {
-            AwsIotMqttBLE_CloseConnection( ( AwsIotMqttBLEConnection_t ) pxNetwork->pvConnection );
-            AwsIotMqttBLE_DestroyConnection( ( AwsIotMqttBLEConnection_t ) pxNetwork->pvConnection );
+            IotBleMqtt_CloseConnection( ( IotBleMqttConnection_t ) pxNetwork->pvConnection );
+            IotBleMqtt_DestroyConnection( ( IotBleMqttConnection_t ) pxNetwork->pvConnection );
         }
 #endif
 #if WIFI_ENABLED

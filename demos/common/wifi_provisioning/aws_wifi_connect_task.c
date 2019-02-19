@@ -94,12 +94,12 @@ void prvWiFiConnectTask( void * pvParams )
                             ( xWiFiConnected == pdFALSE );
                     ulNumRetries++ )
             {
-                ulNumNetworks = WIFI_PROVISION_GetNumNetworks();
+                ulNumNetworks = IotBleWifiProv_GetNumNetworks();
                 for( ulNetworkIndex = 0; ulNetworkIndex < ulNumNetworks; ulNetworkIndex++ )
                 {
                     if( WIFI_IsConnected() == pdFALSE )
                     {
-                        xWiFiConnected = WIFI_PROVISION_Connect( ulNetworkIndex );
+                        xWiFiConnected = IotBleWifiProv_Connect( ulNetworkIndex );
                     }
                     else
                     {

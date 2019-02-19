@@ -22,7 +22,7 @@ void vApplicationDaemonTaskStartupHook( void )
 		/* Connect to the BT before running the demos */
 		prvBLEConnect();
 
-		WIFI_PROVISION_Start();
+		IotBleWifiProv_Start();
 
 		/* Connect to the wifi before running the demos */
 		prvWifiConnect();

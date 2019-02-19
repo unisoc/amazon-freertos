@@ -47,64 +47,64 @@
           (  ( !pxSerializerBuf ) && ( ret == AWS_IOT_SERIALIZER_BUFFER_TOO_SMALL ) ) )
 /*---------------------------------------------------------------------------------------------------------*/
 
-static WifiProvService_t xWifiProvService = { 0 };
+static IotBleWifiProvService_t xWifiProvService = { 0 };
 
-#define STORAGE_INDEX( priority )    ( xWifiProvService.usNumNetworks - priority - 1 )
-#define NETWORK_INFO_DEFAULT_PARAMS        { .xStatus = eWiFiSuccess, .cRSSI = wifiProvINVALID_NETWORK_RSSI, .ucConnected = 0, .sSavedIdx = wifiProvINVALID_NETWORK_INDEX }
+#define STORAGE_INDEX( priority )    ( xWifiProvService.numNetworks - priority - 1 )
+#define NETWORK_INFO_DEFAULT_PARAMS        { .status = eWiFiSuccess, .RSSI = IOT_BLE_WIFI_PROV_INVALID_NETWORK_RSSI, .connected = 0, .savedIdx = IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX }
 /*---------------------------------------------------------------------------------------------------------*/
 /**
  * @brief UUID for Device Information Service.
  *
  * This UUID is used in advertisement for the companion apps to discover and connect to the device.
  */
-#define wifiProvLIST_NETWORK_CHAR_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR_UUID_TYPE \
 { \
-    .uu.uu128 = wifiProvLIST_NETWORK_CHAR_UUID,\
+    .uu.uu128 = IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR_UUID,\
     .ucType   = eBTuuidType128\
 }
 
-#define wifiProvSAVE_NETWORK_CHAR_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE \
 { \
-    .uu.uu128 = wifiProvSAVE_NETWORK_CHAR_UUID,\
+    .uu.uu128 = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID,\
     .ucType   = eBTuuidType128\
 }
 
-#define wifiProvEDIT_NETWORK_CHAR_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_EDIT_NETWORK_CHAR_UUID_TYPE \
 { \
-    .uu.uu128 = wifiProvEDIT_NETWORK_CHAR_UUID,\
+    .uu.uu128 = IOT_BLE_WIFI_PROV_EDIT_NETWORK_CHAR_UUID,\
     .ucType   = eBTuuidType128\
 }
 
-#define wifiProvDELETE_NETWORK_CHAR_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_DELETE_NETWORK_CHAR_UUID_TYPE \
 { \
-    .uu.uu128 = wifiProvDELETE_NETWORK_CHAR_UUID,\
+    .uu.uu128 = IOT_BLE_WIFI_PROV_DELETE_NETWORK_CHAR_UUID,\
     .ucType   = eBTuuidType128\
 }
 
-#define wifiProvCLIENT_CHAR_CFG_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_CLIENT_CHAR_CFG_UUID_TYPE \
 { \
-    .uu.uu16 = wifiProvCLIENT_CHAR_CFG_UUID,\
+    .uu.uu16 = IOT_BLE_WIFI_PROV_CLIENT_CHAR_CFG_UUID,\
     .ucType   = eBTuuidType16\
 }
 
 
-#define wifiProvSVC_UUID_TYPE \
+#define IOT_BLE_WIFI_PROV_SVC_UUID_TYPE \
 { \
-    .uu.uu128 = wifiProvSVC_UUID,\
+    .uu.uu128 = IOT_BLE_WIFI_PROV_SVC_UUID,\
     .ucType   = eBTuuidType128\
 }
 
-static uint16_t usHandlesBuffer[eNbAttributes];
+static uint16_t usHandlesBuffer[IOT_BLE_WIFI_PROV_NB_ATTRIBUTES];
 
 static const BTAttribute_t pxAttributeTable[] = {
      {
-         .xServiceUUID =  wifiProvSVC_UUID_TYPE
+         .xServiceUUID =  IOT_BLE_WIFI_PROV_SVC_UUID_TYPE
      },
     {
          .xAttributeType = eBTDbCharacteristic,
          .xCharacteristic =
          {
-              .xUuid = wifiProvLIST_NETWORK_CHAR_UUID_TYPE,
+              .xUuid = IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR_UUID_TYPE,
               .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  ),
               .xProperties = ( eBTPropRead | eBTPropWrite | eBTPropNotify )
           }
@@ -113,7 +113,7 @@ static const BTAttribute_t pxAttributeTable[] = {
          .xAttributeType = eBTDbDescriptor,
          .xCharacteristicDescr =
          {
-             .xUuid = wifiProvSAVE_NETWORK_CHAR_UUID_TYPE,
+             .xUuid = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE,
              .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  )
           }
      },
@@ -121,7 +121,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbCharacteristic,
 		 .xCharacteristic =
 		 {
-			  .xUuid = wifiProvSAVE_NETWORK_CHAR_UUID_TYPE,
+			  .xUuid = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE,
 			  .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  ),
 			  .xProperties = ( eBTPropRead | eBTPropWrite | eBTPropNotify )
 		  }
@@ -130,7 +130,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbDescriptor,
 		 .xCharacteristicDescr =
 		 {
-			 .xUuid = wifiProvSAVE_NETWORK_CHAR_UUID_TYPE,
+			 .xUuid = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE,
 			 .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  )
 		  }
 	 },
@@ -138,7 +138,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbCharacteristic,
 		 .xCharacteristic =
 		 {
-			  .xUuid = wifiProvEDIT_NETWORK_CHAR_UUID_TYPE,
+			  .xUuid = IOT_BLE_WIFI_PROV_EDIT_NETWORK_CHAR_UUID_TYPE,
 			  .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  ),
 			  .xProperties = ( eBTPropRead | eBTPropWrite | eBTPropNotify )
 		  }
@@ -147,7 +147,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbDescriptor,
 		 .xCharacteristicDescr =
 		 {
-			 .xUuid = wifiProvSAVE_NETWORK_CHAR_UUID_TYPE,
+			 .xUuid = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE,
 			 .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  )
 		  }
 	 },
@@ -155,7 +155,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbCharacteristic,
 		 .xCharacteristic =
 		 {
-			  .xUuid = wifiProvDELETE_NETWORK_CHAR_UUID_TYPE,
+			  .xUuid = IOT_BLE_WIFI_PROV_DELETE_NETWORK_CHAR_UUID_TYPE,
 			  .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  ),
 			  .xProperties = ( eBTPropRead | eBTPropWrite | eBTPropNotify )
 		  }
@@ -164,7 +164,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 		 .xAttributeType = eBTDbDescriptor,
 		 .xCharacteristicDescr =
 		 {
-			 .xUuid = wifiProvSAVE_NETWORK_CHAR_UUID_TYPE,
+			 .xUuid = IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR_UUID_TYPE,
 			 .xPermissions = ( IOT_BLE_CHAR_READ_PERM | IOT_BLE_CHAR_WRITE_PERM  )
 		  }
 	 }
@@ -172,7 +172,7 @@ static const BTAttribute_t pxAttributeTable[] = {
 
 static const BTService_t xWIFIProvisionningService =
 {
-  .xNumberOfAttributes = eNbAttributes,
+  .xNumberOfAttributes = IOT_BLE_WIFI_PROV_NB_ATTRIBUTES,
   .ucInstId = 0,
   .xType = eBTServiceTypePrimary,
   .pusHandlesBuffer = usHandlesBuffer,
@@ -188,7 +188,7 @@ static void vCharacteristicCallback( IotBleAttributeEvent_t * pEventParam );
  */
 static void vClientCharCfgDescrCallback( IotBleAttributeEvent_t * pEventParam );
 
-static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, ListNetworkRequest_t* pxListNetworkRequest );
+static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, IotBleListNetworkRequest_t* pListNetworkRequest );
 
 /*
  * @brief Parses List Network request params and creates task to list networks.
@@ -197,7 +197,7 @@ static BaseType_t prxHandleListNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
 
 
-static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, AddNetworkRequest_t* pxAddNetworkRequest );
+static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, IotBleAddNetworkRequest_t* pAddNetworkRequest );
 /*
  * @brief Parses Save Network request params and creates task to save the new network.
  */
@@ -205,7 +205,7 @@ static BaseType_t prxHandleSaveNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
 
 
-static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, EditNetworkRequest_t* pxEditNetworkRequest );
+static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, IotBleEditNetworkRequest_t* pEditNetworkRequest );
 
 /*
  * @brief Parses Edit Network request params and creates task to edit network priority.
@@ -213,7 +213,7 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
 static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData,
                                                size_t xLength );
 
-static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, DeleteNetworkRequest_t* pxDeleteNetworkRequest );
+static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, IotBleDeleteNetworkRequest_t* pDeleteNetworkRequest );
 
 /*
  * @brief Parses Delete Network request params and creates task to delete a WiFi networ.
@@ -224,7 +224,7 @@ static BaseType_t prxHandleDeleteNetworkRequest( uint8_t * pucData,
 /*
  * @brief Gets the GATT characteristic for a given attribute handle.
  */
-static WifiProvAttributes_t prxGetCharFromHandle( uint16_t xHandle );
+static IotBleWifiProvAttributes_t prxGetCharFromHandle( uint16_t xHandle );
 
 
 WIFIReturnCode_t prvAppendNetwork( WIFINetworkProfile_t * pxProfile );
@@ -248,13 +248,13 @@ WIFIReturnCode_t prvConnectSavedNetwork( uint16_t usIndex );
 WIFIReturnCode_t prvAddNewNetwork( WIFINetworkProfile_t * pxProfile );
 
 
-static AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, uint8_t *pucBuffer, size_t *pxLength );
+static AwsIotSerializerError_t prxSerializeNetwork( IotBleWifiNetworkInfo_t *pNetworkInfo, uint8_t *pucBuffer, size_t *pxLength );
 
-static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t usIdx );
+static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t idx );
 
-static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork );
+static void prvSendScanNetwork( WIFIScanResult_t *pScanNetwork );
 
-static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xStatus, uint8_t* pucBuffer, size_t* pxLength );
+static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t status, uint8_t* pucBuffer, size_t* pxLength );
 
 /*
  * @brief  The task lists the saved network configurations in flash and also scans nearby networks.
@@ -289,16 +289,16 @@ static uint16_t prvGetNumSavedNetworks( void );
 /*
  * @brief Sends a status response for the request.
  */
-void prvSendStatusResponse( WifiProvAttributes_t xChar, WIFIReturnCode_t xStatus );
+void prvSendStatusResponse( IotBleWifiProvAttributes_t xChar, WIFIReturnCode_t status );
 
 
-void prvSendResponse( WifiProvAttributes_t xCharacteristic, uint8_t* pucData, size_t xLen );
+void prvSendResponse( IotBleWifiProvAttributes_t xCharacteristic, uint8_t* pucData, size_t xLen );
 
 
 /*-----------------------------------------------------------*/
 
 
-static const IotBleAttributeEventCallback_t pxCallBackArray[eNbAttributes] =
+static const IotBleAttributeEventCallback_t pxCallBackArray[IOT_BLE_WIFI_PROV_NB_ATTRIBUTES] =
 {
   NULL,
   vCharacteristicCallback,
@@ -313,11 +313,11 @@ static const IotBleAttributeEventCallback_t pxCallBackArray[eNbAttributes] =
 
 /*-----------------------------------------------------------*/
 
-static WifiProvAttributes_t prxGetCharFromHandle( uint16_t usHandle )
+static IotBleWifiProvAttributes_t prxGetCharFromHandle( uint16_t usHandle )
 {
     uint8_t ucCharId;
 
-    for( ucCharId = 0; ucCharId < eNbAttributes; ucCharId++ )
+    for( ucCharId = 0; ucCharId < IOT_BLE_WIFI_PROV_NB_ATTRIBUTES; ucCharId++ )
     {
         if( usHandlesBuffer[ucCharId] == usHandle )
         {
@@ -325,18 +325,18 @@ static WifiProvAttributes_t prxGetCharFromHandle( uint16_t usHandle )
         }
     }
 
-    return ( WifiProvAttributes_t ) ucCharId;
+    return ( IotBleWifiProvAttributes_t ) ucCharId;
 }
 
 /*-----------------------------------------------------------*/
 
-BaseType_t WIFI_PROVISION_Start( void )
+BaseType_t IotBleWifiProv_Start( void )
 {
     BaseType_t xRet = pdFALSE;
 
-    if( xWifiProvService.xInit == pdTRUE )
+    if( xWifiProvService.init == pdTRUE )
     {
-    	xWifiProvService.usNumNetworks = prvGetNumSavedNetworks();
+    	xWifiProvService.numNetworks = prvGetNumSavedNetworks();
     	xRet = pdTRUE;
     }
 
@@ -355,36 +355,36 @@ void vCharacteristicCallback( IotBleAttributeEvent_t * pEventParam )
         .eventStatus    = eBTStatusFail,
         .rspErrorStatus = eBTRspErrorNone
     };
-    WifiProvAttributes_t xChar;
+    IotBleWifiProvAttributes_t xChar;
 
     xResp.pAttrData = &xAttrData;
 
     if( pEventParam->xEventType == eBLEWrite )
     {
         pxWriteParam = pEventParam->pParamWrite;
-        xWifiProvService.usBLEConnId = pxWriteParam->connId;
+        xWifiProvService.BLEConnId = pxWriteParam->connId;
 
         xChar = prxGetCharFromHandle( pxWriteParam->attrHandle );
 
         switch( xChar )
         {
-            case eListNetworkChar:
+            case IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR:
                 xResult = prxHandleListNetworkRequest( pxWriteParam->pValue, pxWriteParam->length );
                 break;
 
-            case eSaveNetworkChar:
+            case IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR:
                 xResult = prxHandleSaveNetworkRequest( pxWriteParam->pValue, pxWriteParam->length );
                 break;
 
-            case eEditNetworkChar:
+            case  IOT_BLE_WIFI_PROV_EDIT_NETWORK_CHAR:
                 xResult = prxHandleEditNetworkRequest( pxWriteParam->pValue, pxWriteParam->length );
                 break;
 
-            case eDeleteNetworkChar:
+            case IOT_BLE_WIFI_PROV_DELETE_NETWORK_CHAR:
                 xResult = prxHandleDeleteNetworkRequest( pxWriteParam->pValue, pxWriteParam->length );
                 break;
 
-            case eNbAttributes:
+            case IOT_BLE_WIFI_PROV_NB_ATTRIBUTES:
             default:
                 xResult = pdFAIL;
                 break;
@@ -435,8 +435,8 @@ static void vClientCharCfgDescrCallback( IotBleAttributeEvent_t * pEventParam )
 
         if( pxWriteParam->length == 2 )
         {
-            xWifiProvService.usNotifyClientEnabled = ( pxWriteParam->pValue[ 1 ] << 8 ) | pxWriteParam->pValue[ 0 ];
-            xWifiProvService.usBLEConnId = pxWriteParam->connId;
+            xWifiProvService.notifyClientEnabled = ( pxWriteParam->pValue[ 1 ] << 8 ) | pxWriteParam->pValue[ 0 ];
+            xWifiProvService.BLEConnId = pxWriteParam->connId;
             xResp.pAttrData->handle = pxWriteParam->attrHandle;
             xResp.pAttrData->pData = pxWriteParam->pValue;
             xResp.pAttrData->size = pxWriteParam->length;
@@ -449,7 +449,7 @@ static void vClientCharCfgDescrCallback( IotBleAttributeEvent_t * pEventParam )
     {
         pxReadParam = pEventParam->pParamRead;
         xResp.pAttrData->handle = pxReadParam->attrHandle;
-        xResp.pAttrData->pData = ( uint8_t * ) &xWifiProvService.usNotifyClientEnabled;
+        xResp.pAttrData->pData = ( uint8_t * ) &xWifiProvService.notifyClientEnabled;
         xResp.pAttrData->size = 2;
         xResp.attrDataOffset = 0;
         xResp.eventStatus = eBTStatusSuccess;
@@ -461,13 +461,13 @@ static void vClientCharCfgDescrCallback( IotBleAttributeEvent_t * pEventParam )
 
 static uint16_t prvGetNumSavedNetworks( void )
 {
-    uint16_t usIdx;
+    uint16_t idx;
     WIFIReturnCode_t xWifiRet;
     WIFINetworkProfile_t xProfile;
 
-    for( usIdx = 0; usIdx < wifiProvMAX_SAVED_NETWORKS; usIdx++ )
+    for( idx = 0; idx < IOT_BLE_WIFI_PROV_MAX_SAVED_NETWORKS; idx++ )
     {
-        xWifiRet = WIFI_NetworkGet( &xProfile, usIdx );
+        xWifiRet = WIFI_NetworkGet( &xProfile, idx );
 
         if( xWifiRet != eWiFiSuccess )
         {
@@ -475,10 +475,10 @@ static uint16_t prvGetNumSavedNetworks( void )
         }
     }
 
-    return usIdx;
+    return idx;
 }
 
-static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, ListNetworkRequest_t* pxListNetworkRequest )
+static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xLength, IotBleListNetworkRequest_t* pListNetworkRequest )
 {
 
     AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
@@ -496,7 +496,7 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvMAX_NETWORKS_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_MAX_NETWORKS_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -513,18 +513,18 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
                         xValue.value.signedInt,
                         IOT_BLE_MAX_NETWORK,
                         IOT_BLE_MAX_NETWORK ));
-                pxListNetworkRequest->sMaxNetworks = IOT_BLE_MAX_NETWORK;
+                pListNetworkRequest->maxNetworks = IOT_BLE_MAX_NETWORK;
             }
             else
             {
-                pxListNetworkRequest->sMaxNetworks = xValue.value.signedInt;
+                pListNetworkRequest->maxNetworks = xValue.value.signedInt;
             }
         }
     }
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvSCAN_TIMEOUT_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_SCAN_TIMEOUT_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -534,7 +534,7 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
         else
         {
 
-            pxListNetworkRequest->sTimeoutMs = xValue.value.signedInt;
+            pListNetworkRequest->timeoutMs = xValue.value.signedInt;
         }
     }
 
@@ -548,19 +548,19 @@ static BaseType_t prxDeserializeListNetworkRequest( uint8_t * pucData, size_t xL
 static BaseType_t prxHandleListNetworkRequest( uint8_t * pucData,
                                                size_t xLength )
 {
-    BaseType_t xStatus = pdFALSE;
-    ListNetworkRequest_t * pxParams = pvPortMalloc( sizeof( ListNetworkRequest_t ));
+    BaseType_t status = pdFALSE;
+    IotBleListNetworkRequest_t * pxParams = pvPortMalloc( sizeof( IotBleListNetworkRequest_t ));
     if( pxParams != NULL )
     {
-        xStatus = prxDeserializeListNetworkRequest( pucData, xLength, pxParams );
-        if( xStatus == pdTRUE )
+        status = prxDeserializeListNetworkRequest( pucData, xLength, pxParams );
+        if( status == pdTRUE )
         {
-            xStatus = xTaskCreate(
+            status = xTaskCreate(
                     prvListNetworkTask,
                     "WifiProvListNetwork",
                     configMINIMAL_STACK_SIZE * 6,
                     pxParams,
-                    wifiProvLIST_NETWORK_TASK_PRIORITY,
+					IOT_BLE_WIFI_PROV_TASK_PRIORITY,
                     NULL );
         }
         else
@@ -573,10 +573,10 @@ static BaseType_t prxHandleListNetworkRequest( uint8_t * pucData,
         configPRINTF(( "Failed to allocate memory for List Network Request\n" ));
     }
 
-    return xStatus;
+    return status;
 }
 
-static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, AddNetworkRequest_t* pxAddNetworkRequest )
+static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLength, IotBleAddNetworkRequest_t* pAddNetworkRequest )
 {
 
     AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
@@ -596,7 +596,7 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
     {
         xValue.value.pString = NULL;
         xValue.value.stringLength = 0;
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvSSID_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_SSID_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING ) )
         {
@@ -615,9 +615,9 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
             }
             else
             {
-                strncpy( pxAddNetworkRequest->xNetwork.cSSID, ( const char * ) xValue.value.pString, xValue.value.stringLength );
-                pxAddNetworkRequest->xNetwork.cSSID[ xValue.value.stringLength ] = '\0';
-                pxAddNetworkRequest->xNetwork.ucSSIDLength = ( xValue.value.stringLength + 1 );
+                strncpy( pAddNetworkRequest->network.cSSID, ( const char * ) xValue.value.pString, xValue.value.stringLength );
+                pAddNetworkRequest->network.cSSID[ xValue.value.stringLength ] = '\0';
+                pAddNetworkRequest->network.ucSSIDLength = ( xValue.value.stringLength + 1 );
             }
         }
     }
@@ -627,7 +627,7 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING;
         xValue.value.pString = NULL;
         xValue.value.stringLength = 0;
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvBSSID_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_BSSID_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING ) )
         {
@@ -645,23 +645,23 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
             }
             else
             {
-                memcpy( pxAddNetworkRequest->xNetwork.ucBSSID, xValue.value.pString, wificonfigMAX_BSSID_LEN );
+                memcpy( pAddNetworkRequest->network.ucBSSID, xValue.value.pString, wificonfigMAX_BSSID_LEN );
             }
         }
     }
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvKEY_MGMT_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_KEY_MGMT_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
-            configPRINTF(( "Failed to get WIFI security parameter, error = %d, value type = %d\n", xRet, xValue.type ));
+            configPRINTF(( "Failed to get WIFI xSecurity parameter, error = %d, value type = %d\n", xRet, xValue.type ));
             xResult = pdFALSE;
         }
         else
         {
-            pxAddNetworkRequest->xNetwork.xSecurity = xValue.value.signedInt;
+            pAddNetworkRequest->network.xSecurity = xValue.value.signedInt;
         }
     }
 
@@ -669,7 +669,7 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
     {
         xValue.value.pString = NULL;
           xValue.value.stringLength = 0;
-          xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvPSK_KEY, &xValue );
+          xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_PSK_KEY, &xValue );
           if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                   ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING ) )
           {
@@ -688,16 +688,16 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
               }
               else
               {
-                  strncpy( pxAddNetworkRequest->xNetwork.cPassword, ( const char * ) xValue.value.pString, xValue.value.stringLength );
-                  pxAddNetworkRequest->xNetwork.cPassword[ xValue.value.stringLength ] = '\0';
-                  pxAddNetworkRequest->xNetwork.ucPasswordLength = ( uint16_t )( xValue.value.stringLength + 1 );
+                  strncpy( pAddNetworkRequest->network.cPassword, ( const char * ) xValue.value.pString, xValue.value.stringLength );
+                  pAddNetworkRequest->network.cPassword[ xValue.value.stringLength ] = '\0';
+                  pAddNetworkRequest->network.ucPasswordLength = ( uint16_t )( xValue.value.stringLength + 1 );
               }
           }
     }
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_INDEX_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -706,10 +706,10 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
         }
         else
         {
-            if( ( xValue.value.signedInt >= wifiProvINVALID_NETWORK_INDEX )
-                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+            if( ( xValue.value.signedInt >= IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX )
+                    && ( xValue.value.signedInt < IOT_BLE_WIFI_PROV_MAX_SAVED_NETWORKS  ) )
             {
-                pxAddNetworkRequest->sSavedIdx = xValue.value.signedInt;
+                pAddNetworkRequest->savedIdx = xValue.value.signedInt;
             }
             else
             {
@@ -729,21 +729,21 @@ static BaseType_t prxDeserializeAddNetworkRequest( uint8_t * pucData, size_t xLe
 static BaseType_t prxHandleSaveNetworkRequest( uint8_t * pucData,
                                                size_t xLength )
 {
-    BaseType_t xStatus = pdFALSE;
-    AddNetworkRequest_t *pxParams = pvPortMalloc( sizeof( AddNetworkRequest_t ));
+    BaseType_t status = pdFALSE;
+    IotBleAddNetworkRequest_t *pxParams = pvPortMalloc( sizeof( IotBleAddNetworkRequest_t ));
 
     if( pxParams != NULL )
     {
-        xStatus = prxDeserializeAddNetworkRequest( pucData, xLength, pxParams );
+        status = prxDeserializeAddNetworkRequest( pucData, xLength, pxParams );
 
-        if( xStatus == pdTRUE )
+        if( status == pdTRUE )
         {
-            xStatus = xTaskCreate(
+            status = xTaskCreate(
                     prvAddNetworkTask,
                     "WifiProvAddNetwork",
                     configMINIMAL_STACK_SIZE * 4,
                     pxParams,
-                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    IOT_BLE_WIFI_PROV_MODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
         }
         else
@@ -756,10 +756,10 @@ static BaseType_t prxHandleSaveNetworkRequest( uint8_t * pucData,
         configPRINTF(( "Failed to allocate memory for save network request\n " ));
     }
 
-    return xStatus;
+    return status;
 }
 
-static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, EditNetworkRequest_t* pxEditNetworkRequest )
+static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xLength, IotBleEditNetworkRequest_t* pEditNetworkRequest )
 {
 
     AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
@@ -777,7 +777,7 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_INDEX_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -787,9 +787,9 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
         else
         {
             if( ( xValue.value.signedInt >= 0 )
-                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+                    && ( xValue.value.signedInt < IOT_BLE_WIFI_PROV_MAX_SAVED_NETWORKS  ) )
             {
-                pxEditNetworkRequest->sCurIdx = xValue.value.signedInt;
+                pEditNetworkRequest->curIdx = xValue.value.signedInt;
             }
             else
             {
@@ -801,7 +801,7 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvNEWINDEX_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_NEWINDEX_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -811,9 +811,9 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
         else
         {
             if( ( xValue.value.signedInt >= 0 )
-                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+                    && ( xValue.value.signedInt < IOT_BLE_WIFI_PROV_MAX_SAVED_NETWORKS  ) )
             {
-                pxEditNetworkRequest->sNewIdx = xValue.value.signedInt;
+                pEditNetworkRequest->newIdx = xValue.value.signedInt;
             }
             else
             {
@@ -832,21 +832,21 @@ static BaseType_t prxDeserializeEditNetworkRequest( uint8_t * pucData, size_t xL
 
 static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData, size_t xLength )
 {
-    BaseType_t xStatus = pdFALSE;
-    EditNetworkRequest_t *pxParams = pvPortMalloc( sizeof( EditNetworkRequest_t ));
+    BaseType_t status = pdFALSE;
+    IotBleEditNetworkRequest_t *pxParams = pvPortMalloc( sizeof( IotBleEditNetworkRequest_t ));
 
     if( pxParams != NULL )
     {
-        xStatus = prxDeserializeEditNetworkRequest( pucData, xLength, pxParams );
+        status = prxDeserializeEditNetworkRequest( pucData, xLength, pxParams );
 
-        if( xStatus == pdTRUE )
+        if( status == pdTRUE )
         {
-            xStatus = xTaskCreate(
+            status = xTaskCreate(
                     prvEditNetworkTask,
                     "WifiProvEditNetwork",
                     configMINIMAL_STACK_SIZE * 4,
                     pxParams,
-                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    IOT_BLE_WIFI_PROV_MODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
         }
         else
@@ -859,10 +859,10 @@ static BaseType_t prxHandleEditNetworkRequest( uint8_t * pucData, size_t xLength
         configPRINTF(( "Failed to allocate memory for edit network request\n " ));
     }
 
-    return xStatus;
+    return status;
 }
 
-static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, DeleteNetworkRequest_t* pxDeleteNetworkRequest )
+static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t xLength, IotBleDeleteNetworkRequest_t* pDeleteNetworkRequest )
 {
 
     AwsIotSerializerDecoderObject_t xDecoderObj = { 0 }, xValue = { 0 };
@@ -880,7 +880,7 @@ static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t 
 
     if( xResult == pdTRUE )
     {
-        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, wifiProvINDEX_KEY, &xValue );
+        xRet = IOT_BLE_MESG_DECODER.find( &xDecoderObj, IOT_BLE_WIFI_PROV_INDEX_KEY, &xValue );
         if( ( xRet != AWS_IOT_SERIALIZER_SUCCESS ) ||
                 ( xValue.type != AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT ) )
         {
@@ -890,9 +890,9 @@ static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t 
         else
         {
             if( ( xValue.value.signedInt >= 0 )
-                    && ( xValue.value.signedInt < wifiProvMAX_SAVED_NETWORKS  ) )
+                    && ( xValue.value.signedInt < IOT_BLE_WIFI_PROV_MAX_SAVED_NETWORKS  ) )
             {
-                pxDeleteNetworkRequest->sIdx = ( int16_t ) xValue.value.signedInt;
+                pDeleteNetworkRequest->idx = ( int16_t ) xValue.value.signedInt;
             }
             else
             {
@@ -912,21 +912,21 @@ static BaseType_t prxDeserializeDeleteNetworkRequest( uint8_t * pucData, size_t 
 static BaseType_t prxHandleDeleteNetworkRequest( uint8_t * pucData,
                                                  size_t xLength )
 {
-    BaseType_t xStatus = pdFALSE;
-    DeleteNetworkRequest_t *pxParams = pvPortMalloc( sizeof( DeleteNetworkRequest_t ));
+    BaseType_t status = pdFALSE;
+    IotBleDeleteNetworkRequest_t *pxParams = pvPortMalloc( sizeof( IotBleDeleteNetworkRequest_t ));
 
     if( pxParams != NULL )
     {
-        xStatus = prxDeserializeDeleteNetworkRequest( pucData, xLength, pxParams );
+        status = prxDeserializeDeleteNetworkRequest( pucData, xLength, pxParams );
 
-        if( xStatus == pdTRUE )
+        if( status == pdTRUE )
         {
-            xStatus = xTaskCreate(
+            status = xTaskCreate(
                     prvDeleteNetworkTask,
                     "WifiProvDeleteNetwork",
                     configMINIMAL_STACK_SIZE * 4,
                     pxParams,
-                    wifiProvMODIFY_NETWORK_TASK_PRIORITY,
+                    IOT_BLE_WIFI_PROV_MODIFY_NETWORK_TASK_PRIORITY,
                     NULL );
         }
         else
@@ -939,11 +939,11 @@ static BaseType_t prxHandleDeleteNetworkRequest( uint8_t * pucData,
         configPRINTF(( "Failed to allocate memory for delete network request\n " ));
     }
 
-    return xStatus;
+    return status;
 }
 
 
-AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, uint8_t *pucBuffer, size_t *pxLength )
+AwsIotSerializerError_t prxSerializeNetwork( IotBleWifiNetworkInfo_t *pNetworkInfo, uint8_t *pucBuffer, size_t *pxLength )
 {
     AwsIotSerializerEncoderObject_t xContainer = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM;
     AwsIotSerializerEncoderObject_t xNetworkMap = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_MAP;
@@ -954,62 +954,62 @@ AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, u
     xRet = IOT_BLE_MESG_ENCODER.init( &xContainer, pucBuffer, xLength );
     if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        xRet = IOT_BLE_MESG_ENCODER.openContainer( &xContainer, &xNetworkMap, wifiProvNUM_NETWORK_INFO_MESG_PARAMS );
+        xRet = IOT_BLE_MESG_ENCODER.openContainer( &xContainer, &xNetworkMap, IOT_BLE_WIFI_PROV_NUM_NETWORK_INFO_MESG_PARAMS );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = pxNetworkInfo->xStatus;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvSTATUS_KEY, xValue );
+        xValue.value.signedInt = pNetworkInfo->status;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_STATUS_KEY, xValue );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_TEXT_STRING;
-        xValue.value.pString = ( uint8_t * ) pxNetworkInfo->pcSSID;
-        xValue.value.stringLength = pxNetworkInfo->xSSIDLength;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvSSID_KEY, xValue );
+        xValue.value.pString = ( uint8_t * ) pNetworkInfo->pSSID;
+        xValue.value.stringLength = pNetworkInfo->SSIDLength;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_SSID_KEY, xValue );
     }
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_BYTE_STRING;
-        xValue.value.pString = ( uint8_t * ) pxNetworkInfo->pucBSSID;
-        xValue.value.stringLength = pxNetworkInfo->xBSSIDLength;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvBSSID_KEY, xValue );
+        xValue.value.pString = ( uint8_t * ) pNetworkInfo->pBSSID;
+        xValue.value.stringLength = pNetworkInfo->BSSIDLength;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_BSSID_KEY, xValue );
     }
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = pxNetworkInfo->xSecurity;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvKEY_MGMT_KEY, xValue );
+        xValue.value.signedInt = pNetworkInfo->security;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_KEY_MGMT_KEY, xValue );
     }
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_BOOL;
-        xValue.value.booleanValue = pxNetworkInfo->ucHidden;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvHIDDEN_KEY, xValue );
+        xValue.value.booleanValue = pNetworkInfo->hidden;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_HIDDEN_KEY, xValue );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = pxNetworkInfo->cRSSI;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiRSSI_KEY, xValue );
+        xValue.value.signedInt = pNetworkInfo->RSSI;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_RSSI_KEY, xValue );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = pxNetworkInfo->ucConnected;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvCONNECTED_KEY, xValue );
+        xValue.value.signedInt = pNetworkInfo->connected;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_CONNECTED_KEY, xValue );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = pxNetworkInfo->sSavedIdx;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, wifiProvINDEX_KEY, xValue );
+        xValue.value.signedInt = pNetworkInfo->savedIdx;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xNetworkMap, IOT_BLE_WIFI_PROV_INDEX_KEY, xValue );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
@@ -1035,7 +1035,7 @@ AwsIotSerializerError_t prxSerializeNetwork( WifiNetworkInfo_t *pxNetworkInfo, u
     return xRet;
 }
 
-static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xStatus, uint8_t* pucBuffer, size_t* pxLength )
+static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t status, uint8_t* pucBuffer, size_t* pxLength )
 {
     AwsIotSerializerEncoderObject_t xContainer = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_STREAM;
     AwsIotSerializerEncoderObject_t xResponseMap = AWS_IOT_SERIALIZER_ENCODER_CONTAINER_INITIALIZER_MAP;
@@ -1046,14 +1046,14 @@ static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xSta
     xRet = IOT_BLE_MESG_ENCODER.init( &xContainer, pucBuffer, xLength );
     if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        xRet = IOT_BLE_MESG_ENCODER.openContainer( &xContainer, &xResponseMap, wifiProvNUM_STATUS_MESG_PARAMS );
+        xRet = IOT_BLE_MESG_ENCODER.openContainer( &xContainer, &xResponseMap, IOT_BLE_WIFI_PROV_NUM_STATUS_MESG_PARAMS );
     }
 
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
         xValue.type = AWS_IOT_SERIALIZER_SCALAR_SIGNED_INT;
-        xValue.value.signedInt = xStatus;
-        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xResponseMap, wifiProvSTATUS_KEY, xValue );
+        xValue.value.signedInt = status;
+        xRet = IOT_BLE_MESG_ENCODER.appendKeyValue( &xResponseMap, IOT_BLE_WIFI_PROV_STATUS_KEY, xValue );
     }
     if( IS_VALID_SERIALIZER_RET( xRet, pucBuffer ) )
     {
@@ -1082,20 +1082,20 @@ static AwsIotSerializerError_t prxSerializeStatusResponse( WIFIReturnCode_t xSta
 
 /*-----------------------------------------------------------*/
 
-void prvSendStatusResponse( WifiProvAttributes_t xCharacteristic,
-                            WIFIReturnCode_t xStatus )
+void prvSendStatusResponse( IotBleWifiProvAttributes_t xCharacteristic,
+                            WIFIReturnCode_t status )
 {
 
     uint8_t *pucBuffer = NULL;
     size_t xMesgLen;
     AwsIotSerializerError_t xRet = AWS_IOT_SERIALIZER_SUCCESS;
-    xRet = prxSerializeStatusResponse( xStatus, NULL, &xMesgLen );
+    xRet = prxSerializeStatusResponse( status, NULL, &xMesgLen );
     if( xRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
         pucBuffer = pvPortMalloc( xMesgLen );
         if( pucBuffer != NULL )
         {
-            xRet = prxSerializeStatusResponse( xStatus, pucBuffer, &xMesgLen );
+            xRet = prxSerializeStatusResponse( status, pucBuffer, &xMesgLen );
         }
         else
         {
@@ -1118,13 +1118,13 @@ void prvSendStatusResponse( WifiProvAttributes_t xCharacteristic,
     }
 }
 
-void prvSendResponse( WifiProvAttributes_t xCharacteristic, uint8_t* pucData, size_t xLen )
+void prvSendResponse( IotBleWifiProvAttributes_t xCharacteristic, uint8_t* pucData, size_t xLen )
 {
 	IotBleAttributeData_t xAttrData = { 0 };
 	IotBleEventResponse_t xResp = { 0 };
 
-	xAttrData.handle = ATTR_HANDLE( xWifiProvService.pxGattService, xCharacteristic );
-	xAttrData.uuid = ATTR_UUID( xWifiProvService.pxGattService, xCharacteristic );
+	xAttrData.handle = ATTR_HANDLE( xWifiProvService.pGattService, xCharacteristic );
+	xAttrData.uuid = ATTR_UUID( xWifiProvService.pGattService, xCharacteristic );
 	xResp.attrDataOffset = 0;
 	xResp.pAttrData = &xAttrData;
 	xResp.rspErrorStatus = eBTRspErrorNone;
@@ -1132,7 +1132,7 @@ void prvSendResponse( WifiProvAttributes_t xCharacteristic, uint8_t* pucData, si
 	xAttrData.pData = pucData;
 	xAttrData.size = xLen;
 
-	( void ) IotBle_SendIndication( &xResp, xWifiProvService.usBLEConnId, false );
+	( void ) IotBle_SendIndication( &xResp, xWifiProvService.BLEConnId, false );
 }
 
 /*-----------------------------------------------------------*/
@@ -1140,14 +1140,14 @@ void prvSendResponse( WifiProvAttributes_t xCharacteristic, uint8_t* pucData, si
 WIFIReturnCode_t prvAppendNetwork( WIFINetworkProfile_t * pxProfile )
 {
     WIFIReturnCode_t xRet;
-    uint16_t usIdx;
+    uint16_t idx;
 
-    xRet = WIFI_NetworkAdd( pxProfile, &usIdx );
+    xRet = WIFI_NetworkAdd( pxProfile, &idx );
 
     if( xRet == eWiFiSuccess )
     {
-        xWifiProvService.usNumNetworks++;
-        xWifiProvService.sConnectedIdx++;
+        xWifiProvService.numNetworks++;
+        xWifiProvService.connectedIdx++;
     }
 
     return xRet;
@@ -1172,16 +1172,16 @@ WIFIReturnCode_t prvPopNetwork( uint16_t usIndex,
 
     if( xRet == eWiFiSuccess )
     {
-        xWifiProvService.usNumNetworks--;
+        xWifiProvService.numNetworks--;
 
         /* Shift the priority for connected network */
-        if( usIndex < xWifiProvService.sConnectedIdx )
+        if( usIndex < xWifiProvService.connectedIdx )
         {
-            xWifiProvService.sConnectedIdx--;
+            xWifiProvService.connectedIdx--;
         }
-        else if( usIndex == xWifiProvService.sConnectedIdx )
+        else if( usIndex == xWifiProvService.connectedIdx )
         {
-            xWifiProvService.sConnectedIdx = wifiProvINVALID_NETWORK_INDEX;
+            xWifiProvService.connectedIdx = IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX;
         }
     }
 
@@ -1243,7 +1243,7 @@ WIFIReturnCode_t prvAddNewNetwork( WIFINetworkProfile_t * pxProfile )
     	xRet = prvAppendNetwork( pxProfile );
     	if( xRet == eWiFiSuccess )
     	{
-    		xWifiProvService.sConnectedIdx = 0;
+    		xWifiProvService.connectedIdx = 0;
     	}
     }
     return xRet;
@@ -1261,7 +1261,7 @@ WIFIReturnCode_t prvConnectSavedNetwork( uint16_t usIndex )
     	xRet = prvConnectNetwork( &xProfile );
     	if( xRet == eWiFiSuccess )
     	{
-    		xWifiProvService.sConnectedIdx = usIndex;
+    		xWifiProvService.connectedIdx = usIndex;
     	}
     }
     return xRet;
@@ -1294,19 +1294,19 @@ WIFIReturnCode_t prvInsertNetwork( uint16_t usIndex,
     return xRet;
 }
 
-static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t usIdx )
+static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t idx )
 {
-    WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
+    IotBleWifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
     uint8_t *pucMessage = NULL;
     size_t xMessageLen = 0;
     AwsIotSerializerError_t xSerializerRet;
 
-    xNetworkInfo.pcSSID = pxSavedNetwork->cSSID;
-    xNetworkInfo.xSSIDLength = pxSavedNetwork->ucSSIDLength;
-    xNetworkInfo.pucBSSID = pxSavedNetwork->ucBSSID;
-    xNetworkInfo.xBSSIDLength = wificonfigMAX_BSSID_LEN;
-    xNetworkInfo.ucConnected = ( xWifiProvService.sConnectedIdx == usIdx ) ? 1 : 0;
-    xNetworkInfo.sSavedIdx = ( int32_t ) usIdx;
+    xNetworkInfo.pSSID = pxSavedNetwork->cSSID;
+    xNetworkInfo.SSIDLength = pxSavedNetwork->ucSSIDLength;
+    xNetworkInfo.pBSSID = pxSavedNetwork->ucBSSID;
+    xNetworkInfo.BSSIDLength = wificonfigMAX_BSSID_LEN;
+    xNetworkInfo.connected = ( xWifiProvService.connectedIdx == idx ) ? 1 : 0;
+    xNetworkInfo.savedIdx = ( int32_t ) idx;
 
     xSerializerRet = prxSerializeNetwork( &xNetworkInfo, NULL, &xMessageLen );
     if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
@@ -1324,7 +1324,7 @@ static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t 
 
     if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        prvSendResponse( eListNetworkChar, pucMessage, xMessageLen );
+        prvSendResponse( IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR, pucMessage, xMessageLen );
     }
     else
     {
@@ -1338,20 +1338,20 @@ static void prvSendSavedNetwork( WIFINetworkProfile_t *pxSavedNetwork, uint16_t 
     }
 }
 
-static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
+static void prvSendScanNetwork( WIFIScanResult_t *pScanNetwork )
 {
-    WifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
+    IotBleWifiNetworkInfo_t xNetworkInfo = NETWORK_INFO_DEFAULT_PARAMS;
     uint8_t *pucMessage = NULL;
     size_t xMessageLen = 0;
     AwsIotSerializerError_t xSerializerRet;
 
-    xNetworkInfo.pcSSID = pxScanNetwork->cSSID;
-    xNetworkInfo.xSSIDLength = strlen( pxScanNetwork->cSSID );
-    xNetworkInfo.pucBSSID = pxScanNetwork->ucBSSID;
-    xNetworkInfo.xBSSIDLength = wificonfigMAX_BSSID_LEN;
-    xNetworkInfo.cRSSI = pxScanNetwork->cRSSI;
-    xNetworkInfo.ucHidden = ( bool ) pxScanNetwork->ucHidden;
-    xNetworkInfo.xSecurity = pxScanNetwork->xSecurity;
+    xNetworkInfo.pSSID = pScanNetwork->cSSID;
+    xNetworkInfo.SSIDLength = strlen( pScanNetwork->cSSID );
+    xNetworkInfo.pBSSID = pScanNetwork->ucBSSID;
+    xNetworkInfo.BSSIDLength = wificonfigMAX_BSSID_LEN;
+    xNetworkInfo.RSSI = pScanNetwork->cRSSI;
+    xNetworkInfo.hidden = ( bool ) pScanNetwork->ucHidden;
+    xNetworkInfo.security = pScanNetwork->xSecurity;
 
     xSerializerRet = prxSerializeNetwork( &xNetworkInfo, NULL, &xMessageLen );
     if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
@@ -1369,12 +1369,12 @@ static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
 
     if( xSerializerRet == AWS_IOT_SERIALIZER_SUCCESS )
     {
-        prvSendResponse( eListNetworkChar, pucMessage, xMessageLen );
+        prvSendResponse( IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR, pucMessage, xMessageLen );
     }
     else
     {
         configPRINTF(( "Failed to send network profile, SSID:%s\n",
-                pxScanNetwork->cSSID ));
+                pScanNetwork->cSSID ));
     }
 
     if( pucMessage != NULL )
@@ -1386,41 +1386,42 @@ static void prvSendScanNetwork( WIFIScanResult_t *pxScanNetwork )
 
 void prvListNetworkTask( void * pvParams )
 {
-    ListNetworkRequest_t * pxListNetworReq = ( ListNetworkRequest_t * ) pvParams;
-    WIFIScanResult_t xScanResults[ pxListNetworReq->sMaxNetworks ];
+    IotBleListNetworkRequest_t * pxListNetworReq = ( IotBleListNetworkRequest_t * ) pvParams;
+    WIFIScanResult_t xScanResults[ pxListNetworReq->maxNetworks ];
     WIFINetworkProfile_t xProfile;
-    uint16_t usIdx;
+    uint16_t idx;
     WIFIReturnCode_t xWifiRet;
 
-    if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
+    if( xSemaphoreTake( xWifiProvService.lock, portMAX_DELAY ) == pdPASS )
     {
-    	for( usIdx = 0; usIdx < xWifiProvService.usNumNetworks; usIdx++ )
+    	for( idx = 0; idx < xWifiProvService.numNetworks; idx++ )
     	{
-    	    xWifiRet = prvGetSavedNetwork( usIdx, &xProfile );
+    	    xWifiRet = prvGetSavedNetwork( idx, &xProfile );
     		if( xWifiRet == eWiFiSuccess )
     		{
-    		    prvSendSavedNetwork( &xProfile, usIdx );
+    		    prvSendSavedNetwork( &xProfile, idx );
     		}
     	}
 
-    	memset( xScanResults, 0x00, sizeof( WIFIScanResult_t ) * pxListNetworReq->sMaxNetworks );
-    	xWifiRet = WIFI_Scan( xScanResults, pxListNetworReq->sMaxNetworks );
+    	memset( xScanResults, 0x00, sizeof( WIFIScanResult_t ) * pxListNetworReq->maxNetworks );
+    	xWifiRet = WIFI_Scan( xScanResults, pxListNetworReq->maxNetworks );
     	if( xWifiRet == eWiFiSuccess )
     	{
-    		for( usIdx = 0; usIdx < pxListNetworReq->sMaxNetworks; usIdx++ )
+    		for( idx = 0; idx < pxListNetworReq->maxNetworks; idx++ )
     		{
-    			if( strlen( xScanResults[ usIdx ].cSSID ) > 0 )
+    			if( strlen( xScanResults[ idx ].cSSID ) > 0 )
     			{
-    			    prvSendScanNetwork( &xScanResults[ usIdx ] );
+    			    prvSendScanNetwork( &xScanResults[ idx ] );
     			}
     		}
     	}
     	else
     	{
-    		prvSendStatusResponse( eListNetworkChar, xWifiRet );
+    		prvSendStatusResponse( IOT_BLE_WIFI_PROV_LIST_NETWORK_CHAR, xWifiRet );
     	}
 
-    	xSemaphoreGive( xWifiProvService.xLock );
+
+    	xSemaphoreGive( xWifiProvService.lock );
     }
 
     vPortFree( pxListNetworReq );
@@ -1432,22 +1433,22 @@ void prvListNetworkTask( void * pvParams )
 void prvAddNetworkTask( void * pvParams )
 {
     WIFIReturnCode_t xRet = eWiFiFailure;
-    AddNetworkRequest_t * pxAddNetworkReq = ( AddNetworkRequest_t * ) pvParams;
+    IotBleAddNetworkRequest_t * pxAddNetworkReq = ( IotBleAddNetworkRequest_t * ) pvParams;
 
-    if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
+    if( xSemaphoreTake( xWifiProvService.lock, portMAX_DELAY ) == pdPASS )
     {
-        if( pxAddNetworkReq->sSavedIdx != wifiProvINVALID_NETWORK_INDEX )
+        if( pxAddNetworkReq->savedIdx != IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX )
         {
-        	xRet = prvConnectSavedNetwork( pxAddNetworkReq->sSavedIdx );
+        	xRet = prvConnectSavedNetwork( pxAddNetworkReq->savedIdx );
         }
         else
         {
-        	xRet = prvAddNewNetwork( &pxAddNetworkReq->xNetwork );
+        	xRet = prvAddNewNetwork( &pxAddNetworkReq->network );
         }
-        xSemaphoreGive( xWifiProvService.xLock );
+        xSemaphoreGive( xWifiProvService.lock );
     }
 
-    prvSendStatusResponse( eSaveNetworkChar, xRet );
+    prvSendStatusResponse( IOT_BLE_WIFI_PROV_SAVE_NETWORK_CHAR, xRet );
     vPortFree( pxAddNetworkReq );
     vTaskDelete( NULL );
 }
@@ -1459,24 +1460,24 @@ void prvAddNetworkTask( void * pvParams )
 void prvDeleteNetworkTask( void * pvParams )
 {
     WIFIReturnCode_t xRet = eWiFiFailure;
-    DeleteNetworkRequest_t * pxDeleteNetworkReq = ( DeleteNetworkRequest_t * ) pvParams;
+    IotBleDeleteNetworkRequest_t * pxDeleteNetworkReq = ( IotBleDeleteNetworkRequest_t * ) pvParams;
 
 
-    if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
+    if( xSemaphoreTake( xWifiProvService.lock, portMAX_DELAY ) == pdPASS )
     {
-        xRet = prvPopNetwork( pxDeleteNetworkReq->sIdx, NULL );
+        xRet = prvPopNetwork( pxDeleteNetworkReq->idx, NULL );
 
         if( xRet == eWiFiSuccess )
         {
-            if( xWifiProvService.sConnectedIdx == wifiProvINVALID_NETWORK_INDEX )
+            if( xWifiProvService.connectedIdx == IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX )
             {
                 ( void ) WIFI_Disconnect();
             }
         }
-        xSemaphoreGive( xWifiProvService.xLock );
+        xSemaphoreGive( xWifiProvService.lock );
     }
 
-    prvSendStatusResponse( eDeleteNetworkChar, xRet );
+    prvSendStatusResponse( IOT_BLE_WIFI_PROV_DELETE_NETWORK_CHAR, xRet );
     vPortFree( pxDeleteNetworkReq );
     vTaskDelete( NULL );
 }
@@ -1488,34 +1489,34 @@ void prvDeleteNetworkTask( void * pvParams )
 void prvEditNetworkTask( void * pvParams )
 {
     WIFIReturnCode_t xRet = eWiFiFailure;
-    EditNetworkRequest_t * pxEditNetworkReq = ( EditNetworkRequest_t * ) pvParams;
+    IotBleEditNetworkRequest_t * pxEditNetworkReq = ( IotBleEditNetworkRequest_t * ) pvParams;
 
-    if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
+    if( xSemaphoreTake( xWifiProvService.lock, portMAX_DELAY ) == pdPASS )
     {
-        xRet = prvMoveNetwork( pxEditNetworkReq->sCurIdx, pxEditNetworkReq->sNewIdx );
-        xSemaphoreGive( xWifiProvService.xLock );
+        xRet = prvMoveNetwork( pxEditNetworkReq->curIdx, pxEditNetworkReq->newIdx );
+        xSemaphoreGive( xWifiProvService.lock );
     }
 
-    prvSendStatusResponse( eEditNetworkChar, xRet );
+    prvSendStatusResponse(  IOT_BLE_WIFI_PROV_EDIT_NETWORK_CHAR, xRet );
     vPortFree( pxEditNetworkReq );
     vTaskDelete( NULL );
 }
 
 /*-----------------------------------------------------------*/
 
-BaseType_t WIFI_PROVISION_Init( void )
+BaseType_t IotBleWifiProv_Init( void )
 {
 	BTStatus_t status = eBTStatusSuccess;
 	BTStatus_t error = pdFAIL;
 
-    if( xWifiProvService.xInit == pdFALSE )
+    if( xWifiProvService.init == pdFALSE )
     {
 
-		xWifiProvService.xLock = xSemaphoreCreateMutex();
+		xWifiProvService.lock = xSemaphoreCreateMutex();
 
-		if( xWifiProvService.xLock != NULL )
+		if( xWifiProvService.lock != NULL )
 		{
-			xSemaphoreGive( xWifiProvService.xLock );
+			xSemaphoreGive( xWifiProvService.lock );
 		}
 		else
 		{
@@ -1524,13 +1525,13 @@ BaseType_t WIFI_PROVISION_Init( void )
 
         if( status == eBTStatusSuccess )
         {
-        	xWifiProvService.pxGattService = ( BTService_t *)&xWIFIProvisionningService;
+        	xWifiProvService.pGattService = ( BTService_t *)&xWIFIProvisionningService;
         	status = IotBle_CreateService( (BTService_t *)&xWIFIProvisionningService, (IotBleAttributeEventCallback_t *)pxCallBackArray );
         }
         if( status == eBTStatusSuccess )
         {
-        	xWifiProvService.sConnectedIdx = wifiProvINVALID_NETWORK_INDEX;
-        	xWifiProvService.xInit = pdTRUE;
+        	xWifiProvService.connectedIdx = IOT_BLE_WIFI_PROV_INVALID_NETWORK_INDEX;
+        	xWifiProvService.init = pdTRUE;
         }
     }
     else
@@ -1547,12 +1548,12 @@ BaseType_t WIFI_PROVISION_Init( void )
 }
 
 /*-----------------------------------------------------------*/
-uint16_t WIFI_PROVISION_GetNumNetworks( void )
+uint16_t IotBleWifiProv_GetNumNetworks( void )
 {
 	return prvGetNumSavedNetworks();
 }
 
-BaseType_t WIFI_PROVISION_Connect( uint16_t usNetworkIndex )
+BaseType_t IotBleWifiProv_Connect( uint16_t usNetworkIndex )
 {
 	WIFIReturnCode_t xWifiRet;
 	BaseType_t xRet = pdFALSE;
@@ -1565,15 +1566,15 @@ BaseType_t WIFI_PROVISION_Connect( uint16_t usNetworkIndex )
 }
 
 
-BaseType_t WIFI_PROVISION_EraseAllNetworks( void )
+BaseType_t IotBleWifiProv_EraseAllNetworks( void )
 {
 
     BaseType_t xRet = pdTRUE;
     WIFIReturnCode_t xWiFiRet;
 
-    if( xSemaphoreTake( xWifiProvService.xLock, portMAX_DELAY ) == pdPASS )
+    if( xSemaphoreTake( xWifiProvService.lock, portMAX_DELAY ) == pdPASS )
     {
-        while( xWifiProvService.usNumNetworks > 0 )
+        while( xWifiProvService.numNetworks > 0 )
         {
             xWiFiRet = prvPopNetwork( 0, NULL );
             if( xWiFiRet != eWiFiSuccess )
@@ -1583,7 +1584,7 @@ BaseType_t WIFI_PROVISION_EraseAllNetworks( void )
                 break;
             }
         }
-        xSemaphoreGive( xWifiProvService.xLock );
+        xSemaphoreGive( xWifiProvService.lock );
     }
     else
     {
@@ -1595,23 +1596,23 @@ BaseType_t WIFI_PROVISION_EraseAllNetworks( void )
 
 /*-----------------------------------------------------------*/
 
-BaseType_t WIFI_PROVISION_Delete( void )
+BaseType_t IotBleWifiProv_Delete( void )
 {
 	BaseType_t xRet = pdFALSE;
 
-    if( IotBle_DeleteService( xWifiProvService.pxGattService ) == eBTStatusSuccess )
+    if( IotBle_DeleteService( xWifiProvService.pGattService ) == eBTStatusSuccess )
     {
     	xRet = pdTRUE;
     }
     if( xRet == pdTRUE )
     {
 
-    	if( xWifiProvService.xLock != NULL )
+    	if( xWifiProvService.lock != NULL )
     	{
-    		vSemaphoreDelete( xWifiProvService.xLock );
+    		vSemaphoreDelete( xWifiProvService.lock );
     	}
 
-    	memset( &xWifiProvService, 0x00, sizeof( WifiProvService_t ) );
+    	memset( &xWifiProvService, 0x00, sizeof( IotBleWifiProvService_t ) );
     }
 
     return xRet;
