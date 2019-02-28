@@ -45,7 +45,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *----------------------------------------------------------*/
 
 /* FIX ME: Uncomment and set to the specifications for your MCU. */
-#define configCPU_CLOCK_HZ                         416000000
+extern uint32_t SystemCoreClock;
+#define configCPU_CLOCK_HZ                         SystemCoreClock
 
 #define configUSE_DAEMON_TASK_STARTUP_HOOK         1
 #define configENABLE_BACKWARD_COMPATIBILITY        0
@@ -54,7 +55,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 60 )
-#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 2048U * 1024U ) )
+#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 412U * 1024U ) ) // 412k for heap
 #define configMAX_TASK_NAME_LEN                    ( 15 )
 #define configUSE_TRACE_FACILITY                   1
 #define configUSE_16_BIT_TICKS                     0
@@ -127,7 +128,7 @@ void vConfigureTimerForRunTimeStats( void );
     /* __NVIC_PRIO_BITS will be specified when CMSIS is being used. */
     #define configPRIO_BITS    __NVIC_PRIO_BITS
 #else
-    #define configPRIO_BITS    3                                 /* 8 priority levels. */
+    #define configPRIO_BITS    6                                 /* 8 priority levels. */
 #endif
 
 /* This demo makes use of one or more example stats formatting functions.  These
@@ -151,12 +152,12 @@ extern void vLoggingPrintf( const char * pcFormat, ... );
 #define configPRINTF( X )    vLoggingPrintf X
 
 /* Non-format version thread-safe print */
-extern void vLoggingPrint( const char * pcMessage );
-#define configPRINT( X )     vLoggingPrint( X )
+extern void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
+#define configPRINT( X )     vMainUARTPrintString( (X), ( strlen( X ) ) )
 
 /* Map the logging task's printf to the board specific output function. */
-#include <stdio.h>
-#define configPRINT_STRING( X )    printf( X ); /* FIX ME: Change to your devices console print acceptance function. */
+extern void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
+#define configPRINT_STRING( X )    vMainUARTPrintString( (X), ( strlen( X ) ) ) /* FIX ME: Change to your devices console print acceptance function. */
 /* Sets the length of the buffers into which logging messages are written - so
  * also defines the maximum length of each log message. */
 #define configLOGGING_MAX_MESSAGE_LENGTH            100

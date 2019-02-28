@@ -38,6 +38,12 @@
 #include "aws_clientcredential.h"
 #include "aws_dev_mode_key_provisioning.h"
 
+
+#include "uwp_led.h"
+#include "uwp_uart.h"
+
+#include <stdio.h>
+
 /* Logging Task Defines. */
 #define mainLOGGING_MESSAGE_QUEUE_LENGTH    ( 15 )
 #define mainLOGGING_TASK_STACK_SIZE         ( configMINIMAL_STACK_SIZE * 8 )
@@ -124,28 +130,33 @@ void vApplicationDaemonTaskStartupHook( void );
 /**
  * @brief Connects to Wi-Fi.
  */
-static void prvWifiConnect( void );
+//static void prvWifiConnect( void );
 
 /**
  * @brief Initializes the board.
  */
 static void prvMiscInitialization( void );
 
+/**
+ * @brief print string.
+ */
+void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
+
 /*-----------------------------------------------------------*/
 
 /**
  * @brief Application runtime entry point.
  */
-int main( void )
+int app_main( void )
 {
     /* Perform any hardware initialization that does not require the RTOS to be
      * running.  */
     prvMiscInitialization();
 
     /* Create tasks that are not dependent on the Wi-Fi being initialized. */
-    xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
+    /*xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
                             tskIDLE_PRIORITY,
-                            mainLOGGING_MESSAGE_QUEUE_LENGTH );
+                            mainLOGGING_MESSAGE_QUEUE_LENGTH );*/
 
     /* FIX ME: If you are using Ethernet network connections and the FreeRTOS+TCP stack,
      * uncomment the initialization function, FreeRTOS_IPInit(), below. */
@@ -164,15 +175,25 @@ int main( void )
     return 0;
 }
 /*-----------------------------------------------------------*/
-
+extern serial_t stdio_uart;
+extern void SystemInit(void);
+gpio_t led1;
 static void prvMiscInitialization( void )
 {
     /* FIX ME: Perform any hardware initializations, that don't require the RTOS to be 
      * running, here.
      */
+    SystemInit();
+    vled_Init(&led1, LED1);
+    vled_On(&led1);
+    serial_init(&stdio_uart, NC, NC);
+    configPRINT_STRING("test message\r\n");
 }
 /*-----------------------------------------------------------*/
-
+void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput){
+    vMyUARTOutput(DataToOutput, LengthToOutput);
+}
+/*-----------------------------------------------------------*/
 void vApplicationDaemonTaskStartupHook( void )
 {
     /* FIX ME: Perform any hardware initialization, that require the RTOS to be
@@ -232,6 +253,8 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
 }
 /*-----------------------------------------------------------*/
 #endif
+
+#if 0
 void prvWifiConnect( void )
 {
     /* FIX ME: Delete surrounding compiler directives when the Wi-Fi library is ported. */
@@ -294,6 +317,7 @@ void prvWifiConnect( void )
         }
     #endif /* if 0 */
 }
+#endif
 /*-----------------------------------------------------------*/
 
 /**
@@ -415,7 +439,7 @@ void vApplicationIdleHook( void )
 
     if( ( xTimeNow - xLastPrint ) > xPrintFrequency )
     {
-        configPRINT( "." );
+        configPRINT( ".\r\n" );
         xLastPrint = xTimeNow;
     }
 }

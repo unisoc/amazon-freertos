@@ -70,6 +70,11 @@
 			<locationURI>AFR_HOME/tests/common/include</locationURI>
 		</link>
 		<link>
+			<name>application_code/vendor_code/bsp</name>
+			<type>2</type>
+			<location>E:/Marlin3/FreeRTOS/amazon-freertos/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</location>
+		</link>
+		<link>
 			<name>lib/aws/FreeRTOS</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -165,14 +170,29 @@
 			<locationURI>AFR_HOME/lib/FreeRTOS/portable/GCC/ARM_CM3</locationURI>
 		</link>
 		<link>
-			<name>lib/aws/FreeRTOS/portable/MemMang/heap_4.c</name>
+			<name>lib/aws/FreeRTOS/portable/MemMang/heap_5.c</name>
 			<type>1</type>
-			<locationURI>AFR_HOME/lib/FreeRTOS/portable/MemMang/heap_4.c</locationURI>
+			<location>E:/Marlin3/FreeRTOS/amazon-freertos/lib/FreeRTOS/portable/MemMang/heap_5.c</location>
+		</link>
+		<link>
+			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/CMSIS</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/CMSIS</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/HAL_Driver</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/HAL_Driver</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/gcc</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/gcc</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/newlibc</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/newlibc</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
