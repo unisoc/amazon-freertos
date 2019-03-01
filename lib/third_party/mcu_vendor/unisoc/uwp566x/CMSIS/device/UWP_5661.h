@@ -122,8 +122,8 @@ typedef enum IRQn
 #define UWP_IRAM_BASE            (0x00100000UL)
 #define UWP_DRAM_BASE            (0x00180000UL)
 #define UWP_FLASH_BASE           (0x02000000UL)
-//#define NVIC_RAM_VECTOR_ADDRESS  UWP_IRAM_BASE
-#define NVIC_NUM_VECTORS         ( 15 + 128 )
+#define NVIC_RAM_VECTOR_ADDRESS  UWP_IRAM_BASE
+#define NVIC_NUM_VECTORS         ( 16 + 128 )
 
 /* peripheral base address definition                                         */
 
