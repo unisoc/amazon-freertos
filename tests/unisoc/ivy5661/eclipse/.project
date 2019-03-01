@@ -72,7 +72,7 @@
 		<link>
 			<name>application_code/vendor_code/bsp</name>
 			<type>2</type>
-			<location>E:/Marlin3/FreeRTOS/amazon-freertos/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</location>
+			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</locationURI>
 		</link>
 		<link>
 			<name>lib/aws/FreeRTOS</name>
@@ -172,7 +172,7 @@
 		<link>
 			<name>lib/aws/FreeRTOS/portable/MemMang/heap_5.c</name>
 			<type>1</type>
-			<location>E:/Marlin3/FreeRTOS/amazon-freertos/lib/FreeRTOS/portable/MemMang/heap_5.c</location>
+			<locationURI>AFR_HOME/lib/FreeRTOS/portable/MemMang/heap_5.c</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/CMSIS</name>
