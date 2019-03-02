@@ -228,6 +228,17 @@ Reset_Handler:
 	strlt	r0, [r2], #4
 	blt	.L_loop1
 
+	ldr r1, =__ramfunc_start__
+	ldr r2, =__ramtext_start__
+	ldr r3, =__ramtext_end__
+
+.L_loop2:
+	cmp	r2, r3
+	ittt	lt
+	ldrlt	r0, [r1], #4
+	strlt	r0, [r2], #4
+	blt	.L_loop2
+
 /*  This part of work usually is done in C library startup code. Otherwise,
  *  define this macro to enable it in this startup.
  *

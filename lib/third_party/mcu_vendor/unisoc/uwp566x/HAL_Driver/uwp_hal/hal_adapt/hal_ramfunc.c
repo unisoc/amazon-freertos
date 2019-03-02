@@ -1,17 +1,19 @@
 #include "hal_ramfunc.h"
 
-void uwp_temp_printgf(const char *fmt, ...){
+void uwp_temp_printf(const char *fmt, ...){
     return;
 }
 
+void mbed_error_printf(const char *fmt, ...){
+    return;
+}
 void vLoggingPrintf(char *fmt, ...){
     return;
 }
 
 void _irq_spurious(void *unused)
 {
-	for (;;)
-		;
+    for (;;);
 }
 
 void smsg_irq_handler(void *unused){
