@@ -155,11 +155,6 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
-			<name>lib/aws/FreeRTOS/portable/MemMang</name>
-			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -168,11 +163,6 @@
 			<name>lib/aws/FreeRTOS/portable/GCC/ARM_CM3</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/FreeRTOS/portable/GCC/ARM_CM3</locationURI>
-		</link>
-		<link>
-			<name>lib/aws/FreeRTOS/portable/MemMang/heap_4.c</name>
-			<type>1</type>
-			<locationURI>AFR_HOME/lib/FreeRTOS/portable/MemMang/heap_4.c</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/CMSIS</name>
