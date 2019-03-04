@@ -55,7 +55,9 @@ extern uint32_t SystemCoreClock;
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 60 )
-#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 412U * 1024U ) ) // 412k for heap
+/* heap: 0x00180000 size:400k */
+#define configAPPLICATION_ALLOCATED_HEAP           1
+#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 400U * 1024U ) )
 #define configMAX_TASK_NAME_LEN                    ( 15 )
 #define configUSE_TRACE_FACILITY                   1
 #define configUSE_16_BIT_TICKS                     0

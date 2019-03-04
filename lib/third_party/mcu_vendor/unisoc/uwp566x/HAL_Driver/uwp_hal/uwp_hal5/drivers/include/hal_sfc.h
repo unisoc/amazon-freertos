@@ -143,7 +143,7 @@ extern "C" {
 	void spi_flash_free(struct spi_flash *flash);
 
 	void uwp_spi_dump(u32_t arg_in);
-
+#if 0
 static inline unsigned int irq_lock_primask(void){
     unsigned int key;
     key = __get_PRIMASK();
@@ -156,8 +156,8 @@ static inline void irq_unlock_primask(unsigned int key){
         return;
     __enable_irq();
 }
-
-#if 0
+#endif
+#if 1
 static inline unsigned int irq_lock_primask(void)
 {
 

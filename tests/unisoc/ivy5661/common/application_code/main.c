@@ -111,6 +111,9 @@ static const uint8_t ucDNSServerAddress[ 4 ] =
     configDNS_SERVER_ADDR3
 };
 
+/* array ucHeap must be declared in one of the application's source file  */
+uint8_t *ucHeap = (uint8_t *)0x180000;
+
 /**
  * @brief Application task startup hook for applications using Wi-Fi. If you are not 
  * using Wi-Fi, then start network dependent applications in the vApplicationIPNetorkEventHook
@@ -177,6 +180,7 @@ int app_main( void )
 /*-----------------------------------------------------------*/
 extern serial_t stdio_uart;
 extern void SystemInit(void);
+extern int uwp_flash_init(void);
 gpio_t led1;
 static void prvMiscInitialization( void )
 {
@@ -188,6 +192,8 @@ static void prvMiscInitialization( void )
     vled_On(&led1);
     serial_init(&stdio_uart, NC, NC);
     configPRINT_STRING("test message\r\n");
+    if(uwp_flash_init() != 0)
+        configPRINT_STRING("flash init failed\r\n");
 }
 /*-----------------------------------------------------------*/
 void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput){

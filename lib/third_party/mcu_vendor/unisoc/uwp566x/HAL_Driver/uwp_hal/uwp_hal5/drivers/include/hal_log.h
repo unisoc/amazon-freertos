@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-
+#include "uwp_log.h"
 
 #ifdef __cplusplus
 }

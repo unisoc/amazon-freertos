@@ -58,7 +58,8 @@ MEMORY
 {
 
 	flash (rx) : ORIGIN = 0x02000000, LENGTH = 128K
-	sram (rwx) : ORIGIN = 0x00100240, LENGTH = (912K - 0x240)
+	sram (rwx) : ORIGIN = 0x00100240, LENGTH = (512K - 0x240)
+	dram (rwx) : ORIGIN = 0x00180000, LENGTH = 400K
 /*	flash (rx) : ORIGIN = 0x02000000, LENGTH = 512K
 	sram (rwx) : ORIGIN = 0x00100000, LENGTH = 400K */
 }
@@ -78,7 +79,7 @@ SECTIONS
 
 	.text : {
 		*(.vectors)
-		*(.text .text.*)
+		*( EXCLUDE_FILE (*hal_sfc.o *hal_sfc_phy.o *ramfunc_flash_api.o) .text.*)
 		*(.fixup)
 		*(.gnu.warning)
 		*(.rodata .rodata.*)
@@ -124,6 +125,16 @@ SECTIONS
 		CONSTRUCTORS
 		. = ALIGN(4);
 		_edata = ABSOLUTE(.);
+	} > sram
+
+	__ramfunc_start__ = _etext + SIZEOF(.data);
+	.ramtext : AT( __ramfunc_start__ ) {
+		. = ALIGN(4);
+		__ramtext_start__ = ABSOLUTE(.);
+		*ramfunc_flash_api.o(.text*)
+		*hal_sfc.o(.text*)
+		*hal_sfc_phy.o(.text*)
+		__ramtext_end__ = ABSOLUTE(.);
 	} > sram
 
 	.bss : {
