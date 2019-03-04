@@ -8,21 +8,60 @@
 #include <sys/times.h>
 #include <malloc.h>
 
-extern uint32_t __sbrk_start;
-extern uint32_t __krbs_start;
-
+extern char __HeapBase, __HeapLimit, HEAP_SIZE;
+static int heapBytesRemaining = (int)&HEAP_SIZE;
 caddr_t _sbrk(int incr)
 {
-    static uint32_t heap_ind = (uint32_t)(&__sbrk_start);
-    uint32_t heap_ind_pre = heap_ind;
-    uint32_t heap_ind_new = (heap_ind_pre + incr + 0x07) & ~0x07;
-    if (heap_ind_new > (uint32_t)(&__krbs_start)) {
-        errno = ENOMEM;
-        return (caddr_t)(-1);
+	static char *currentHeapEnd = &__HeapBase;
+	vTaskSuspendAll(); // Note: safe to use before FreeRTOS scheduler started
+	char *previousHeapEnd = currentHeapEnd;
+	if (currentHeapEnd + incr > &__HeapLimit) {
+		#if( configUSE_MALLOC_FAILED_HOOK == 1 )
+	    {
+	        extern void vApplicationMallocFailedHook( void );
+	        vApplicationMallocFailedHook();
+	    }
+	    #elif 0
+	        // If you want to alert debugger or halt...
+	        while(1) { __asm("bkpt #0"); }; // Stop in GUI as if at a breakpoint (if debugging, otherwise loop forever)
+	    #else
+	        // If you prefer to believe your application will gracefully trap out-of-memory...
+	        _impure_ptr->_errno = ENOMEM; // newlib's thread-specific errno
+	        xTaskResumeAll();
+	    #endif
+	    return (char *)-1; // the malloc-family routine that called sbrk will return 0
     }
-    heap_ind = heap_ind_new;
-    return (caddr_t) heap_ind_pre;
+	currentHeapEnd += incr;
+	heapBytesRemaining -= incr;
+	xTaskResumeAll();
+	return (char *) previousHeapEnd;
 }
+
+void __malloc_lock()     {       vTaskSuspendAll(); };
+void __malloc_unlock()   { (void)xTaskResumeAll();  };
+
+// newlib also requires implementing locks for the application's environment memory space,
+// accessed by newlib's setenv() and getenv() functions.
+// As these are trivial functions, momentarily suspend task switching (rather than semaphore).
+// ToDo: Move __env_lock/unlock to a separate newlib helper file.
+void __env_lock()    {       vTaskSuspendAll(); };
+void __env_unlock()  { (void)xTaskResumeAll();  };
+
+#if 0
+/// /brief  Wrap malloc/malloc_r to help debug who requests memory and why.
+/// Add to the linker command line: -Xlinker --wrap=malloc -Xlinker --wrap=_malloc_r
+// Note: These functions are normally unused and stripped by linker.
+void *__wrap_malloc(size_t nbytes) {
+    extern void * __real_malloc(size_t nbytes);
+    void *p = __real_malloc(nbytes); // Solely for debug breakpoint...
+    return p;
+};
+void *__wrap__malloc_r(void *reent, size_t nbytes) {
+    extern void * __real__malloc_r(size_t nbytes);
+    void *p = __real__malloc_r(nbytes); // Solely for debug breakpoint...
+    return p;
+};
+#endif
 
 #include "uwp_uart.h"
 extern serial_t stdio_uart;
@@ -54,7 +93,6 @@ int _close(int file)
 	return -1;
 }
 
-
 int _fstat(int file, struct stat *st)
 {
 	//st->st_mode = S_IFCHR;
@@ -71,7 +109,6 @@ int _lseek(int file, int ptr, int dir)
 	return 0;
 }
 
-
 // ================================================================================================
 // Implement FreeRTOS's memory API using newlib-provided malloc family.
 // ================================================================================================
@@ -83,12 +120,12 @@ void *pvPortMalloc( size_t xSize )  {
 void vPortFree( void *pv )  {
     free(pv);
 };
-#if 0
+
 size_t xPortGetFreeHeapSize( void )  {
     struct mallinfo mi = mallinfo();
     return mi.fordblks; + heapBytesRemaining;
 }
-#endif
+
 // GetMinimumEverFree is not available in newlib's malloc implementation.
 // So, no implementation provided: size_t xPortGetMinimumEverFreeHeapSize( void ) PRIVILEGED_FUNCTION;
 

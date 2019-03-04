@@ -156,16 +156,11 @@ SECTIONS
 		. = ALIGN(4);
 		_eiram = ABSOLUTE(.);
 	} > sram
-	
+
 	.heap :
 	{
-		__end__ = .;
-		end = __end__;
 		*(.heap*)
-		__HeapLimit = .;
 	} > dram
-	PROVIDE(__sbrk_start = ADDR(.heap));
-	PROVIDE(__krbs_start = ADDR(.heap) + SIZEOF(.heap));
 	
 	/* Stabs debugging sections. */
 	.stab 0 : { *(.stab) }
