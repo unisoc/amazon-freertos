@@ -35,6 +35,21 @@
 
 	.extern __SRAM_segment_end__
 
+	.section .heap
+	.align 3
+#ifdef __HEAP_SIZE
+	.equ    Heap_Size, __HEAP_SIZE
+#else
+	.equ    Heap_Size, 0x66000
+#endif
+	.globl    __HeapBase
+	.globl    __HeapLimit
+__HeapBase:
+	.space    Heap_Size
+	.size __HeapBase, . - __HeapBase
+__HeapLimit:
+	.size __HeapLimit, . - __HeapLimit
+
 	.section .isr_vector,"a",%progbits
 	.align	4
 	.globl	__isr_vector
