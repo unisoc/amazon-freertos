@@ -7,6 +7,18 @@ extern "C"{
 
 #include "hal_type.h"
 
+#define BIT(nr) (1UL << (nr))
+
+#define CLR_BIT(reg, bit) ((reg) &= ~(1<<(bit)))
+
+#define SET_BIT(reg, bit) ((reg) |=  (1<<(bit)))
+
+#define set_bits(value, addr)	\
+	(*(volatile unsigned long *)(addr)) |= (value)
+
+#define clr_bits(value, addr)	\
+	(*(volatile unsigned long *)(addr)) &= ~(value)
+
 static inline void sci_write32(mem_addr_t addr, u32_t data);
 
 #define sci_reg_and(reg, val) \

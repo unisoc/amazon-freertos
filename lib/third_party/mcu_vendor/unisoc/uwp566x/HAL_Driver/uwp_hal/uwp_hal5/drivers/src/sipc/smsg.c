@@ -13,11 +13,10 @@
 #include "hal_sys.h"
 #include "UWP_5661.h"
 #include "hal_ramfunc.h"
+#include "uwp_rtos_posix.h"
 
-//#define WIFI_LOG_DBG
+#define WIFI_LOG_INF
 #include "uwp_log.h"
-
-#define K_FOREVER 0xFFFFFFFF
 
 #define SMSG_STACK_SIZE		(2048)
 //struct k_thread smsg_thread;
@@ -148,7 +147,7 @@ void smsg_clear_queue(struct smsg_ipc *ipc, int prio)
 }
 
 extern void sblock_process(struct smsg *msg);
-void smsg_msg_dispatch_thread(const char *arg)
+void smsg_msg_dispatch_thread(void *arg)
 {
 	int prio;
 	struct smsg_ipc *ipc = &smsg_ipcs[0];
@@ -160,7 +159,8 @@ void smsg_msg_dispatch_thread(const char *arg)
 
 	while (1) {
 
-		k_sem_acquire(ipc->irq_sem, K_FOREVER);
+		configPRINT_STRING("wait sem\r\n");
+		k_sem_take(ipc->irq_sem, K_FOREVER);
 
 		for (prio = QUEUE_PRIO_IRQ; prio < QUEUE_PRIO_MAX; prio++) {
 			rx_buf = &(ipc->queue[prio].rx_buf);
@@ -218,7 +218,7 @@ int smsg_ipc_destroy(u8_t dst)
 {
 	struct smsg_ipc *ipc = &smsg_ipcs[dst];
 
-	k_thread_terminate(ipc->pid);
+	//k_thread_terminate(ipc->pid);
 
 	return 0;
 }
@@ -243,11 +243,14 @@ int smsg_ch_open(u8_t dst, u8_t channel, int prio, int timeout)
 		return -ENODEV;
 	}
 
-	ch->rxsem = k_sem_create(1, 0);
-	ch->rxlock = k_mutex_create();
+	//ch->rxsem = k_sem_create(1, 0);
+	k_sem_init(ch->rxsem, 1, 0);
+	//ch->rxlock = k_mutex_create();
+	k_mutex_init(ch->rxlock);
 
     if(ch->txlock == NULL)
-	    ch->txlock = k_mutex_create();
+	    //ch->txlock = k_mutex_create();
+    	k_mutex_init(ch->txlock);
     else
 		LOG_ERR("channel:%d txlock has created",channel);
 
@@ -366,7 +369,7 @@ int smsg_send(u8_t dst, u8_t prio, struct smsg *msg, int timeout)
     /* sometimes response to CP however the channel is not created at AP */
 	if(ch->txlock == NULL){
 		//LOG_ERR("channel:%d create txlock",msg->channel);
-        ch->txlock = k_mutex_create();
+        k_mutex_init(ch->txlock);
 	}
 
 	k_mutex_lock(ch->txlock, K_FOREVER);
@@ -400,11 +403,21 @@ static void smsg_irq_handler(void *arg)
 
     uwp_ipi_clear_remote(IPI_CORE_BTWF, IPI_TYPE_IRQ0);
 
-    k_sem_release(ipc->irq_sem);
+#ifdef FREERTOS_AND_INTERRUPT_DEFER
+    long xHighPriorityTaskWoken = pdFAIL;
+    k_sem_give_from_isr( ipc->irq_sem, &xHighPriorityTaskWoken );
+#else
+    k_sem_give( ipc->irq_sem );
+#endif
 
     NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
+
+#ifdef FREERTOS_AND_INTERRUPT_DEFER
+    portYIELD_FROM_ISR( xHighPriorityTaskWoken );
+#endif
+
 }
-#if 0
+
 int smsg_init(u32_t dst, u32_t smsg_base)
 {
 	struct smsg_ipc *ipc = &smsg_ipcs[dst];
@@ -416,15 +429,14 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 	smsg_clear_queue(ipc, QUEUE_PRIO_NORMAL);
 	smsg_clear_queue(ipc, QUEUE_PRIO_HIGH);
 	smsg_clear_queue(ipc, QUEUE_PRIO_IRQ);
+#if 0
+	k_sem_init( ipc->irq_sem, 1, 0 );
+	//ipc->irq_sem = k_sem_create(1, 0);
 
-	//uwp_ipi_set_callback(smsg_irq_handler, (void *)ipc);
-
-	ipc->irq_sem = k_sem_create(1, 0);
-
-    ipc->pid = k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,osPriorityNormal);
+    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,1,ipc->pid);
     if(ipc->pid == NULL)
         LOG_ERR("smsg thread create failed");
-#if 1
+
     NVIC_DisableIRQ(GNSS2BTWIFI_IPI_IRQn);
     uwp_sys_enable(BIT(APB_EB_IPI));
     uwp_sys_reset(BIT(APB_EB_IPI));
@@ -436,4 +448,3 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 
 	return (ipc->pid == NULL);
 }
-#endif

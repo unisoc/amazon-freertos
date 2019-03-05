@@ -6,10 +6,12 @@
  */
 
 #include "uwp_uart.h"
+#include "FreeRTOSConfig.h"
 
 extern serial_t stdio_uart;
 
-void vMyUARTOutput(char *DataToOutput, size_t LengthToOutput){
-    for(int i = 0; i < LengthToOutput; i++)
-        serial_putc(&stdio_uart, DataToOutput[i]);
+void vStdioUARTOutput(char *DataToOutput){
+    short sDataLength = 0;
+    while( (DataToOutput[sDataLength] != '\0') && (sDataLength <= configLOGGING_MAX_MESSAGE_LENGTH) )
+        serial_putc(&stdio_uart, DataToOutput[sDataLength++]);
 }

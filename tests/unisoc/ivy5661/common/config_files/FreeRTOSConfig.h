@@ -54,8 +54,11 @@ extern uint32_t SystemCoreClock;
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
-#define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 60 )
-#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 2048U * 1024U ) )
+#define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 64 )
+/* heap: 0x00180000 size:400k */
+#define configAPPLICATION_ALLOCATED_HEAP           1
+#define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 400U * 1024U ) )
+>>>>>>> preserve modification
 #define configMAX_TASK_NAME_LEN                    ( 15 )
 #define configUSE_TRACE_FACILITY                   1
 #define configUSE_16_BIT_TICKS                     0
@@ -64,7 +67,6 @@ extern uint32_t SystemCoreClock;
 #define configUSE_MUTEXES                          1
 #define configUSE_RECURSIVE_MUTEXES                1
 #define configQUEUE_REGISTRY_SIZE                  0
-#define configUSE_APPLICATION_TASK_TAG             0
 #define configUSE_COUNTING_SEMAPHORES              1
 #define configUSE_ALTERNATIVE_API                  0
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS    3      /* FreeRTOS+FAT requires 2 pointers if a CWD is supported. */
@@ -73,9 +75,9 @@ extern uint32_t SystemCoreClock;
 
 /* Hook function related definitions. */
 #define configUSE_TICK_HOOK                        0
-#define configUSE_IDLE_HOOK                        1
+#define configUSE_IDLE_HOOK                        0
 #define configUSE_MALLOC_FAILED_HOOK               1
-#define configCHECK_FOR_STACK_OVERFLOW             0      /* Not applicable to the Win32 port. */
+#define configCHECK_FOR_STACK_OVERFLOW             2      /* Not applicable to the Win32 port. */
 
 /* Software timer related definitions. */
 #define configUSE_TIMERS                           1
@@ -85,6 +87,10 @@ extern uint32_t SystemCoreClock;
 
 /* Event group related definitions. */
 #define configUSE_EVENT_GROUPS                     1
+
+/* FreeRTOS POSIX.  */
+#define configUSE_POSIX_ERRNO                      0
+#define configUSE_APPLICATION_TASK_TAG             0
 
 /* Run time stats gathering definitions. */
 /* FIX ME: Uncomment if you plan to use Tracealyzer.
@@ -150,22 +156,22 @@ void vAssertCalled( const char * pcFile,
 /* The function that implements FreeRTOS printf style output, and the macro
  * that maps the configPRINTF() macros to that function. */
 extern void vLoggingPrintf( const char * pcFormat, ... );
-#define configPRINTF( X )    vLoggingPrintf X
+#define configPRINTF    vLoggingPrintf
 
 /* Non-format version thread-safe print */
-extern void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
-#define configPRINT( X )     vMainUARTPrintString( (X), ( strlen( X ) ) )
+extern void vLoggingPrint( const char * pcMessage );
+#define configPRINT( X )     vLoggingPrint( (X) )
 
 /* Map the logging task's printf to the board specific output function. */
-extern void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
-#define configPRINT_STRING( X )    vMainUARTPrintString( (X), ( strlen( X ) ) ) /* FIX ME: Change to your devices console print acceptance function. */
+extern void vStdioUARTOutput( char *DataToOutput );
+#define configPRINT_STRING( X )    vStdioUARTOutput( (X) )
 /* Sets the length of the buffers into which logging messages are written - so
  * also defines the maximum length of each log message. */
 #define configLOGGING_MAX_MESSAGE_LENGTH            100
 
 /* Set to 1 to prepend each log message with a message number, the task name,
  * and a time stamp. */
-#define configLOGGING_INCLUDE_TIME_AND_TASK_NAME    1
+#define configLOGGING_INCLUDE_TIME_AND_TASK_NAME    0
 
 /* The priority at which the tick interrupt runs.  This should probably be kept at 1. */
 #define configKERNEL_INTERRUPT_PRIORITY             1

@@ -7,16 +7,13 @@ void uwp_temp_printf(const char *fmt, ...){
 void mbed_error_printf(const char *fmt, ...){
     return;
 }
-void vLoggingPrintf(char *fmt, ...){
-    return;
-}
 
 void _irq_spurious(void *unused)
 {
     for (;;);
 }
 
-void smsg_irq_handler(void *unused){
+void defualt_smsg_irq_handler(void *unused){
     for(;;);
 }
 

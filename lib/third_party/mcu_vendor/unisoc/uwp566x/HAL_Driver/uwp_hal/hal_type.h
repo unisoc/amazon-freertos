@@ -23,6 +23,11 @@ typedef unsigned char  u8_t;
 typedef signed   char  s8_t;
 typedef u32_t          mem_addr_t;
 
+typedef void * k_sem_t;
+typedef void * k_thread_t;
+typedef void * k_mutex_t;
+typedef void * k_queue_t;
+
 #ifdef __cplusplus
 }
 #endif

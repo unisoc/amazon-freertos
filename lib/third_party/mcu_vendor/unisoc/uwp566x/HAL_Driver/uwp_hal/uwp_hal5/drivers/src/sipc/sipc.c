@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include "sipc.h"
+
+#define WIFI_LOG_INF
 #include "uwp_log.h"
 
 extern int smsg_init(u32_t dst, u32_t smsg_base);
@@ -16,13 +18,13 @@ int sipc_init(void)
 	int ret;
 
 	LOG_INF("sipc init start.");
-
+#if 1
 	ret = smsg_init(IPC_DST, IPC_RING_ADDR);
 	if (ret) {
 		LOG_ERR("sipc init failed.");
 		return ret;
 	}
-
+#endif
 	LOG_INF("sipc init success.");
 
 	return 0;
