@@ -45,7 +45,7 @@
 #include <stdio.h>
 
 /* Logging Task Defines. */
-#define mainLOGGING_MESSAGE_QUEUE_LENGTH    ( 15 )
+#define mainLOGGING_MESSAGE_QUEUE_LENGTH    ( 32 )
 #define mainLOGGING_TASK_STACK_SIZE         ( configMINIMAL_STACK_SIZE * 8 )
 
 /* Unit test defines. */
@@ -139,11 +139,7 @@ void vApplicationDaemonTaskStartupHook( void );
  * @brief Initializes the board.
  */
 static void prvMiscInitialization( void );
-
-/**
- * @brief print string.
- */
-void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput);
+extern void vUnisocInitialize(void);
 
 /*-----------------------------------------------------------*/
 
@@ -157,9 +153,11 @@ int app_main( void )
     prvMiscInitialization();
 
     /* Create tasks that are not dependent on the Wi-Fi being initialized. */
-    /*xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
-                            tskIDLE_PRIORITY,
-                            mainLOGGING_MESSAGE_QUEUE_LENGTH );*/
+    xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
+                            tskIDLE_PRIORITY + 1,
+                            mainLOGGING_MESSAGE_QUEUE_LENGTH );
+
+    vUnisocInitialize();
 
     /* FIX ME: If you are using Ethernet network connections and the FreeRTOS+TCP stack,
      * uncomment the initialization function, FreeRTOS_IPInit(), below. */
@@ -181,6 +179,8 @@ int app_main( void )
 extern serial_t stdio_uart;
 extern void SystemInit(void);
 extern int uwp_flash_init(void);
+extern void intc_uwp_init(void);
+extern void aon_intc_uwp_init(void);
 gpio_t led1;
 static void prvMiscInitialization( void )
 {
@@ -192,12 +192,11 @@ static void prvMiscInitialization( void )
     vled_On(&led1);
     serial_init(&stdio_uart, NC, NC);
     configPRINT_STRING("test message\r\n");
+
     if(uwp_flash_init() != 0)
         configPRINT_STRING("flash init failed\r\n");
-}
-/*-----------------------------------------------------------*/
-void vMainUARTPrintString(char *DataToOutput, size_t LengthToOutput){
-    vMyUARTOutput(DataToOutput, LengthToOutput);
+    intc_uwp_init();
+    aon_intc_uwp_init();
 }
 /*-----------------------------------------------------------*/
 void vApplicationDaemonTaskStartupHook( void )
@@ -210,6 +209,7 @@ void vApplicationDaemonTaskStartupHook( void )
      * enable the unit tests and after MQTT, Bufferpool, and Secure Sockets libraries 
      * have been imported into the project. If you are not using Wi-Fi, see the 
      * vApplicationIPNetworkEventHook function. */
+
     #if 0
         if( SYSTEM_Init() == pdPASS )
         {
@@ -402,6 +402,7 @@ void vApplicationMallocFailedHook()
 {
     /* The TCP tests will test behavior when the entire heap is allocated. In
      * order to avoid interfering with those tests, this function does nothing. */
+	configPRINT_STRING("malloc failed\r\n");
 }
 /*-----------------------------------------------------------*/
 
@@ -422,6 +423,7 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask,
     portDISABLE_INTERRUPTS();
 
     /* Loop forever */
+    configPRINT_STRING("stack overflow\r\n");
     for( ; ; )
     {
     }
@@ -445,9 +447,10 @@ void vApplicationIdleHook( void )
 
     if( ( xTimeNow - xLastPrint ) > xPrintFrequency )
     {
-        configPRINT( ".\r\n" );
+        configPRINT( "." );
         xLastPrint = xTimeNow;
     }
+
 }
 /*-----------------------------------------------------------*/
 

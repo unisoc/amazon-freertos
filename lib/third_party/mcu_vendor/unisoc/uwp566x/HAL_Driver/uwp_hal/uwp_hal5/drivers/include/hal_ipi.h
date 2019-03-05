@@ -9,6 +9,7 @@
 
 #include "hal_base.h"
 #include "hal_ramfunc.h"
+#include "uwp_def.h"
 
 #ifdef __cplusplus
 extern "C" {

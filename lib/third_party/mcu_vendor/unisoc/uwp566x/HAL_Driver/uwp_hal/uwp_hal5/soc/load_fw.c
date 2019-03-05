@@ -5,8 +5,13 @@
  */
 
 #include <string.h>
-#include <uwp_hal.h>
 #include <stdbool.h>
+
+#include "uwp_hal.h"
+#include "uwp_rtos_posix.h"
+
+#define WIFI_LOG_INF
+#include "uwp_log.h"
 
 #define CONFIG_CP_SECTOR1_LOAD_BASE 0x40a20000
 #define CONFIG_CP_SECTOR2_LOAD_BASE 0x40a80000
@@ -21,8 +26,6 @@
 #define CP_RUNNING_CHECK_CR 0x40a80000
 #define CP_RUNNING_BIT  0
 #define CP_WIFI_RUNNING_BIT     1
-
-#define k_sleep osDelay
 
 extern void GNSS_Start(void);
 
@@ -227,7 +230,7 @@ int uwp_mcu_init(void)
 		return ret;
 	}
 
-	LOG_DBG("Start init mcu and download firmware.");
+	LOG_INF("Start init mcu and download firmware.");
 
 	cp_sram_init();
 	GNSS_Start();
@@ -258,6 +261,6 @@ int uwp_mcu_init(void)
 
 	cp_init_flag = true;
 
-	LOG_DBG("CP Init done,and CP fw is running!!!");
+	LOG_INF("CP Init done,and CP fw is running!!!");
 	return 0;
 }

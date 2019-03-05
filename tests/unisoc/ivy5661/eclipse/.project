@@ -179,6 +179,11 @@
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/gcc</locationURI>
 		</link>
+		<link>
+			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/logging</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/logging</locationURI>
+		</link>
 	</linkedResources>
 	<variableList>
 		<variable>

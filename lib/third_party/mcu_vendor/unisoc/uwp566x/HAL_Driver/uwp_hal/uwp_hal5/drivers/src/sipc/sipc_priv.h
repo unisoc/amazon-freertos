@@ -19,9 +19,9 @@ extern "C" {
 
 	struct smsg_channel {
 		/* wait queue for recv-buffer */
-		void    *rxsem;
-		void    *rxlock;
-		void    *txlock;
+		k_sem_t      rxsem;
+		k_mutex_t    rxlock;
+		k_mutex_t    txlock;
 
 		u32_t refs;
 		u32_t state;
@@ -68,8 +68,8 @@ extern "C" {
 
 		/* sipc ctrl thread */
 		//struct tcb_s	*thread;
-		void			*pid; // tid return value of thread create
-		void            *irq_sem;
+		k_thread_t       pid; // tid return value of thread create
+		k_sem_t          irq_sem;
 		/* lock for send-buffer */
 		u32_t            txpinlock;
 		/* all fixed channels receivers */

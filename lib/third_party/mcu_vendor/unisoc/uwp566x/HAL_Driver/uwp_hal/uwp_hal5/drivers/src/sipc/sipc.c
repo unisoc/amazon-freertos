@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include "sipc.h"
+
+#define WIFI_LOG_INF
 #include "uwp_log.h"
 
 extern int smsg_init(u32_t dst, u32_t smsg_base);

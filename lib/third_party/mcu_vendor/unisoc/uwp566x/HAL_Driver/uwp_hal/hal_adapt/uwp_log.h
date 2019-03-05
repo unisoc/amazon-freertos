@@ -14,9 +14,8 @@ extern "C" {
 //#define WIFI_DUMP
 
 #ifdef  WIFI_LOG_ERR
-#define LOG_ERR(fmt, ...) do {\
-            uwp_temp_printf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
-    }while(0)
+extern void vLoggingPrintf(const char *fmt, ... );
+#define LOG_ERR( fmt, ... ) vLoggingPrintf ( "%s:"fmt"\r\n", __func__, ##__VA_ARGS__ )
 #else
 #define LOG_ERR(fmt, ...)
 #endif
@@ -38,8 +37,9 @@ extern "C" {
 #endif
 
 #ifdef  WIFI_LOG_INF
+extern void vLoggingPrintf(const char *fmt, ... );
 #define LOG_INF(fmt, ...) do {\
-        uwp_temp_printf(fmt"\r\n",##__VA_ARGS__);\
+		vLoggingPrintf(fmt"\r\n",##__VA_ARGS__);\
     }while(0)
 #else
 #define LOG_INF(fmt, ...)
