@@ -159,7 +159,6 @@ void smsg_msg_dispatch_thread(void *arg)
 
 	while (1) {
 
-		configPRINT_STRING("wait sem\r\n");
 		k_sem_take(ipc->irq_sem, K_FOREVER);
 
 		for (prio = QUEUE_PRIO_IRQ; prio < QUEUE_PRIO_MAX; prio++) {
@@ -429,11 +428,10 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 	smsg_clear_queue(ipc, QUEUE_PRIO_NORMAL);
 	smsg_clear_queue(ipc, QUEUE_PRIO_HIGH);
 	smsg_clear_queue(ipc, QUEUE_PRIO_IRQ);
-#if 0
-	k_sem_init( ipc->irq_sem, 1, 0 );
-	//ipc->irq_sem = k_sem_create(1, 0);
 
-    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,1,ipc->pid);
+	k_sem_init( ipc->irq_sem, 1, 0 );
+
+    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,5,ipc->pid);
     if(ipc->pid == NULL)
         LOG_ERR("smsg thread create failed");
 
@@ -441,10 +439,10 @@ int smsg_init(u32_t dst, u32_t smsg_base)
     uwp_sys_enable(BIT(APB_EB_IPI));
     uwp_sys_reset(BIT(APB_EB_IPI));
 	// TODO: isr priority
-    NVIC_SetPriority(GNSS2BTWIFI_IPI_IRQn,0x1FUL);
+    NVIC_SetPriority(GNSS2BTWIFI_IPI_IRQn,5);
     NVIC_SetVector(GNSS2BTWIFI_IPI_IRQn,(uint32_t)smsg_irq_handler);
     NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
-#endif
+
 
 	return (ipc->pid == NULL);
 }

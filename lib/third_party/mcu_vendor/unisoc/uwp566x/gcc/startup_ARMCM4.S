@@ -95,7 +95,7 @@ __isr_vector:
     .long    _irq_spurious         					 //     16 BT ACCELERATOR INTR4
     .long    _irq_spurious							 //     17
     .long    _irq_spurious          				 //     18
-    .long    smsg_irq_handler      					 //     19 INT IPI
+    .long    default_smsg_irq_handler      					 //     19 INT IPI
     .long    _irq_spurious        					 //     20 INT AON INTC
     .long    _irq_spurious							 //     21
     .long    _irq_spurious							 //     22
@@ -126,7 +126,7 @@ __isr_vector:
     .long    _irq_spurious				             //     47
     .long    _irq_spurious				             //     48
     .long    _irq_spurious				             //     49
-    .long    smsg_irq_handler				         //     50  NVIC_INT_GNSS2BTWF_IPI
+    .long    default_smsg_irq_handler				         //     50  NVIC_INT_GNSS2BTWF_IPI
     .long    _irq_spurious				             //     51
     .long    _irq_spurious				             //     52
     .long    _irq_spurious				             //     53

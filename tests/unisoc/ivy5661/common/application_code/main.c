@@ -153,15 +153,12 @@ int app_main( void )
     prvMiscInitialization();
 
     /* Create tasks that are not dependent on the Wi-Fi being initialized. */
-    long ret = xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
+    xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
                             tskIDLE_PRIORITY + 1,
                             mainLOGGING_MESSAGE_QUEUE_LENGTH );
-    if( ret != pdPASS )
-    	configPRINT_STRING("log init failed\r\n");
-    else
-    	configPRINT_STRING("LOG init success\r\n");
 
     vUnisocInitialize();
+
     /* FIX ME: If you are using Ethernet network connections and the FreeRTOS+TCP stack,
      * uncomment the initialization function, FreeRTOS_IPInit(), below. */
     /*FreeRTOS_IPInit( ucIPAddress,
@@ -202,7 +199,6 @@ static void prvMiscInitialization( void )
     aon_intc_uwp_init();
 }
 /*-----------------------------------------------------------*/
-extern void vRTOSTest(void);
 void vApplicationDaemonTaskStartupHook( void )
 {
     /* FIX ME: Perform any hardware initialization, that require the RTOS to be
@@ -214,11 +210,6 @@ void vApplicationDaemonTaskStartupHook( void )
      * have been imported into the project. If you are not using Wi-Fi, see the 
      * vApplicationIPNetworkEventHook function. */
 
-	//vUnisocInitialize();
-	/*if( sipc_init() != 0){
-        configPRINT_STRING("sipc init failed\r\n");
-	}*/
-	//vRTOSTest();
     #if 0
         if( SYSTEM_Init() == pdPASS )
         {

@@ -13,7 +13,7 @@ void _irq_spurious(void *unused)
     for (;;);
 }
 
-void defualt_smsg_irq_handler(void *unused){
+void default_smsg_irq_handler(void *unused){
     for(;;);
 }
 
