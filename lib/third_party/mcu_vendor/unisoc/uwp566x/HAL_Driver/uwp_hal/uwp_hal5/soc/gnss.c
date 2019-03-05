@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <uwp_hal.h>
+#include "uwp_hal.h"
+
+#include "uwp_log.h"
 
 #define APB_GLB_REG_BASE    0x40BC8000
 #define SOFT_RST            (APB_GLB_REG_BASE + 0X0000)

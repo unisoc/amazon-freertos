@@ -21,10 +21,12 @@ void vUnisocInitialize(void){
 
 /* this task shuold be deleted after uwp complete init */
 extern int sipc_init(void);
+extern int uwp_mcu_init(void);
 static void prvUWPInitTask(void *pvParameter){
     if(sipc_init() != 0)
     	configPRINT("sipc init failed\r\n");
-    //if(uwp_cp_init() != 0)
+    if(uwp_mcu_init() != 0)
+    	configPRINT("fw load failed\r\n");
     for(;;){
     	//configPRINT("unisoc init task\r\n");
         vTaskDelay(pdMS_TO_TICKS(5000));

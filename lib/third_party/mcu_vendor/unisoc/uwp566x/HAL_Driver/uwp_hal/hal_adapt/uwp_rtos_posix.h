@@ -18,6 +18,8 @@ extern "C"{
 
 #define K_FOREVER portMAX_DELAY
 
+#define k_sleep( X ) vTaskDelay( pdMS_TO_TICKS(X) )
+
 #define k_queue_init( QueueHandle, ulQueueLength, ulQueueItemSize) \
 	do { \
 	    QueueHandle = xQueueCreate( ulQueueLength, ulQueueItemSize ); \
