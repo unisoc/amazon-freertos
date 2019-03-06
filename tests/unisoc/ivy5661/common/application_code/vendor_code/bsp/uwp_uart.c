@@ -15,3 +15,15 @@ void vStdioUARTOutput(char *DataToOutput){
     while( (DataToOutput[sDataLength] != '\0') && (sDataLength <= configLOGGING_MAX_MESSAGE_LENGTH) )
         serial_putc(&stdio_uart, DataToOutput[sDataLength++]);
 }
+
+#include <stdarg.h>
+#include <string.h>
+
+void printk(const char *pcFormat, ...){
+    char LogForISRBuf[20];
+    va_list args;
+    va_start(args, pcFormat);
+    vsnprintf( LogForISRBuf, 20, pcFormat, args );
+    va_end(args);
+    vStdioUARTOutput(LogForISRBuf);
+}

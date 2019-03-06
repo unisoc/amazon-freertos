@@ -29,8 +29,9 @@ extern void vLoggingPrintf(const char *fmt, ... );
 #endif
 
 #ifdef  WIFI_LOG_DBG
+extern void vLoggingPrintf(const char *fmt, ... );
 #define LOG_DBG(fmt, ...) do {\
-        uwp_temp_printf(fmt"\r\n", ##__VA_ARGS__);\
+		vLoggingPrintf(fmt"\r\n", ##__VA_ARGS__);\
     }while(0)
 #else
 #define LOG_DBG(fmt, ...)
@@ -66,7 +67,7 @@ extern void vLoggingPrintf(const char *fmt, ... );
             }\
        } while(0)
 
-#define printk uwp_temp_printf
+extern void printk(const char *pcFarmat, ... );
 
 void uwp_temp_printf(const char *fmt, ...);
 void mbed_error_printf(const char*fmt, ...);
