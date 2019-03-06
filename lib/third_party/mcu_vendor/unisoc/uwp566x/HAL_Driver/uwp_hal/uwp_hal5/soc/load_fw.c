@@ -10,6 +10,7 @@
 #include "uwp_hal.h"
 #include "uwp_rtos_posix.h"
 
+#define WIFI_LOG_DBG
 #define WIFI_LOG_INF
 #include "uwp_log.h"
 

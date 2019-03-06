@@ -12,7 +12,7 @@ static void prvUWPInitTask(void *pvParameter);
 
 void vUnisocInitialize(void){
     if ( k_thread_create("uwpInitTask", prvUWPInitTask,
-    		              NULL, NULL, 1024, 1, prvUnisocInitTaskHandle) != pdPASS){
+    		              NULL, NULL, 1024 * 2, 1, prvUnisocInitTaskHandle) != pdPASS){
     	configPRINT("Unisoc Init Task failed\r\n");
     	return;
     }
