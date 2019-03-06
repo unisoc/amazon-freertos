@@ -398,7 +398,7 @@ static void smsg_irq_handler(void *arg)
 
     NVIC_DisableIRQ(GNSS2BTWIFI_IPI_IRQn);
 
-    LOG_DBG("\r\nipi\r\n");
+    printk("\r\nipi\r\n");
 
     uwp_ipi_clear_remote(IPI_CORE_BTWF, IPI_TYPE_IRQ0);
 
@@ -441,7 +441,7 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 	// TODO: isr priority
     NVIC_SetPriority(GNSS2BTWIFI_IPI_IRQn,5);
     NVIC_SetVector(GNSS2BTWIFI_IPI_IRQn,(uint32_t)smsg_irq_handler);
-    NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
+    //NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
 
 
 	return (ipc->pid == NULL);

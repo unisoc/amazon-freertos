@@ -6,6 +6,7 @@
 
 #include "uwp_hal.h"
 
+#define WIFI_LOG_DBG
 #include "uwp_log.h"
 
 #define APB_GLB_REG_BASE    0x40BC8000

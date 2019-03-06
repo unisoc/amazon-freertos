@@ -11,6 +11,7 @@
 #include "uwp_rtos_posix.h"
 
 #define WIFI_LOG_INF
+#define WIFI_LOG_DBG
 #include "uwp_log.h"
 
 #define CONFIG_CP_SECTOR1_LOAD_BASE 0x40a20000
@@ -154,6 +155,7 @@ int cp_check_running(void)
 	do {
 		value = sci_read32(CP_RUNNING_CHECK_CR);
 		if (value & (1 << CP_RUNNING_BIT)) {
+			LOG_DBG("cp is running");
 			return 0;
 		}
 		k_sleep(30);
