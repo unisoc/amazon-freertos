@@ -35,6 +35,21 @@
 
 	.extern __SRAM_segment_end__
 
+	.section .stack
+	.align 3
+#ifdef __STACK_SIZE
+	.equ	Stack_Size, __STACK_SIZE
+#else
+	.equ	Stack_Size, 0x800
+#endif
+	.globl	__StackTop
+	.globl	__StackLimit
+__StackLimit:
+	.space	Stack_Size
+	.size	__StackLimit, . - __StackLimit
+__StackTop:
+	.size	__StackTOP, . - __StackTop
+
 	.section .heap
 	.align 3
 #ifdef __HEAP_SIZE
@@ -58,7 +73,7 @@ __HeapLimit:
 
 __Vectors:
 __isr_vector:
-	.long	__SRAM_segment_end__ - 4  /* Top of Stack at top of RAM*/
+	.long	__SRAM_segment_end__ - 4 /* Top of Stack at top of RAM*/
 	.long	Reset_Handler         /* Reset Handler */
 	.long	NMI_Handler           /* NMI Handler */
 	.long	HardFault_Handler     /* Hard Fault Handler */

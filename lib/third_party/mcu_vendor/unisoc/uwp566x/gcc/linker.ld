@@ -147,6 +147,16 @@ SECTIONS
 		_ebss = ABSOLUTE(.);
 	} > sram
 
+	.stack_dummy : {
+		*(.stack)
+	} > sram
+	
+	__StackTop = ORIGIN(sram) + LENGTH(sram);
+	__StackLimit = __StackTop - SIZEOF(.stack_dummy);
+	PROVIDE(__stack = __StackTop);
+	
+	ASSERT(__StackLimit >= _ebss, "region sram overflowed with stack")
+	
 	.iram : {
 		. = ALIGN(4);
 		_siram = ABSOLUTE(.);
