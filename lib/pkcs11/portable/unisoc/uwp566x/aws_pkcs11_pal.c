@@ -35,10 +35,12 @@
 /* C runtime includes. */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* UWP FLASH driver */
 #include "hal_ramfunc.h"
 
+#include "task.h"
 /*-----------------------------------------------------------*/
 
 extern void vLoggingPRINT(const char *pcFormat, ... );
@@ -318,6 +320,28 @@ int mbedtls_hardware_poll( void * data,
                            size_t len,
                            size_t * olen )
 {
-    /* FIX ME. */
+    int copylen = len;
+    int size;
+    int entropy;
+    unsigned seed = xTaskGetTickCount();
+
+    size = sizeof( entropy );
+    if(seed != 0)
+        srand(seed);
+
+    while( copylen > 0 )
+    {
+        entropy = rand();
+        if( entropy == 0 )
+        {
+            vLoggingPrintf( "Error RAND is returning 0 at copylen 0x%x \n\r", copylen );
+        }
+
+        memcpy( output, &entropy, size < copylen ? size : copylen);
+        output += size;
+        copylen -= size;
+    }
+
+    *olen = len;
     return 0;
 }
