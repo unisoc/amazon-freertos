@@ -18,6 +18,9 @@ extern "C"{
 
 #define K_FOREVER portMAX_DELAY
 
+#define RTOS_RETURN_VALUE_SUCCESS  1
+#define RTOS_RETURN_VALUE_FAILED   0
+
 #define k_sleep( X ) vTaskDelay( pdMS_TO_TICKS(X) )
 
 #define k_queue_init( QueueHandle, ulQueueLength, ulQueueItemSize) \

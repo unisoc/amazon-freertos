@@ -177,7 +177,7 @@ extern void vStdioUARTOutput( char *DataToOutput );
 
 /* The maximum interrupt priority from which FreeRTOS API functions can be called.
  * Only API functions that end in ...FromISR() can be used within interrupts. */
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY        ( 1 << 5 )
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY        ( 1 << (8 - configPRIO_BITS) )
 
 /* Application specific definitions follow. **********************************/
 

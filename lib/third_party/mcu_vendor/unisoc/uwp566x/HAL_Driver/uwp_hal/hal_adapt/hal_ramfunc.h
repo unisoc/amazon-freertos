@@ -5,6 +5,8 @@
 extern "C"{
 #endif
 
+#include <stdbool.h>
+
 #include "hal_type.h"
 
 static inline void sci_write32(mem_addr_t addr, u32_t data);
@@ -40,6 +42,10 @@ static inline void sys_write32(u32_t data, mem_addr_t addr)
 {
     *(volatile u32_t *)addr = data;
 }
+
+extern int flash_uwp_write_protection(bool enable);
+extern int flash_uwp_erase(uint32_t offset, uint32_t len);
+extern int flash_uwp_write(uint32_t offset, const void *data, uint32_t len);
 
 #ifdef __cplusplus
 }

@@ -60,6 +60,16 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>lib/crypto</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/pkcs11</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>lib/third_party</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -68,6 +78,11 @@
 			<name>application_code/common_test/include</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/tests/common/include</locationURI>
+		</link>
+		<link>
+			<name>application_code/common_test/pkcs11</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/common/pkcs11</locationURI>
 		</link>
 		<link>
 			<name>application_code/vendor_code/bsp</name>
@@ -88,6 +103,21 @@
 			<name>lib/aws/utils</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/utils</locationURI>
+		</link>
+		<link>
+			<name>lib/crypto/aws_crypto.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/crypto/aws_crypto.c</locationURI>
+		</link>
+		<link>
+			<name>lib/pkcs11/aws_pkcs11_mbedtls.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/pkcs11/mbedtls/aws_pkcs11_mbedtls.c</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/mbedtls</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor</name>
@@ -145,7 +175,22 @@
 			<locationURI>AFR_HOME/lib/FreeRTOS/timers.c</locationURI>
 		</link>
 		<link>
+			<name>lib/third_party/mbedtls/include</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mbedtls/include</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/mbedtls/library</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/mbedtls/library</locationURI>
+		</link>
+		<link>
 			<name>lib/third_party/mcu_vendor/unisoc</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/pkcs11/portable</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
@@ -156,6 +201,11 @@
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/pkcs11/portable/unisoc</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
@@ -183,6 +233,11 @@
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/logging</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/logging</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/pkcs11/portable/unisoc/uwp566x</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/pkcs11/portable/unisoc/uwp566x</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
