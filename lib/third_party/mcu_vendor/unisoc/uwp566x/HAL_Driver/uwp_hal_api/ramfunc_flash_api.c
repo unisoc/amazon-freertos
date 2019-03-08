@@ -10,6 +10,7 @@
 #include "hal_config_def.h"
 #include "mbed_retarget.h"
 #include "hal_ramfunc.h"
+#include "uwp_rtos_posix.h"
 
 #define FLASH_WRITE_BLOCK_SIZE 0x1
 
@@ -20,25 +21,34 @@
  */
 
 static struct spi_flash_struct uwp_flash_dev;
-static void *flash_op_sem = NULL;
-#if 0
+static k_sem_t flash_op_sem;
+#if 1
 static inline int flash_uwp_lock(void)
 {
-    return k_sem_acquire(flash_op_sem, osWaitForever);
+    if ( k_sem_take(flash_op_sem, K_FOREVER) == RTOS_RETURN_VALUE_SUCCESS )
+        return 0;
+    return -1;
 }
 
 static inline int flash_uwp_unlock(void)
 {
-    return k_sem_release(flash_op_sem);
+    if ( k_sem_give(flash_op_sem) == RTOS_RETURN_VALUE_SUCCESS )
+        return 0;
+    return -1;
 }
 
 int flash_uwp_write_protection(bool enable)
 {
-    int ret = 0;
-    if(enable)
-        ret = k_sem_acquire(flash_op_sem, osWaitForever);
-    else
-        ret = k_sem_release(flash_op_sem);
+    int ret = -1;
+
+    if(enable){
+        if ( k_sem_take(flash_op_sem, K_FOREVER) == RTOS_RETURN_VALUE_SUCCESS )
+            ret = 0;
+    }
+    else{
+        if ( k_sem_give(flash_op_sem) == RTOS_RETURN_VALUE_SUCCESS )
+            ret = 0;
+    }
 
     return ret;
 }
@@ -123,16 +133,16 @@ int uwp_flash_init(void)
 
     ret = uwp_spi_flash_init(flash, &params);
     if (ret) {
-        mbed_error_printf("uwp spi flash init failed. ret:[%d]\n", ret);
+        printk("uwp spi flash init failed. ret:[%d]\n", ret);
         return ret;
     }
 
     return ret;
 }
-#if 0
+#if 1
 int flash_init_supplement(void){
     int ret = -1;
-    flash_op_sem = k_sem_create( 1, 0);
+    k_sem_init( flash_op_sem, 1, 0);
     return (flash_op_sem == NULL ? -1 : 0);
 }
 #endif

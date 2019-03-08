@@ -4,6 +4,7 @@
  *  Created on: 2019Äê3ÔÂ5ÈÕ
  *      Author: xiangkai.gao
  */
+#include <stdbool.h>
 
 #include "uwp_rtos_posix.h"
 

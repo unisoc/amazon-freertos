@@ -177,7 +177,7 @@ void SystemInit (void)
 
 
     SCB->VTOR  = UWP_FLASH_BASE;                      /* vector table in flash      */
-    NVIC_SetPriorityGrouping(0x01);                   /* 6 bit for pre-emption pri  */
+    NVIC_SetPriorityGrouping(0);                   /* 6 bit for pre-emption pri  */
 
 #ifdef NVIC_RAM_VECTOR_ADDRESS
     uint32_t *old_vectors = (uint32_t *)SCB->VTOR;
