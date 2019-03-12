@@ -208,15 +208,15 @@ void wifi_irq_init(void)
 {
     NVIC_DisableIRQ(MAC_IRQn);
     NVIC_SetVector(MAC_IRQn,(uint32_t)wifi_mac_irq_handler);
-    NVIC_SetPriority(MAC_IRQn,0x1FUL);
+    NVIC_SetPriority(MAC_IRQn,0x5UL);
 
     NVIC_DisableIRQ(DPD_IRQn);
     NVIC_SetVector(DPD_IRQn,(uint32_t)wifi_dpd_irq_handler);
-    NVIC_SetPriority(DPD_IRQn,0x1FUL);
+    NVIC_SetPriority(DPD_IRQn,0x5UL);
 
     NVIC_DisableIRQ(COMTMR_IRQn);
     NVIC_SetVector(COMTMR_IRQn,(uint32_t)wifi_comtmr_irq_handler);
-    NVIC_SetPriority(COMTMR_IRQn,0x1FUL);
+    NVIC_SetPriority(COMTMR_IRQn,0x5UL);
 }
 
 void sprd_wifi_irq_enable_num(u32_t num)
