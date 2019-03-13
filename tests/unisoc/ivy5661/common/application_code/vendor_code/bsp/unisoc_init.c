@@ -33,3 +33,14 @@ static void prvUWPInitTask(void *pvParameter){
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
+void prvUWPInitTask_func(void){
+	configPRINT("prvUWPInitTask_func\r\n");
+    if(sipc_init() != 0)
+    	configPRINT("sipc init failed\r\n");
+
+    if(uwp_mcu_init() != 0)
+    	configPRINT("fw load failed\r\n");
+	configPRINT("prvUWPInitTask_func,end\r\n");
+ 
+}
+
