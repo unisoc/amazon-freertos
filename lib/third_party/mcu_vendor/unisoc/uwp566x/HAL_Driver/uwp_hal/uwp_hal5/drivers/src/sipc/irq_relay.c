@@ -178,7 +178,7 @@ static void wifi_mac_irq_handler(void)
     NVIC_DisableIRQ(MAC_IRQn);
     smsg_set(&msg, SMSG_CH_IRQ_DIS, SMSG_TYPE_EVENT, 0, irq);
     smsg_send_irq(SIPC_ID_AP, &msg);
-    LOG_DBG("mac irq\r\n");
+    //printk("mac irq\r\n");
     NVIC_EnableIRQ(MAC_IRQn);
 }
 
@@ -189,7 +189,7 @@ static void wifi_dpd_irq_handler(void)
     NVIC_DisableIRQ(DPD_IRQn);
     smsg_set(&msg, SMSG_CH_IRQ_DIS, SMSG_TYPE_EVENT, 0, irq);
     smsg_send_irq(SIPC_ID_AP, &msg);
-    LOG_DBG("dpd irq\r\n");
+    //printk("dpd irq\r\n");
     NVIC_EnableIRQ(DPD_IRQn);
 }
 
@@ -200,7 +200,7 @@ static void wifi_comtmr_irq_handler(void)
     NVIC_DisableIRQ(COMTMR_IRQn);
     smsg_set(&msg, SMSG_CH_IRQ_DIS, SMSG_TYPE_EVENT, 0, irq);
     smsg_send_irq(SIPC_ID_AP, &msg);
-    LOG_DBG("comtmr irq\r\n");
+    //printk("comtmr irq\r\n");
     NVIC_EnableIRQ(COMTMR_IRQn);
 }
 
@@ -504,4 +504,8 @@ void sprd_bt_irq_init(void)
 	sprd_bt_irq_enable();
 }
 
+void wifi_irq_enable()
+{
+	NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
+}
 

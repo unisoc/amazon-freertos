@@ -149,7 +149,7 @@ void smsg_clear_queue(struct smsg_ipc *ipc, int prio)
 extern void sblock_process(struct smsg *msg);
 void smsg_msg_dispatch_thread(void *arg)
 {
-	int prio;
+	int prio,ret;
 	struct smsg_ipc *ipc = &smsg_ipcs[0];
 	struct smsg *msg;
 	struct smsg recv_smsg;
@@ -159,8 +159,11 @@ void smsg_msg_dispatch_thread(void *arg)
 
 	while (1) {
 
-		k_sem_take(ipc->irq_sem, K_FOREVER);
-
+		ret = k_sem_take(ipc->irq_sem, K_FOREVER);
+		if(ret == 0){
+			LOG_WRN("mutex take failed.");
+			//return; /* lock mutex failed */
+		}
 		for (prio = QUEUE_PRIO_IRQ; prio < QUEUE_PRIO_MAX; prio++) {
 			rx_buf = &(ipc->queue[prio].rx_buf);
 			if (sys_read32(rx_buf->wrptr) !=
@@ -325,14 +328,14 @@ int smsg_send_irq(u8_t dst, struct smsg *msg)
 send_failed:
 	return ret;
 }
-
+/*success,ret 0;fail,ret<0*/
 int smsg_send(u8_t dst, u8_t prio, struct smsg *msg, int timeout)
 {
 	struct smsg_channel *ch;
 	struct smsg_queue_buf *tx_buf;
 	struct smsg_ipc *ipc = &smsg_ipcs[dst];
 	u32_t txpos;
-	int ret = 0;
+	int ret = 0, ret1;
 
 	ch = &ipc->channels[msg->channel];
 
@@ -370,8 +373,11 @@ int smsg_send(u8_t dst, u8_t prio, struct smsg *msg, int timeout)
 		//LOG_ERR("channel:%d create txlock",msg->channel);
         k_mutex_init(ch->txlock);
 	}
-
-	k_mutex_lock(ch->txlock, K_FOREVER);
+	ret1 = k_mutex_lock(ch->txlock, K_FOREVER);
+    if(ret1 == 0){
+        LOG_WRN("mutex lock failed.");
+        return -ETIME; /* lock mutex failed */
+    }
 	/* calc txpos and write smsg */
 	txpos = (sys_read32(tx_buf->wrptr) & (tx_buf->size - 1)) *
 		sizeof(struct smsg) + tx_buf->addr;
@@ -385,8 +391,11 @@ int smsg_send(u8_t dst, u8_t prio, struct smsg *msg, int timeout)
 
 	/* update wrptr */
 	sys_write32(sys_read32(tx_buf->wrptr) + 1, tx_buf->wrptr);
-	k_mutex_unlock(ch->txlock);
-
+	ret1 = k_mutex_unlock(ch->txlock);
+    if(ret1 == 0){
+        LOG_WRN("mutex unlock failed.");
+        return -ETIME; /* lock mutex failed */
+    }
     uwp_ipi_trigger(IPI_CORE_BTWF, IPI_TYPE_IRQ0);
 
 	return ret;
@@ -429,7 +438,7 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 	smsg_clear_queue(ipc, QUEUE_PRIO_HIGH);
 	smsg_clear_queue(ipc, QUEUE_PRIO_IRQ);
 
-	k_sem_init( ipc->irq_sem, 1, 0 );
+	k_sem_init( ipc->irq_sem, 15, 0 );
 
     k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,5,ipc->pid);
     if(ipc->pid == NULL)
