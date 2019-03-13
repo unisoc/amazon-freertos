@@ -41,9 +41,17 @@
 #include "hal_ramfunc.h"
 
 #include "task.h"
+
+//#define USE_OFFLOAD_SSL
+#ifdef USE_OFFLOAD_SSL
+#include "mbedtls/pk.h"
+#include "mbedtls/base64.h"
+#endif
+
 /*-----------------------------------------------------------*/
 
-extern void vLoggingPRINT(const char *pcFormat, ... );
+extern void vLoggingPrint( const char * pcMessage );
+extern void vLoggingPrintf(const char *pcFormat, ... );
 
 /*-----------------------------------------------------------*/
 
@@ -73,6 +81,7 @@ enum eObjectHandles
 /*-----------------------------------------------------------*/
 
 typedef struct {
+    uint8_t ucUpdateFromFalsh; /* indicate whether read content from flash after power up */
     char pcLabel[64];
     char pcFileName[64];
 	CK_OBJECT_HANDLE xHandle;
@@ -83,24 +92,27 @@ typedef struct {
 
 /*-----------------------------------------------------------*/
 
-static xObjectFileEntry xObjectFileDict[] = {
+static xObjectFileEntry xObjectFileDict[4] = {
     {
+    	0,
         pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
         pkcs11palFILE_NAME_CLIENT_CERTIFICATE,
         eAwsDeviceCertificate,
         CK_FALSE,
-		UWP_FLASH_FILE_OFFSET,              /* offset   192K     */
-		UWP_FLASH_FILE_SIZE                 /*      4K           */
+		UWP_FLASH_FILE_OFFSET,
+		UWP_FLASH_FILE_SIZE
     },
     {
+    	0,
         pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS,
         pkcs11palFILE_NAME_KEY,
         eAwsDevicePrivateKey,
         CK_TRUE,
 		UWP_FLASH_FILE_OFFSET + UWP_FLASH_FILE_SIZE,
-        0x1000
+		UWP_FLASH_FILE_SIZE
     },
     {
+    	0,
         pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS,
         pkcs11palFILE_NAME_KEY,
         eAwsDevicePublicKey,
@@ -109,6 +121,7 @@ static xObjectFileEntry xObjectFileDict[] = {
 		UWP_FLASH_FILE_SIZE
     },
     {
+    	0,
         pkcs11configLABEL_CODE_VERIFICATION_KEY,
         pkcs11palFILE_CODE_SIGN_PUBLIC_KEY,
         eAwsCodeSigningKey,
@@ -118,7 +131,217 @@ static xObjectFileEntry xObjectFileDict[] = {
     }
 };
 
+/*  alloc flash memory for xObjectFileDict  */
+static xObjectFileEntry xObjectFileDictFlash[4] __attribute__ ( (section(".CERTIFICATE_ENTRY")) );
+
 /*-----------------------------------------------------------*/
+
+#ifdef USE_OFFLOAD_SSL
+
+ #define BEGIN_EC_PRIVATE_KEY     "-----BEGIN EC PRIVATE KEY-----\n"
+ #define END_EC_PRIVATE_KEY       "-----END EC PRIVATE KEY-----\n"
+ #define BEGIN_RSA_PRIVATE_KEY    "-----BEGIN RSA PRIVATE KEY-----\n"
+ #define END_RSA_PRIVATE_KEY      "-----END RSA PRIVATE KEY-----\n"
+ #define BEGIN_CERTIFICATE        "-----BEGIN CERTIFICATE-----\n"
+ #define END_CERTIFICATE          "-----END CERTIFICATE-----\n"
+ #define NUM_CHAR_PER_PEM_LINE    64
+
+/*
+* @brief Converts DER objects to PEM objects.
+*
+* \note Only elliptic curve and RSA private keys are supported.
+*
+* \param[in]   pDerBuffer      A pointer the DER object.
+* \param[in]   xDerLength      The length of the DER object (bytes)
+* \param[out]  ppcPemBuffer    A pointer to the buffer that will be allocated
+*                              for the PEM object.  This function performs
+*                              a memory allocation for this buffer, and the
+*                              caller MUST free the buffer.
+* \param[out]  pPemLength      Length of the PEM object
+* \param[in]   xObjectType     Type of object being converted to PEM.
+*                              Valid values are CKO_PRIVATE_KEY and
+*                              CKO_CERTIFICATE.
+*/
+ static CK_RV prvDerToPem( uint8_t * pDerBuffer,
+                           size_t xDerLength,
+                           char ** ppcPemBuffer,
+                           size_t * pPemLength,
+                           CK_OBJECT_CLASS xObjectType )
+ {
+     CK_RV xReturn = CKR_OK;
+     size_t xTotalPemLength = 0;
+     mbedtls_pk_context pk;
+     mbedtls_pk_type_t xKeyType;
+     char * pcHeader;
+     char * pcFooter;
+     unsigned char * pemBodyBuffer;
+     uint8_t * pFinalBufferPlaceholder;
+     int ulLengthOfContentsCopiedSoFar = 0;
+     int ulBytesInLine = 0;
+     int ulBytesRemaining;
+
+     if( xObjectType == CKO_PRIVATE_KEY )
+     {
+         mbedtls_pk_init( &pk );
+         /* Parse key. */
+         xReturn = mbedtls_pk_parse_key( &pk, pDerBuffer, xDerLength, NULL, 0 );
+
+         if( xReturn != 0 )
+         {
+             xReturn = CKR_ATTRIBUTE_VALUE_INVALID;
+         }
+
+         /* Get key algorithm. */
+         xKeyType = mbedtls_pk_get_type( &pk );
+
+         switch( xKeyType )
+         {
+             case ( MBEDTLS_PK_RSA ):
+             case ( MBEDTLS_PK_RSA_ALT ):
+                 pcHeader = BEGIN_RSA_PRIVATE_KEY;
+                 pcFooter = END_RSA_PRIVATE_KEY;
+                 xTotalPemLength = strlen( BEGIN_RSA_PRIVATE_KEY ) + strlen( END_RSA_PRIVATE_KEY );
+                 break;
+
+             case ( MBEDTLS_PK_ECKEY ):
+             case ( MBEDTLS_PK_ECKEY_DH ):
+             case ( MBEDTLS_PK_ECDSA ):
+                 pcHeader = BEGIN_EC_PRIVATE_KEY;
+                 pcFooter = END_EC_PRIVATE_KEY;
+                 xTotalPemLength = strlen( BEGIN_EC_PRIVATE_KEY ) + strlen( END_EC_PRIVATE_KEY );
+                 break;
+
+             default:
+                 xReturn = CKR_ATTRIBUTE_VALUE_INVALID;
+                 break;
+         }
+
+         mbedtls_pk_free( &pk );
+     }
+     else /* Certificate object. */
+     {
+         pcHeader = BEGIN_CERTIFICATE;
+         pcFooter = END_CERTIFICATE;
+         xTotalPemLength = strlen( BEGIN_CERTIFICATE ) + strlen( END_CERTIFICATE );
+     }
+
+     if( xReturn == CKR_OK )
+     {
+         /* A PEM object has a header, body, and footer. */
+
+         /*
+          * ------- BEGIN SOMETHING --------\n
+          * BODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODY\n
+          * BODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODY\n
+          * BODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODYBODY\n
+          * ....
+          * ------- END SOMETHING ---------\n
+          */
+
+         /* Determine the length of the Base 64 encoded body. */
+         xReturn = mbedtls_base64_encode( NULL, 0, pPemLength, pDerBuffer, xDerLength );
+
+         if( xReturn != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL )
+         {
+             xReturn = CKR_ATTRIBUTE_VALUE_INVALID;
+         }
+         else
+         {
+             xReturn = 0;
+         }
+
+         if( xReturn == 0 )
+         {
+             /* Allocate memory for the PEM contents (excluding header, footer, newlines). */
+             pemBodyBuffer = pvPortMalloc( *pPemLength );
+
+             if( pemBodyBuffer == NULL )
+             {
+                 xReturn = CKR_DEVICE_MEMORY;
+             }
+         }
+
+         if( xReturn == 0 )
+         {
+             /* Convert the body contents from DER to PEM. */
+             xReturn = mbedtls_base64_encode( pemBodyBuffer,
+                                              *pPemLength,
+                                              pPemLength,
+                                              pDerBuffer,
+                                              xDerLength );
+         }
+
+         if( xReturn == 0 )
+         {
+             /* Calculate the length required for the entire PEM object. */
+             xTotalPemLength += *pPemLength;
+             /* Add in space for the newlines. */
+             xTotalPemLength += ( *pPemLength ) / NUM_CHAR_PER_PEM_LINE;
+
+             if( ( *pPemLength ) % NUM_CHAR_PER_PEM_LINE != 0 )
+             {
+                 xTotalPemLength += 1;
+             }
+
+             /* Allocate space for the full PEM certificate, including header, footer, and newlines.
+              * This space must be freed by the application. */
+             *ppcPemBuffer = pvPortMalloc( xTotalPemLength );
+
+             if( *ppcPemBuffer == NULL )
+             {
+                 xReturn = CKR_DEVICE_MEMORY;
+             }
+         }
+
+         if( xReturn == 0 )
+         {
+             /* Copy the header. */
+             pFinalBufferPlaceholder = ( uint8_t * ) *ppcPemBuffer;
+             memcpy( pFinalBufferPlaceholder, pcHeader, strlen( pcHeader ) );
+             pFinalBufferPlaceholder += strlen( pcHeader );
+
+             /* Copy the Base64 encoded contents into the final buffer 64 bytes at a time, adding newlines */
+             while( ulLengthOfContentsCopiedSoFar < *pPemLength )
+             {
+                 ulBytesRemaining = *pPemLength - ulLengthOfContentsCopiedSoFar;
+                 ulBytesInLine = ( ulBytesRemaining > NUM_CHAR_PER_PEM_LINE ) ? NUM_CHAR_PER_PEM_LINE : ulBytesRemaining;
+                 memcpy( pFinalBufferPlaceholder,
+                         pemBodyBuffer + ulLengthOfContentsCopiedSoFar,
+                         ulBytesInLine );
+                 pFinalBufferPlaceholder += ulBytesInLine;
+                 *pFinalBufferPlaceholder = '\n';
+                 pFinalBufferPlaceholder++;
+
+                 ulLengthOfContentsCopiedSoFar += ulBytesInLine;
+             }
+         }
+
+         if( pemBodyBuffer != NULL )
+         {
+             vPortFree( pemBodyBuffer );
+         }
+
+         /* Copy the footer. */
+         memcpy( pFinalBufferPlaceholder, pcFooter, strlen( pcFooter ) );
+
+         /* Update the total length of the PEM object returned by the function. */
+         *pPemLength = xTotalPemLength;
+     }
+
+     return xReturn;
+ }
+
+#endif
+
+/*
+*
+*@bref  get flash stroge address of xObjectFileEntryDict.
+*
+*/
+
+static void * prvGetAbsolutexObjectFileDictAddr(){
+    return (void *)xObjectFileDictFlash;
+}
 
 /*
 *
@@ -195,7 +418,7 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     {
     	void *pvBufToWrite = pvPortMalloc(UWP_FLASH_SECTOR_SIZE);
     	if( pvBufToWrite == NULL ){
-            vLoggingPRINT("malloc fiald\r\n");
+    		vLoggingPrint("malloc fiald\r\n");
             return eInvalidHandle;
     	}
     	memset(pvBufToWrite, 0, ulDataSize);
@@ -204,27 +427,27 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     	memcpy(pvBufToWrite, pucData, ulDataSize);
 
     	if( flash_uwp_write_protection(false) != 0 ){
-    		vLoggingPRINT("flash not avaible\r\n");
+    		vLoggingPrint("flash not avaible\r\n");
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_erase(pxFileEntry->ulFileLen, UWP_FLASH_SECTOR_SIZE) != 0 ){
-    		vLoggingPRINT("flash file erase failed\r\n");
+    		vLoggingPrint("flash file erase failed\r\n");
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_write(pxFileEntry->ulFileAddrOffset, pvBufToWrite, ulDataSize) != 0 ){
-    		vLoggingPRINT("flash file write failed\r\n");
+    		vLoggingPrint("flash file write failed\r\n");
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_erase(UWP_FLASH_FILE_ENTRY_OFFSET, UWP_FLASH_SECTOR_SIZE) != 0 ){
-    		vLoggingPRINT("flash entry erase failed\r\n");
+    		vLoggingPrint("flash entry erase failed\r\n");
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_write(UWP_FLASH_FILE_ENTRY_OFFSET, xObjectFileDict, sizeof(xObjectFileDict)) != 0 ){
-    		vLoggingPRINT("flash entry write failed\r\n");
+    		vLoggingPrint("flash entry write failed\r\n");
     		return eInvalidHandle;
     	}
 
@@ -344,4 +567,51 @@ int mbedtls_hardware_poll( void * data,
 
     *olen = len;
     return 0;
+}
+
+/*  test case */
+void pkcs_self_test(void){
+	void * pvObjectAddr = NULL;
+	CK_ATTRIBUTE pxLabel = {
+	    0,
+		(void *)pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
+		sizeof(pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS)
+	};
+	uint8_t *pucData = NULL;
+	uint32_t ulDataSize;
+	CK_BBOOL IsPrivate;
+
+	vLoggingPrint("pkcs test\r\n");
+	pvObjectAddr = prvGetAbsolutexObjectFileDictAddr();
+	vLoggingPrintf("flash addr :0x%x\r\n", pvObjectAddr);
+
+	if( PKCS11_PAL_FindObject((uint8_t *)pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,
+			                      sizeof(pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS)) != eAwsDeviceCertificate )
+	{
+		vLoggingPrint("test PKCS11_PAL_FindObject failed\r\n");
+	}
+	else
+	{
+		vLoggingPrint("test PKCS11_PAL_FindObject success\r\n");
+	}
+
+	if( PKCS11_PAL_SaveObject(&pxLabel,
+			                     (uint8_t *)"123456789954123", sizeof("123456789954123")) != eAwsDeviceCertificate )
+	{
+		vLoggingPrint("test PKCS11_PAL_SaveObject failed\r\n");
+	}
+	else
+	{
+		vLoggingPrint("test PKCS11_PAL_SaveObject success\r\n");
+	}
+
+	if( PKCS11_PAL_GetObjectValue(eAwsDeviceCertificate, &pucData, &ulDataSize, &IsPrivate) != CKR_OK )
+	{
+		vLoggingPrint("test PKCS11_PAL_GetObjectValue failed\r\n");
+	}
+	else
+	{
+        vLoggingPrintf("cert:%s\r\n", (char *)pucData);
+	}
+
 }

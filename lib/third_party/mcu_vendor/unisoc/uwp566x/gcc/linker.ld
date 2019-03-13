@@ -60,7 +60,16 @@ MEMORY
 	flash (rx) : ORIGIN = 0x02000000, LENGTH = 128K
 	sram (rwx) : ORIGIN = 0x00100240, LENGTH = (324K - 0x240)
 	dram (rwx) : ORIGIN = 0x00180000, LENGTH = 400K
-	wifi_data_ram(rwx) : ORIGIN = 0x00151000, LENGTH = 188K
+	flash (rx) : ORIGIN = 0x02000000, LENGTH = 192K
+	sram (rwx) : ORIGIN = 0x00100240, LENGTH = (512K - 0x240)
+	dram (rwx) : ORIGIN = 0x00180000, LENGTH = 400K
+	wifi_data_ram  (rwx) : ORIGIN = 0x00151000, LENGTH =  188K
+	critical_info   (rx) : ORIGIN = 0x02030000, LENGTH =    4K
+	flash_app       (rx) : ORIGIN = 0x02040000, LENGTH =  512K
+	flash_modem     (rx) : ORIGIN = 0x020C0000, LENGTH =  768K
+	flash_filesys   (rx) : ORIGIN = 0x02180000, LENGTH = 1280K
+	flash_app_ota   (rx) : ORIGIN = 0x022C0000, LENGTH =  512K
+	flash_modem_ota (rx) : ORIGIN = 0x02340000, LENGTH =  768K
 /*	flash (rx) : ORIGIN = 0x02000000, LENGTH = 512K
 	sram (rwx) : ORIGIN = 0x00100000, LENGTH = 400K */
 }
@@ -177,6 +186,10 @@ SECTIONS
 	{
 		*(SECTIONWIFIDATARAM)
 	} > wifi_data_ram
+
+	.critical_info_region (NOLOAD) : {
+		*(.CERTIFICATE_ENTRY)
+	} > critical_info
 	
 	/* Stabs debugging sections. */
 	.stab 0 : { *(.stab) }
