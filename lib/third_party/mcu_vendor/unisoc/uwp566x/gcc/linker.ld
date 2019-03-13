@@ -182,16 +182,14 @@ SECTIONS
 		*(.heap*)
 	} > dram
 	
-<<<<<<< HEAD
 	.SECTIONWIFIDATARAM (NOLOAD) :
 	{
 		*(SECTIONWIFIDATARAM)
 	} > wifi_data_ram
-=======
+
 	.critical_info_region (NOLOAD) : {
 		*(.CERTIFICATE_ENTRY)
 	} > critical_info
->>>>>>> modify aws_pkcs11_pal.c
 	
 	/* Stabs debugging sections. */
 	.stab 0 : { *(.stab) }
