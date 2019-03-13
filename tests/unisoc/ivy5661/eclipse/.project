@@ -345,6 +345,11 @@
 			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/logging</locationURI>
 		</link>
 		<link>
+			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/uwpwifi</name>
+			<type>2</type>
+			<location>E:/Git_SVN/amazon_unisoc/amazon-freertos/lib/third_party/mcu_vendor/unisoc/uwp566x/uwpwifi</location>
+		</link>
+		<link>
 			<name>lib/third_party/pkcs11/portable/unisoc/uwp566x</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/pkcs11/portable/unisoc/uwp566x</locationURI>
