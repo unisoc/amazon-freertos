@@ -15,14 +15,16 @@ extern "C" {
 
 #ifdef  WIFI_LOG_ERR
 extern void vLoggingPrintf(const char *fmt, ... );
-#define LOG_ERR( fmt, ... ) vLoggingPrintf ( "%s:"fmt"\r\n", __func__, ##__VA_ARGS__ )
+#define LOG_ERR(fmt, ...) do {\
+        vLoggingPrintf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
+    }while(0)
 #else
 #define LOG_ERR(fmt, ...)
 #endif
 
 #ifdef  WIFI_LOG_WRN
 #define LOG_WRN(fmt, ...) do {\
-        uwp_temp_printf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
+        vLoggingPrintf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
     }while(0)
 #else
 #define LOG_WRN(fmt, ...)
@@ -31,7 +33,7 @@ extern void vLoggingPrintf(const char *fmt, ... );
 #ifdef  WIFI_LOG_DBG
 extern void vLoggingPrintf(const char *fmt, ... );
 #define LOG_DBG(fmt, ...) do {\
-		vLoggingPrintf(fmt"\r\n", ##__VA_ARGS__);\
+        vLoggingPrintf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
     }while(0)
 #else
 #define LOG_DBG(fmt, ...)
@@ -40,7 +42,7 @@ extern void vLoggingPrintf(const char *fmt, ... );
 #ifdef  WIFI_LOG_INF
 extern void vLoggingPrintf(const char *fmt, ... );
 #define LOG_INF(fmt, ...) do {\
-		vLoggingPrintf(fmt"\r\n",##__VA_ARGS__);\
+        vLoggingPrintf("%s"fmt"\r\n", __func__, ##__VA_ARGS__);\
     }while(0)
 #else
 #define LOG_INF(fmt, ...)
@@ -49,12 +51,14 @@ extern void vLoggingPrintf(const char *fmt, ... );
 #ifdef  WIFI_DUMP
 #define DUMP_DATA(buff, len) do {\
             u8_t *data = (u8_t *)buff;\
-            for(int i=1;i<=len;i++){\
-                printf("%02x ",data[i-1]);\
-                if(i%10 == 0)\
-                uwp_temp_printf("\r\n");\
-                }\
-            printf("\r\n");\
+            for (int i=0;i<len;i++) {\
+                    if(i%8 == 0)\
+                        vLoggingPrintf("  ");\
+                    vLoggingPrintf("%02x ", data[i]);\
+                    if((i+1)%16 == 0)\
+                        vLoggingPrintf("\r\n");\
+            }\
+            vLoggingPrintf("len:%d\r\n", len);\
     }while(0)
 #else
 #define DUMP_DATA(buff, len)

@@ -138,11 +138,76 @@ void vApplicationDaemonTaskStartupHook( void );
 /**
  * @brief Initializes the board.
  */
+#include "uwp_wifi_main.h"
+extern struct wifi_priv uwp_wifi_priv;
 static void prvMiscInitialization( void );
 extern void vUnisocInitialize(void);
-
+extern void prvUWPInitTask_func();
+void uwp_cp_init(void);
 /*-----------------------------------------------------------*/
+static TaskHandle_t uwp_cp_init_data;
+void vUWPwifiInitialize(void)
+{
+	if(xTaskCreate(uwp_cp_init, "uwp_cp_init", 1024*3, NULL, 1, &uwp_cp_init_data) != 1)
+	{
+	   	configPRINT("uwp_cp_init task failed\r\n");
+	    return;
+	}
+	configPRINT("uwp_cp_init task success\r\n");
+}
 
+void uwp_cp_init(void)
+{
+	configPRINT_STRING("hal_init\r\n");
+	prvUWPInitTask_func();
+	configPRINT_STRING("uwp_cp_init 111\r\n");
+    if(!uwp_init(&uwp_wifi_priv, 1))
+		configPRINT_STRING("uwp_cp_init 222\r\n");
+    if(!uwp_mgmt_open(&uwp_wifi_priv))
+		configPRINT_STRING("uwp_mgmt_open 333\r\n");
+    {
+    	struct wifi_drv_scan_params params;
+    	params.band = 0;
+    	params.channel = 0;
+    	//params.ssid_len = 0;
+
+        uwp_mgmt_scan(&uwp_wifi_priv, &params);
+    }
+#if 1
+    {
+    	struct wifi_drv_connect_params params;
+    	params.ssid_length = 4;
+    	params.ssid = "scty";
+
+    	/* BSSID is optional */
+
+    	/* Passphrase is only valid for WPA/WPA2-PSK */
+    	params.psk_length = 0;
+    	params.psk = "";
+    	uwp_mgmt_connect(&uwp_wifi_priv, &params);
+    }
+#endif
+/*
+	if(!uwp_wifi_priv.wifi_dev[0].opened) {
+		ret = uwp_mgmt_open(&uwp_wifi_priv);//0 success
+	    configPRINT_STRING("WIFI_On,open,\r\n");
+		if(!ret)
+		    configPRINT_STRING("WIFI_On,open,success\r\n");
+	}
+    configPRINT_STRING("WIFI_On,open,success222\r\n");
+
+
+	configPRINT_STRING("WIFI_On,connect\r\n");
+	wifi_testconnect();
+	configPRINT_STRING("WIFI_On,connect end\r\n");
+*/
+	//for(;;)
+	{
+	//configPRINT("unisoc init task\r\n");
+    	vTaskDelay(pdMS_TO_TICKS(5000));
+	}
+
+}
 /**
  * @brief Application runtime entry point.
  */
@@ -157,8 +222,9 @@ int app_main( void )
                             tskIDLE_PRIORITY + 1,
                             mainLOGGING_MESSAGE_QUEUE_LENGTH );
 
-    vUnisocInitialize();
+    vUWPwifiInitialize();
 
+	configPRINT_STRING("uwp_cp_init,end\r\n");
     /* FIX ME: If you are using Ethernet network connections and the FreeRTOS+TCP stack,
      * uncomment the initialization function, FreeRTOS_IPInit(), below. */
     /*FreeRTOS_IPInit( ucIPAddress,

@@ -11,8 +11,8 @@
 #include "sipc.h"
 #include "sblock.h"
 #include "uwp_log.h"
-
-#define K_FOREVER 0xffffffff
+#include "uwp_rtos_posix.h"
+//#define K_FOREVER 0xffffffff
 
 static struct sblock_mgr sblocks[SIPC_ID_NR][SMSG_CH_NR-SMSG_CH_OFFSET];
 
@@ -157,7 +157,7 @@ void sblock_process(struct smsg *msg)
 	}
 
 }
-
+/*success ret0*/
 int sblock_create(u8_t dst, u8_t channel,
 		u32_t txblocknum, u32_t txblocksize,
 		u32_t rxblocknum, u32_t rxblocksize)
@@ -275,8 +275,8 @@ int sblock_create(u8_t dst, u8_t channel,
 	}
 
 	ring->yell = 1;
-	ring->getwait = k_sem_create(1, 0);
-	ring->recvwait = k_sem_create(1,0);
+	k_sem_init(ring->getwait,1,0);//ring->getwait = k_sem_create(1, 0);
+	k_sem_init(ring->recvwait,1,0);//ring->recvwait = k_sem_create(1,0);
 
 	sblock->state = SBLOCK_STATE_READY;
 
@@ -328,7 +328,7 @@ int sblock_unregister_callback(u8_t channel)
 
 	return 0;
 }
-
+/*success ret0*/
 int sblock_register_callback(u8_t channel,
 		void (*callback)(int ch))
 {
@@ -394,23 +394,23 @@ void sblock_put(u8_t dst, u8_t channel, struct sblock *blk)
 	sblock->txblksz);
 	ring->txrecord[index] = SBLOCK_BLK_STATE_DONE;
 }
-
+/*success,ret0;fail,ret<0*/
 int sblock_get(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 {
 	struct sblock_mgr *sblock = &sblocks[dst][channel-SMSG_CH_OFFSET];
 	struct sblock_ring *ring = NULL;
 	volatile struct sblock_ring_header *poolhd = NULL;
 	int txpos, index;
-	int ret = 0;
+	int ret = 0, ret1=0;
 
 	ring = &sblock->ring;
 	poolhd = (volatile struct sblock_ring_header *)(&ring->header->pool);
 
 	if (poolhd->txblk_rdptr == poolhd->txblk_wrptr) {
-		ret = k_sem_acquire(ring->getwait, timeout);
-		if (ret) {
+		ret1 = k_sem_take(ring->getwait, timeout);//ret = k_sem_acquire(ring->getwait, timeout);
+		if (ret1 == 0) {//0 is failed
 			LOG_WRN("wait timeout!");
-			return ret;
+			return -ETIME;
 		}
 
 		if (sblock->state == SBLOCK_STATE_IDLE) {
@@ -438,7 +438,7 @@ int sblock_get(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 
 	return ret;
 }
-
+/*success,ret0;fail,ret<0*/
 static int sblock_send_ex(u8_t dst, u8_t channel,
 	u8_t prio, struct sblock *blk, bool yell)
 {
@@ -480,12 +480,12 @@ static int sblock_send_ex(u8_t dst, u8_t channel,
 
 	return ret;
 }
-
+/*success ret0;fail,ret<0*/
 int sblock_send(u8_t dst, u8_t channel, u8_t prio, struct sblock *blk)
 {
 	return sblock_send_ex(dst, channel, prio, blk, true);
 }
-
+/*success ret0*/
 int sblock_send_prepare(u8_t dst, u8_t channel, u8_t prio, struct sblock *blk)
 {
 	return sblock_send_ex(dst, channel, prio, blk, false);
@@ -514,13 +514,13 @@ int sblock_send_finish(u8_t dst, u8_t channel)
 
 	return ret;
 }
-
+/*success,ret0*/
 int sblock_receive(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 {
 	struct sblock_mgr *sblock = &sblocks[dst][channel-SMSG_CH_OFFSET];
 	struct sblock_ring *ring;
 	volatile struct sblock_ring_header *ringhd;
-	int rxpos, index, ret = 0;
+	int rxpos, index, ret = 0, ret1 = 0;
 
 	if (sblock->state != SBLOCK_STATE_READY) {
 		LOG_WRN("sblock-%d-%d not ready!", dst, channel);
@@ -539,9 +539,10 @@ int sblock_receive(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 			ret = -ENODATA;
 		} else if (timeout < 0) {
 			/* wait forever */
-			ret = k_sem_acquire(ring->recvwait, K_FOREVER);
-			if (ret < 0) {
-				LOG_WRN(" wait interrupted!");
+			/*ret1 = k_sem_take(ring->recvwait, K_FOREVER);//ret = k_sem_acquire(ring->recvwait, K_FOREVER);
+			//if (ret == 0)
+			{//0 is failed
+				LOG_WRN(" wait K_FOREVER!");
 			}
 
 			if (sblock->state == SBLOCK_STATE_IDLE) {
@@ -549,13 +550,16 @@ int sblock_receive(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 				ret = -EIO;
 			}
 
-		} else {
+		*/} else {
 			/* wait timeout */
-			ret = k_sem_acquire(ring->recvwait, timeout);
-			if (ret < 0) {
-				LOG_WRN(" wait interrupted!");
-			} else if (ret == 0) {
-				LOG_WRN(" wait timeout!");
+			ret1 = k_sem_take(ring->recvwait, timeout);//ret = k_sem_acquire(ring->recvwait, timeout);
+			//if (ret == 0)
+			{
+				//LOG_WRN(" wait interrupted!");
+			}
+			//else
+				if (ret1 == 0) {
+				LOG_ERR(" wait timeout!");
 				ret = -ETIME;
 			}
 
@@ -630,7 +634,7 @@ int sblock_get_free_count(u8_t dst, u8_t channel)
 	return blk_count;
 }
 
-
+/*success,ret=0*/
 int sblock_release(u8_t dst, u8_t channel, struct sblock *blk)
 {
 	struct sblock_mgr *sblock = &sblocks[dst][channel-SMSG_CH_OFFSET];

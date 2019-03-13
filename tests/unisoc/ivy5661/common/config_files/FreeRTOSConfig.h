@@ -173,7 +173,7 @@ extern void vStdioUARTOutput( char *DataToOutput );
 #define configLOGGING_INCLUDE_TIME_AND_TASK_NAME    0
 
 /* The priority at which the tick interrupt runs.  This should probably be kept at 1. */
-#define configKERNEL_INTERRUPT_PRIORITY             1
+#define configKERNEL_INTERRUPT_PRIORITY            ( 7 << (8 - configPRIO_BITS) )
 
 /* The maximum interrupt priority from which FreeRTOS API functions can be called.
  * Only API functions that end in ...FromISR() can be used within interrupts. */
