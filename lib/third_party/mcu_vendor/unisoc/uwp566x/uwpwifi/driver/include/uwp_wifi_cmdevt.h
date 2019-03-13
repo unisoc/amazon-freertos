@@ -263,8 +263,7 @@ int wifi_cmd_npi_send(struct device *dev, int ictx_id, char *t_buf,
 int wifi_cmd_npi_get_mac(struct device *dev, char *buf);
 int wifi_cmd_set_ip(struct wifi_device *wifi_dev, u8_t *ip, u8_t len);
 */
-int wifi_cmd_send(u8_t cmd, char *data, int len,
-			 char *rbuf, int *rlen);
+int wifi_cmd_send(int u32cmd, char *data, int len, char *rbuf, int *rlen);
 int wifi_cmd_load_ini(const u8_t *data, u32_t len, u8_t sec_num);
 int wifi_cmdevt_process(struct wifi_priv *priv, char *data, int len);
 int wifi_cmdevt_init(void);
