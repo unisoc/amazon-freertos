@@ -55,6 +55,11 @@
 			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code</locationURI>
 		</link>
 		<link>
+			<name>lib/FreeRTOS-Plus-TCP</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>lib/aws</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -85,9 +90,29 @@
 			<locationURI>AFR_HOME/tests/common/pkcs11</locationURI>
 		</link>
 		<link>
+			<name>application_code/common_test/secure_sockets</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>application_code/vendor_code/bsp</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/include</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/include</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
 			<name>lib/aws/FreeRTOS</name>
@@ -98,6 +123,11 @@
 			<name>lib/aws/include</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/include</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/secure_sockets</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
 			<name>lib/aws/utils</name>
@@ -140,6 +170,71 @@
 			<locationURI>AFR_HOME/lib/third_party/unity/extras/fixture/src</locationURI>
 		</link>
 		<link>
+			<name>application_code/common_test/secure_sockets/aws_test_tcp.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/tests/common/secure_sockets/aws_test_tcp.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable/BufferManagement</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable/Compiler</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable/NetworkInterface</name>
+			<type>2</type>
+			<location>E:/Git_SVN/amazon_unisoc/amazon-freertos/lib/FreeRTOS-Plus-TCP/source/portable/NetworkInterface/unisoc</location>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_ARP.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_ARP.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_DHCP.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_DHCP.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_DNS.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_DNS.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_IP.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_IP.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_Sockets.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_Sockets.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_Stream_Buffer.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_Stream_Buffer.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_TCP_IP.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_TCP_IP.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_TCP_WIN.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_TCP_WIN.c</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_UDP_IP.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/FreeRTOS_UDP_IP.c</locationURI>
+		</link>
+		<link>
 			<name>lib/aws/FreeRTOS/event_groups.c</name>
 			<type>1</type>
 			<locationURI>AFR_HOME/lib/FreeRTOS/event_groups.c</locationURI>
@@ -175,6 +270,11 @@
 			<locationURI>AFR_HOME/lib/FreeRTOS/timers.c</locationURI>
 		</link>
 		<link>
+			<name>lib/aws/secure_sockets/aws_secure_sockets.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/secure_sockets/portable/freertos_plus_tcp/aws_secure_sockets.c</locationURI>
+		</link>
+		<link>
 			<name>lib/third_party/mbedtls/include</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/mbedtls/include</locationURI>
@@ -193,6 +293,16 @@
 			<name>lib/third_party/pkcs11/portable</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c</name>
+			<type>1</type>
+			<location>E:/Git_SVN/amazon_unisoc/amazon-freertos/lib/FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c</location>
+		</link>
+		<link>
+			<name>lib/FreeRTOS-Plus-TCP/portable/Compiler/GCC</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/portable/Compiler/GCC</locationURI>
 		</link>
 		<link>
 			<name>lib/aws/FreeRTOS/portable/GCC</name>
