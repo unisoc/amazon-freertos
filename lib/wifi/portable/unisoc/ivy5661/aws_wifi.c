@@ -38,6 +38,10 @@
 #include "uwp_wifi_main.h"
 extern struct wifi_priv uwp_wifi_priv;
 
+static SemaphoreHandle_t xWiFiSem;
+static const TickType_t xSemaphoreWaitTicks = pdMS_TO_TICKS( wificonfigMAX_SEMAPHORE_WAIT_TIME_MS );
+static WIFIDeviceMode_t prvcurDeviceMode;
+
 /*-----------------------------------------------------------*/
 
 WIFIReturnCode_t WIFI_On( void )
@@ -57,7 +61,11 @@ WIFIReturnCode_t WIFI_On( void )
 				return eWiFiFailure;
 			}
 		}
-	return eWiFiSuccess;
+
+
+   static StaticSemaphore_t xSemaphoreBuffer;
+   xWiFiSem = xSemaphoreCreateMutexStatic( &( xSemaphoreBuffer ) );
+   return eWiFiSuccess;
 }
 /*-----------------------------------------------------------*/
 
@@ -209,7 +217,26 @@ WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
 
 WIFIReturnCode_t WIFI_GetMAC( uint8_t * pucMac )
 {
-    /* FIX ME. */
+    WIFIReturnCode_t xRetVal;
+
+    if (pucMac == NULL) {
+        return eWiFiFailure;
+    }
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+        uwp_err_t ret = wifi_get_mac(WIFI_MODE_STA, pucMac);
+        xRetVal = (ret == UWP_OK) ? eWiFiSuccess : eWiFiFailure;
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    else
+    {
+        xRetVal = eWiFiTimeout;
+    }
+
+    return xRetVal;
     return eWiFiNotSupported;
 }
 /*-----------------------------------------------------------*/

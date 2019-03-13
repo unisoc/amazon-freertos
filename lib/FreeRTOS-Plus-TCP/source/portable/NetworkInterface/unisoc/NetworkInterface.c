@@ -23,6 +23,183 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  http://www.FreeRTOS.org
 */
 
+/* Standard includes. */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+/* FreeRTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+
+/* FreeRTOS+TCP includes. */
+#include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
+#include "FreeRTOS_IP_Private.h"
+#include "FreeRTOS_DNS.h"
+#include "NetworkBufferManagement.h"
+#include "NetworkInterface.h"
+#include "uwp_sys_wrapper.h"
+//#include "sdkconfig.h"
+//#include "uwp566x_types.h"
+#include "uwp_log.h"
+//#include "uwp_err.h"
+
+#include "aws_wifi.h"
+//#include "wifi_main.h"
+
+//#include "uwp5661_log.h"
+//#include "uwp5661_wifi.h"
+//#include "uwp5661_wifi_internal.h"
+//#include "tcpip_adapter.h"
+
+enum if_state_t {
+    INTERFACE_DOWN = 0,
+    INTERFACE_UP,
+};
+
+enum if_idx {
+	INTERFACE_STA = 1,
+	INTERFACE_AP,
+};
+
+volatile static uint32_t xInterfaceState = INTERFACE_DOWN;
+
+BaseType_t xNetworkInterfaceInitialise( void )
+{
+    static BaseType_t xMACAdrInitialized = pdFALSE;
+    uint8_t ucMACAddress[ ipMAC_ADDRESS_LENGTH_BYTES ];
+
+    if (xInterfaceState == INTERFACE_UP) {
+        if (xMACAdrInitialized == pdFALSE) {
+            WIFI_GetMAC(ucMACAddress);
+            FreeRTOS_UpdateMACAddress(ucMACAddress);
+            xMACAdrInitialized = pdTRUE;
+        }
+        return pdTRUE;
+    }
+    return pdFALSE;
+}
+
+BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBuffer, BaseType_t xReleaseAfterSend )
+{
+	NetworkBufferDescriptor_t * pxSendingBuffer;
+	const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
+    int ret = -1;
+
+    if (pxNetworkBuffer == NULL || pxNetworkBuffer->pucEthernetBuffer == NULL || pxNetworkBuffer->xDataLength == 0) {
+        LOG_ERR("Invalid params");
+        return pdFALSE;
+    }
+
+    if (xReleaseAfterSend == pdFALSE) {
+        // Duplicate Network descriptor and buffer
+        pxSendingBuffer = pxGetNetworkBufferWithDescriptor(pxNetworkBuffer->xDataLength, xDescriptorWaitTime);
+            if (pxSendingBuffer != NULL) {
+                memcpy((uint8_t *)pxSendingBuffer, (uint8_t *)pxNetworkBuffer, sizeof(NetworkBufferDescriptor_t));
+                memcpy(pxSendingBuffer->pucEthernetBuffer,
+                        pxNetworkBuffer->pucEthernetBuffer,
+                        pxSendingBuffer->xDataLength);
+
+            } else {
+                return pdFALSE;
+            }
+    } else {
+        pxSendingBuffer = pxNetworkBuffer;
+    }
+
+    ret = uwp_iface_tx(INTERFACE_STA, pxSendingBuffer->pucEthernetBuffer,
+        pxSendingBuffer->xDataLength);
+    if (ret != UWP_OK) {
+        LOG_ERR("Failed to tx buffer %p, len %d, err %d",
+                pxSendingBuffer->pucEthernetBuffer,
+                pxSendingBuffer->xDataLength, ret);
+        vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
+    }
+
+    return ret == UWP_OK ? pdTRUE : pdFALSE;
+}
+
+void vNetworkNotifyIFDown()
+{
+    IPStackEvent_t xRxEvent = { eNetworkDownEvent, NULL };
+    xInterfaceState = INTERFACE_DOWN;
+    xSendEventStructToIPTask( &xRxEvent, 0 );
+}
+
+void vNetworkNotifyIFUp()
+{
+    xInterfaceState = INTERFACE_UP;
+}
+
+void* wlanif_alloc_network_buffer(uint16_t len)
+{
+	NetworkBufferDescriptor_t *pxNetworkBuffer;
+    const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
+
+	pxNetworkBuffer = pxGetNetworkBufferWithDescriptor(len, xDescriptorWaitTime);
+
+	return pxNetworkBuffer;
+}
+
+void wlanif_free_network_buffer(uint32_t addr)
+{
+	NetworkBufferDescriptor_t *pxNetworkBuffer =
+			(NetworkBufferDescriptor_t *)(*(uint32_t *)(addr - ipconfigBUFFER_PADDING));
+
+	vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+
+	return;
+}
+
+BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
+{
+    NetworkBufferDescriptor_t *pxNetworkBuffer;
+    IPStackEvent_t xRxEvent = { eNetworkRxEvent, NULL };
+    const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
+
+    if( eConsiderFrameForProcessing( buffer ) != eProcessBuffer ) {
+        LOG_ERR("Dropping packet");
+        return UWP_OK;
+    }
+
+    pxNetworkBuffer = pxGetNetworkBufferWithDescriptor(len, xDescriptorWaitTime);
+    if (pxNetworkBuffer != NULL) {
+
+	/* Set the packet size, in case a larger buffer was returned. */
+	pxNetworkBuffer->xDataLength = len;
+
+	/* Copy the packet data. */
+        memcpy(pxNetworkBuffer->pucEthernetBuffer, buffer, len);
+        xRxEvent.pvData = (void *) pxNetworkBuffer;
+
+        if ( xSendEventStructToIPTask( &xRxEvent, xDescriptorWaitTime) == pdFAIL ) {
+            LOG_ERR("Failed to enqueue packet to network stack %p, len %d", buffer, len);
+            vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+            return UWP_FAIL;
+        }
+        return UWP_OK;
+    } else {
+        LOG_ERR("Failed to get buffer descriptor");
+        return UWP_FAIL;
+    }
+}
+
+
+void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
+{
+    /* FIX ME. */
+}
+
+BaseType_t xGetPhyLinkStatus( void )
+{
+    /* FIX ME. */
+    return pdFALSE;
+}
+
+#if 0
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "list.h"
@@ -51,13 +228,4 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
     return pdFALSE;
 }
 
-void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
-{
-    /* FIX ME. */
-}
-
-BaseType_t xGetPhyLinkStatus( void )
-{
-    /* FIX ME. */
-    return pdFALSE;
-}
+#endif

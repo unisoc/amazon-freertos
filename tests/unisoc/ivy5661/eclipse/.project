@@ -187,7 +187,7 @@
 		<link>
 			<name>lib/FreeRTOS-Plus-TCP/portable/NetworkInterface</name>
 			<type>2</type>
-			<location>E:/Git_SVN/amazon_unisoc/amazon-freertos/lib/FreeRTOS-Plus-TCP/source/portable/NetworkInterface/unisoc</location>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/portable/NetworkInterface/unisoc</locationURI>
 		</link>
 		<link>
 			<name>lib/FreeRTOS-Plus-TCP/source/FreeRTOS_ARP.c</name>
@@ -297,7 +297,7 @@
 		<link>
 			<name>lib/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c</name>
 			<type>1</type>
-			<location>E:/Git_SVN/amazon_unisoc/amazon-freertos/lib/FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c</location>
+			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c</locationURI>
 		</link>
 		<link>
 			<name>lib/FreeRTOS-Plus-TCP/portable/Compiler/GCC</name>
