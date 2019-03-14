@@ -272,7 +272,7 @@ int uwp_mgmt_scan(struct wifi_priv *priv,
 */
 	uwp_mgmt_empty_scan_result_list();
 	ret = wifi_cmd_scan(wifi_dev, params);
-	//OS_SLEEP(10000);
+	UWP_SLEEP(3000);
 	LOG_ERR("uwp_mgmt_scan,exit.ret=%d\r\n",ret);
 	return ret;
 
@@ -322,7 +322,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	struct wifi_device *wifi_dev;
 	int ret;
 
-	LOG_DBG("uwp_mgmt_connect,enter");
+	configPRINT_STRING("uwp_mgmt_connect,enter");
 	if (!priv || !params) {
 		return -EINVAL;
 	}
@@ -344,7 +344,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	}
 
 	ret = wifi_cmd_connect(wifi_dev, params);
-	LOG_DBG("uwp_mgmt_connect,exit.ret=%d\r\n",ret);
+	configPRINT_STRING("uwp_mgmt_connect,exit\r\n");
 	return ret;
 }
 
@@ -430,7 +430,9 @@ int uwp_init(struct wifi_priv *wifi_priv, UWP_WIFI_MODE_T wifi_mode)
         /* ensure smsg thread excute  */
         //osDelay(100);
 		//OS_SLEEP(100);
+
 		wifi_irq_enable();
+
 		ret = wifi_cmdevt_init();
 		if (ret) {
 			LOG_ERR("wifi_cmdevt_init failed %i.\r\n", ret);
@@ -442,12 +444,15 @@ int uwp_init(struct wifi_priv *wifi_priv, UWP_WIFI_MODE_T wifi_mode)
 			return ret;
 		}
 		wifi_irq_init();
+        //UWP_SLEEP(1000);
+		//wifi_irq_enable();
 		UWP_SLEEP(400);/* FIXME: workaround */
 		ret = wifi_rf_init();
 		if (ret) {
 			LOG_ERR("wifi rf init failed.");
 			return ret;
 		}
+
 		ret = wifi_cmd_get_cp_info(priv);
 		if (ret) {
 			LOG_ERR("Get cp info failed.\r\n");
@@ -456,7 +461,7 @@ int uwp_init(struct wifi_priv *wifi_priv, UWP_WIFI_MODE_T wifi_mode)
 		priv->initialized = true;
 
 	}
-	LOG_DBG("UWP WIFI driver Initialized\r\n");
+	LOG_ERR("UWP WIFI driver Initialized\r\n");
 	return 0;
 }
 

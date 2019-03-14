@@ -94,7 +94,7 @@ int wifi_ipc_recv(int ch, u8_t *data, int *len, int offset)
 
 	ret = sblock_receive(0, ch, &blk, 0);
 	if (ret) {
-		LOG_ERR("wifi_ipc_recv,sblock_receive=%d",ret);
+		//LOG_ERR("wifi_ipc_recv,sblock_receive=%d",ret);
 		return ret;
 	}
 

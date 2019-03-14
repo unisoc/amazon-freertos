@@ -54,7 +54,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #define configMAX_PRIORITIES                       ( 7 )
 #define configTICK_RATE_HZ                         ( 1000 )
-#define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 64 )
+#define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 100 )
 /* heap: 0x00180000 size:400k */
 #define configAPPLICATION_ALLOCATED_HEAP           1
 #define configTOTAL_HEAP_SIZE                      ( ( size_t ) ( 400U * 1024U ) )
@@ -82,7 +82,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_TIMERS                           1
 #define configTIMER_TASK_PRIORITY                  ( configMAX_PRIORITIES - 1 )
 #define configTIMER_QUEUE_LENGTH                   5
-#define configTIMER_TASK_STACK_DEPTH               ( configMINIMAL_STACK_SIZE * 2 )
+#define configTIMER_TASK_STACK_DEPTH               ( configMINIMAL_STACK_SIZE * 4 )
 
 /* Event group related definitions. */
 #define configUSE_EVENT_GROUPS                     1
@@ -159,6 +159,7 @@ extern void vLoggingPrintf( const char * pcFormat, ... );
 
 /* Non-format version thread-safe print */
 extern void vLoggingPrint( const char * pcMessage );
+#define vLoggingPRINT( X )     vLoggingPrint( (X) )
 #define configPRINT( X )     vLoggingPrint( (X) )
 
 /* Map the logging task's printf to the board specific output function. */

@@ -26,7 +26,7 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
-//#include "FreeRTOS_IP.h" /* FIX ME: Delete if you are not using the FreeRTOS-Plus-TCP library. */
+#include "FreeRTOS_IP.h" /* FIX ME: Delete if you are not using the FreeRTOS-Plus-TCP library. */
 
 /* Test includes */
 #include "aws_test_runner.h"
@@ -128,12 +128,12 @@ void vApplicationDaemonTaskStartupHook( void );
  * start network dependent applications in vApplicationDaemonTaskStartupHook after the
  * network status is up.
  */
-//void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent );
+void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent );
 
 /**
  * @brief Connects to Wi-Fi.
  */
-//static void prvWifiConnect( void );
+static void prvWifiConnect( void );
 
 /**
  * @brief Initializes the board.
@@ -163,6 +163,7 @@ void uwp_cp_init(void)
 	configPRINT_STRING("uwp_cp_init 111\r\n");
     if(!uwp_init(&uwp_wifi_priv, 1))
 		configPRINT_STRING("uwp_cp_init 222\r\n");
+
     if(!uwp_mgmt_open(&uwp_wifi_priv))
 		configPRINT_STRING("uwp_mgmt_open 333\r\n");
     {
@@ -176,14 +177,14 @@ void uwp_cp_init(void)
 #if 1
     {
     	struct wifi_drv_connect_params params;
-    	params.ssid_length = 4;
-    	params.ssid = "scty";
+    	params.ssid_length = 5;
+    	params.ssid = "qwert";
 
     	/* BSSID is optional */
 
     	/* Passphrase is only valid for WPA/WPA2-PSK */
-    	params.psk_length = 0;
-    	params.psk = "";
+    	params.psk_length = 8;
+    	params.psk = "qqqqqqqq";
     	uwp_mgmt_connect(&uwp_wifi_priv, &params);
     }
 #endif
@@ -222,17 +223,16 @@ int app_main( void )
                             tskIDLE_PRIORITY + 1,
                             mainLOGGING_MESSAGE_QUEUE_LENGTH );
 
-    vUWPwifiInitialize();
+    //vUWPwifiInitialize();
 
 	configPRINT_STRING("uwp_cp_init,end\r\n");
     /* FIX ME: If you are using Ethernet network connections and the FreeRTOS+TCP stack,
      * uncomment the initialization function, FreeRTOS_IPInit(), below. */
-    /*FreeRTOS_IPInit( ucIPAddress,
-     *                 ucNetMask,
-     *                 ucGatewayAddress,
-     *                 ucDNSServerAddress,
-     *                 ucMACAddress );
-     */
+    FreeRTOS_IPInit( ucIPAddress,
+                      ucNetMask,
+                      ucGatewayAddress,
+                      ucDNSServerAddress,
+                      ucMACAddress );
 
     /* Start the scheduler.  Initialization that requires the OS to be running,
      * including the Wi-Fi initialization, is performed in the RTOS daemon task
@@ -268,6 +268,7 @@ static void prvMiscInitialization( void )
     aon_intc_uwp_init();
 }
 /*-----------------------------------------------------------*/
+
 void vApplicationDaemonTaskStartupHook( void )
 {
     /* FIX ME: Perform any hardware initialization, that require the RTOS to be
@@ -279,12 +280,11 @@ void vApplicationDaemonTaskStartupHook( void )
      * have been imported into the project. If you are not using Wi-Fi, see the 
      * vApplicationIPNetworkEventHook function. */
 
-    #if 0
         if( SYSTEM_Init() == pdPASS )
         {
             /* Connect to the Wi-Fi before running the tests. */
             prvWifiConnect();
-
+#if 0
             /* Provision the device with AWS certificate and private key. */
             vDevModeKeyProvisioning();
 
@@ -295,11 +295,12 @@ void vApplicationDaemonTaskStartupHook( void )
                          NULL,
                          tskIDLE_PRIORITY,
                          NULL );
+#endif
         }
-    #endif /* if 0 */
+
 }
 /*-----------------------------------------------------------*/
-#if 0
+
 void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
 {
     /* FIX ME: If your application is using Ethernet network connections and the 
@@ -307,6 +308,11 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
      * unit tests and after MQTT, Bufferpool, and Secure Sockets libraries have been 
      * imported into the project. If you are not using Ethernet see the 
      * vApplicationDaemonTaskStartupHook function. */
+    if (eNetworkEvent == eNetworkUp)
+    {
+        configPRINT("Network connection successful.\n\r");
+    }
+
     #if 0
     static BaseType_t xTasksAlreadyCreated = pdFALSE;
 
@@ -327,30 +333,29 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
     #endif /* if 0 */
 }
 /*-----------------------------------------------------------*/
-#endif
 
-#if 0
 void prvWifiConnect( void )
 {
     /* FIX ME: Delete surrounding compiler directives when the Wi-Fi library is ported. */
-    #if 0
+
         WIFINetworkParams_t xNetworkParams;
         WIFIReturnCode_t xWifiStatus;
         uint8_t ucTempIp[4] = { 0 };
+        configPRINT_STRING("///prvWifiConnect enter\r\n");
 
         xWifiStatus = WIFI_On();
 
         if( xWifiStatus == eWiFiSuccess )
         {
-            configPRINTF( ( "Wi-Fi module initialized. Connecting to AP...\r\n" ) );
+            configPRINT_STRING( ( "Wi-Fi module initialized. Connecting to AP...\r\n" ) );
         }
         else
         {
-            configPRINTF( ( "Wi-Fi module failed to initialize.\r\n" ) );
+            configPRINT_STRING( ( "Wi-Fi module failed to initialize.\r\n" ) );
 
             /* Delay to allow the lower priority logging task to print the above status. 
              * The while loop below will block the above printing. */
-            TaskDelay( mainLOGGING_WIFI_STATUS_DELAY );
+            vTaskDelay( mainLOGGING_WIFI_STATUS_DELAY );
 
             while( 1 )
             {
@@ -369,30 +374,29 @@ void prvWifiConnect( void )
 
         if( xWifiStatus == eWiFiSuccess )
         {
-            configPRINTF( ( "Wi-Fi Connected to AP. Creating tasks which use network...\r\n" ) );
+            configPRINT_STRING( ( "Wi-Fi Connected to AP. Creating tasks which use network...\r\n" ) );
             
             xWifiStatus = WIFI_GetIP( ucTempIp );
             if ( eWiFiSuccess == xWifiStatus ) 
             {
-                configPRINTF( ( "IP Address acquired %d.%d.%d.%d\r\n",
+                configPRINT_STRING( ( "IP Address acquired %d.%d.%d.%d\r\n",
                                 ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ] ) );
             }
         }
         else
         {
-            configPRINTF( ( "Wi-Fi failed to connect to AP.\r\n" ) );
+            configPRINT_STRING( ( "Wi-Fi failed to connect to AP.\r\n" ) );
 
             /* Delay to allow the lower priority logging task to print the above status. 
              * The while loop below will block the above printing. */
-            TaskDelay( mainLOGGING_WIFI_STATUS_DELAY );
+            vTaskDelay( mainLOGGING_WIFI_STATUS_DELAY );
 
             while( 1 )
             {
             }
         }
-    #endif /* if 0 */
+
 }
-#endif
 /*-----------------------------------------------------------*/
 
 /**
@@ -519,7 +523,6 @@ void vApplicationIdleHook( void )
         configPRINT( "." );
         xLastPrint = xTimeNow;
     }
-
 }
 /*-----------------------------------------------------------*/
 

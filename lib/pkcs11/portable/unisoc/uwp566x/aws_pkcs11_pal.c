@@ -41,6 +41,8 @@
 #include "hal_ramfunc.h"
 
 #include "task.h"
+#include "FreeRTOSConfig.h"
+
 
 //#define USE_OFFLOAD_SSL
 #ifdef USE_OFFLOAD_SSL
@@ -52,6 +54,7 @@
 
 extern void vLoggingPrint( const char * pcMessage );
 extern void vLoggingPrintf(const char *pcFormat, ... );
+
 
 /*-----------------------------------------------------------*/
 

@@ -67,6 +67,7 @@ MEMORY
 	flash_filesys   (rx) : ORIGIN = 0x02180000, LENGTH = 1280K
 	flash_app_ota   (rx) : ORIGIN = 0x022C0000, LENGTH =  512K
 	flash_modem_ota (rx) : ORIGIN = 0x02340000, LENGTH =  768K
+
 /*	flash (rx) : ORIGIN = 0x02000000, LENGTH = 512K
 	sram (rwx) : ORIGIN = 0x00100000, LENGTH = 400K */
 }
