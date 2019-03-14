@@ -80,6 +80,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>application_code/common_test/devmode_key_provisioning</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/demos/common/devmode_key_provisioning</locationURI>
+		</link>
+		<link>
 			<name>application_code/common_test/include</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/tests/common/include</locationURI>
@@ -93,6 +98,16 @@
 			<name>application_code/common_test/secure_sockets</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>application_code/common_test/test_runner</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/common/test_runner</locationURI>
+		</link>
+		<link>
+			<name>application_code/common_test/tls</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/common/tls</locationURI>
 		</link>
 		<link>
 			<name>application_code/vendor_code/bsp</name>
@@ -130,9 +145,19 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>lib/aws/tls</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/tls</locationURI>
+		</link>
+		<link>
 			<name>lib/aws/utils</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/utils</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/wifi</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
 			<name>lib/crypto/aws_crypto.c</name>
@@ -273,6 +298,11 @@
 			<name>lib/aws/secure_sockets/aws_secure_sockets.c</name>
 			<type>1</type>
 			<locationURI>AFR_HOME/lib/secure_sockets/portable/freertos_plus_tcp/aws_secure_sockets.c</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/wifi/aws_wifi.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/wifi/portable/unisoc/ivy5661/aws_wifi.c</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/mbedtls/include</name>

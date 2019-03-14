@@ -110,7 +110,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
         pxSendingBuffer = pxNetworkBuffer;
     }
 
-    ret = uwp_iface_tx(INTERFACE_STA, pxSendingBuffer->pucEthernetBuffer,
+    ret = uwp_mgmt_tx(pxSendingBuffer->pucEthernetBuffer,
         pxSendingBuffer->xDataLength);
     if (ret != UWP_OK) {
         LOG_ERR("Failed to tx buffer %p, len %d, err %d",

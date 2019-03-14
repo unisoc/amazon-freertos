@@ -36,6 +36,8 @@
 #include "aws_wifi_config.h"
 
 #include "uwp_wifi_main.h"
+#include "uwp_sys_wrapper.h"
+
 extern struct wifi_priv uwp_wifi_priv;
 
 static SemaphoreHandle_t xWiFiSem;
@@ -48,23 +50,29 @@ WIFIReturnCode_t WIFI_On( void )
 {
     /* FIX ME. */
 	int ret = eWiFiFailure;
-	if(!uwp_wifi_priv.initialized)
-		ret = uwp_init(&uwp_wifi_priv, WIFI_MODE_STA);//WIFI_MODE_STA
-    configPRINT_STRING("WIFI_On,init\r\n");
-	if(ret)
-		return eWiFiFailure;
-	else {
-		if(!uwp_wifi_priv.wifi_dev[WIFI_DEV_STA].opened) {
-			ret = uwp_mgmt_open(&uwp_wifi_priv);//0 success
-		    configPRINT_STRING("WIFI_On,open,\r\n");
-			if(ret)
-				return eWiFiFailure;
-			}
-		}
 
+   configPRINT_STRING("WIFI_On enter\r\n");
+
+   if(sipc_init() != 0) {
+       configPRINT_STRING("sipc init failed\r\n");
+       return eWiFiFailure;
+   }
+
+   if(uwp_init(&uwp_wifi_priv, WIFI_MODE_STA)) {
+        configPRINT_STRING("uwp init failed\r\n");
+        return eWiFiFailure;
+   }
+   if(!uwp_wifi_priv.wifi_dev[WIFI_DEV_STA].opened) {
+       ret = uwp_mgmt_open(&uwp_wifi_priv);
+        if(ret) {
+            configPRINT_STRING("WIFI_On,open failed,\r\n");
+            return eWiFiFailure;
+        }
+   }
 
    static StaticSemaphore_t xSemaphoreBuffer;
    xWiFiSem = xSemaphoreCreateMutexStatic( &( xSemaphoreBuffer ) );
+   configPRINT_STRING("WIFI_On done\r\n");
    return eWiFiSuccess;
 }
 /*-----------------------------------------------------------*/
@@ -85,42 +93,47 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
 {
     /* FIX ME. */
 	int ret = eWiFiFailure;
+    struct wifi_drv_scan_params scan_params;
+	struct wifi_drv_connect_params connect_params;
 
-	struct wifi_drv_connect_params params;
-/*
-	if(!uwp_wifi_priv.initialized)
-		ret = uwp_init(&uwp_wifi_priv, WIFI_MODE_STA);//WIFI_MODE_STA
+    //fixme: check if wifi on.
 
-	if(ret)
-		return eWiFiFailure;
-	else {
-		if(!uwp_wifi_priv.wifi_dev[WIFI_MODE_STA].opened) {
-			ret = uwp_mgmt_open(&uwp_wifi_priv);//0 success
-			if(ret)
-				return eWiFiFailure;
-			}
-		}
+    //scan param
+    scan_params.band = 0;
+    scan_params.channel = 0;
+    ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params);
+    if(ret) {
+        configPRINT_STRING("scan failed\r\n");
+        return eWiFiFailure;
+    }
+    configPRINT_STRING("111\r\n");
 
-*/
 	/* SSID is mandatory */
-	params.ssid_length = strlen(pxNetworkParams->pcSSID);
-	if (!pxNetworkParams->pcSSID || !params.ssid_length)
+    connect_params.ssid_length = strlen(pxNetworkParams->pcSSID);
+	if (!pxNetworkParams->pcSSID || !connect_params.ssid_length)
 		return -eWiFiFailure;
-	params.ssid = pxNetworkParams->pcSSID;
+	connect_params.ssid = pxNetworkParams->pcSSID;
+    configPRINT_STRING("222\r\n");
 
 	/* BSSID is optional */
 
 	/* Passphrase is only valid for WPA/WPA2-PSK */
-	params.psk_length = strlen(pxNetworkParams->pcPassword);
-	if (pxNetworkParams->pcPassword && !params.psk_length)
-		return -eWiFiFailure;
-	params.psk = pxNetworkParams->pcPassword;
-    configPRINT_STRING("WIFI_connect\r\n");
-	ret = uwp_mgmt_connect(&uwp_wifi_priv, &params);
+	connect_params.psk_length = strlen(pxNetworkParams->pcPassword);
+	//if (pxNetworkParams->pcPassword && !connect_params.psk_length)
+	//	return -eWiFiFailure;
+    configPRINT_STRING("333\r\n");
 
-	if(!ret)
-		return eWiFiSuccess;
-	return eWiFiFailure;
+    connect_params.psk = pxNetworkParams->pcPassword;
+    
+	ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
+	if(ret) {
+        configPRINT_STRING("connect failed\r\n");
+		return eWiFiFailure;
+    }
+    configPRINT_STRING("start dhcp\r\n");
+    vDHCPProcess(pdTRUE);
+
+	return eWiFiSuccess;
 }
 /*-----------------------------------------------------------*/
 
@@ -218,6 +231,7 @@ WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
 WIFIReturnCode_t WIFI_GetMAC( uint8_t * pucMac )
 {
     WIFIReturnCode_t xRetVal;
+    int ret = UWP_FAIL;
 
     if (pucMac == NULL) {
         return eWiFiFailure;
@@ -226,7 +240,7 @@ WIFIReturnCode_t WIFI_GetMAC( uint8_t * pucMac )
     /* Try to acquire the semaphore. */
     if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
     {
-        uwp_err_t ret = wifi_get_mac(WIFI_MODE_STA, pucMac);
+        ret = uwp_mgmt_getmac(pucMac);
         xRetVal = (ret == UWP_OK) ? eWiFiSuccess : eWiFiFailure;
         /* Return the semaphore. */
         xSemaphoreGive( xWiFiSem );
