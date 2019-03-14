@@ -438,16 +438,24 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
 
     	if( flash_uwp_write(pxFileEntry->ulFileAddrOffset, pvBufToWrite, ulDataSize) != 0 ){
     		vLoggingPrint("flash file write failed\r\n");
+    		flash_uwp_write_protection(true);
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_erase(UWP_FLASH_FILE_ENTRY_OFFSET, UWP_FLASH_SECTOR_SIZE) != 0 ){
     		vLoggingPrint("flash entry erase failed\r\n");
+    		flash_uwp_write_protection(true);
     		return eInvalidHandle;
     	}
 
     	if( flash_uwp_write(UWP_FLASH_FILE_ENTRY_OFFSET, xObjectFileDict, sizeof(xObjectFileDict)) != 0 ){
     		vLoggingPrint("flash entry write failed\r\n");
+    		flash_uwp_write_protection(true);
+    		return eInvalidHandle;
+    	}
+
+    	if( flash_uwp_write_protection(true) != 0 ){
+    		vLoggingPrint("flash protect failed\r\n");
     		return eInvalidHandle;
     	}
 
