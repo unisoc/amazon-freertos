@@ -106,14 +106,12 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
         configPRINT_STRING("scan failed\r\n");
         return eWiFiFailure;
     }
-    configPRINT_STRING("111\r\n");
 
 	/* SSID is mandatory */
     connect_params.ssid_length = strlen(pxNetworkParams->pcSSID);
 	if (!pxNetworkParams->pcSSID || !connect_params.ssid_length)
 		return -eWiFiFailure;
 	connect_params.ssid = pxNetworkParams->pcSSID;
-    configPRINT_STRING("222\r\n");
 
 	/* BSSID is optional */
 
@@ -121,17 +119,16 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
 	connect_params.psk_length = strlen(pxNetworkParams->pcPassword);
 	//if (pxNetworkParams->pcPassword && !connect_params.psk_length)
 	//	return -eWiFiFailure;
-    configPRINT_STRING("333\r\n");
 
     connect_params.psk = pxNetworkParams->pcPassword;
-    
 	ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
 	if(ret) {
         configPRINT_STRING("connect failed\r\n");
 		return eWiFiFailure;
     }
     configPRINT_STRING("start dhcp\r\n");
-    vDHCPProcess(pdTRUE);
+    //UWP_SLEEP(2000);
+    //vDHCPProcess(pdTRUE);
 
 	return eWiFiSuccess;
 }
