@@ -200,7 +200,7 @@ __ramfunc struct spi_flash_params *spiflash_scan(void)
 	}
 
 	if (i == ARRAY_SIZE(spi_flash_spec_table)) {
-		LOG_INF("SF: Unsupported manufacture %04x\n", manufacturer_id);
+		LOG_ERR("SF: Unsupported manufacture %04x\n", manufacturer_id);
 		return NULL;
 	}
 
@@ -215,7 +215,7 @@ __ramfunc struct spi_flash_params *spiflash_scan(void)
 	}
 
 	if (i == spi_spec->table_num) {
-		LOG_INF("SF: Unsupported ID %04x %04x\n", jedec, ext_jedec);
+		LOG_ERR("SF: Unsupported ID %04x %04x\n", jedec, ext_jedec);
 		return NULL;
 	} else {
 		return params;
@@ -579,7 +579,7 @@ __ramfunc int spiflash_cmd_erase(struct spi_flash *flash,
 
 	dummp = offset % flash->sector_size;
 	if (dummp) {
-		LOG_INF("SF: Erase offset/length not multiple of erase size\n");
+		LOG_ERR("SF: Erase offset/length not multiple of erase size\n");
 		return -1;
 	}
 
@@ -844,7 +844,7 @@ int __attribute__ ((optimize("-O0"))) spiflash_cmd_program_sec(struct spi_flash
 	}
 
 	if (ret < 0) {
-		LOG_INF("SF: enabling write failed \n");
+		LOG_ERR("SF: enabling write failed \n");
 		return ret;
 	}
 
@@ -867,7 +867,7 @@ int __attribute__ ((optimize("-O0"))) spiflash_cmd_program_sec(struct spi_flash
 			spiflash_write_page_sec(flash, cmd_desc, 2,
 					((char *)buf + actual), chunk_len);
 		if (ret < 0) {
-			LOG_INF("SF: write failed\n");
+			LOG_ERR("SF: write failed\n");
 			break;
 		}
 
@@ -1056,6 +1056,13 @@ __ramfunc int spiflash_write(struct spi_flash *flash, u32_t offset,
 __ramfunc int spiflash_erase(struct spi_flash *flash, u32_t offset, u32_t len)
 {
 	u32_t i, sectors_nr;
+	u32_t dummp;
+
+	dummp = len % flash->sector_size;
+	if (dummp) {
+		LOG_ERR("SF: Erase param length not multiple of erase size\n");
+		return -1;
+	}
 
 	sectors_nr = len / flash->sector_size;
 

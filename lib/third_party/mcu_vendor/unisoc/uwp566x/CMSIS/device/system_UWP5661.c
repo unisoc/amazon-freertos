@@ -175,8 +175,8 @@ void SystemInit (void)
     SCB->CPACR |= ((3UL << 10*2) | (3UL << 11*2));    /* set CP10, CP11 Full Access */
 #endif /* ((__FPU_PRESENT == 1) && (__FPU_USED == 1)) */
 
-
-    SCB->VTOR  = UWP_FLASH_BASE;                      /* vector table in flash      */
+    extern uint32_t __FLASH_ISR_VECTOR__;
+    SCB->VTOR  = & __FLASH_ISR_VECTOR__;           /* vector table in flash      */
     NVIC_SetPriorityGrouping(0);                   /* 6 bit for pre-emption pri  */
 
 #ifdef NVIC_RAM_VECTOR_ADDRESS
