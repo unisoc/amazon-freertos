@@ -211,6 +211,7 @@ int wifi_cmd_scan(struct wifi_device *wifi_dev, struct wifi_drv_scan_params *par
 
 	UWP_MEM_FREE(cmd);//free(cmd);
     UWPEventGroupWaitBits(cmd_sem, SCAN_DONE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+    UWPEventGroupClearBits(cmd_sem, SCAN_DONE_BIT);
 	return 0;
 }
 
@@ -246,7 +247,7 @@ int wifi_cmd_connect(struct wifi_device *wifi_dev,
 	if (params->psk_length && params->psk)
 		memcpy(cmd.psk, wpa_psk, WIFI_PMK_LEN);
 
-    DUMP_DATA(&cmd, sizeof(struct cmd_connect));
+    //DUMP_DATA(&cmd, sizeof(struct cmd_connect));
 
 	ret = wifi_cmd_send(WIFI_CMD_CONNECT, (char *)&cmd,
 			    sizeof(cmd), NULL, NULL);

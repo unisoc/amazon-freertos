@@ -53,12 +53,12 @@ extern void vLoggingPrintf(const char *fmt, ... );
             u8_t *data = (u8_t *)buff;\
             for (int i=0;i<len;i++) {\
                     if(i%8 == 0)\
-                        vLoggingPrintf("  ");\
-                    vLoggingPrintf("%02x ", data[i]);\
+                        printk("  ");\
+                    printk("%02x ", data[i]);\
                     if((i+1)%16 == 0)\
-                        vLoggingPrintf("\r\n");\
+                        printk("\r\n");\
             }\
-            vLoggingPrintf("len:%d\r\n", len);\
+            printk("len:%d\r\n", len);\
     }while(0)
 #else
 #define DUMP_DATA(buff, len)

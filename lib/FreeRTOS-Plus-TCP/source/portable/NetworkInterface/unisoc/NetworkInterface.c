@@ -48,7 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //#include "uwp_err.h"
 
 #include "aws_wifi.h"
-//#include "wifi_main.h"
+#include "uwp_wifi_main.h"
 
 //#include "uwp5661_log.h"
 //#include "uwp5661_wifi.h"
@@ -66,21 +66,44 @@ enum if_idx {
 };
 
 volatile static uint32_t xInterfaceState = INTERFACE_DOWN;
+extern struct wifi_priv uwp_wifi_priv;
+//static NetworkBufferDescriptor_t * last_dscr_p= NULL;
+//static NetworkBufferDescriptor_t * last_buf_p= NULL;
+
+static inline void save_dscr_addr_before_buffer_addr(u32_t payload, void *addr)
+{
+	u32_t *pkt_ptr;
+
+	pkt_ptr = (u32_t *)(payload - (16+4+4));
+	*pkt_ptr = (u32_t)addr;
+}
+
+static inline u32_t get_dscr_addr_from_buffer_addr(u32_t payload)
+{
+	u32_t *ptr;
+
+	ptr = (u32_t *)(payload - (16+4+4));
+
+	return *ptr;
+}
 
 BaseType_t xNetworkInterfaceInitialise( void )
 {
     static BaseType_t xMACAdrInitialized = pdFALSE;
     uint8_t ucMACAddress[ ipMAC_ADDRESS_LENGTH_BYTES ];
 
-    if (xInterfaceState == INTERFACE_UP) {
-        if (xMACAdrInitialized == pdFALSE) {
-            WIFI_GetMAC(ucMACAddress);
-            FreeRTOS_UpdateMACAddress(ucMACAddress);
-            xMACAdrInitialized = pdTRUE;
-        }
-        return pdTRUE;
+    if(!uwp_wifi_priv.wifi_dev[0].opened)
+        return pdFALSE;
+    else {
+            if (xMACAdrInitialized == pdFALSE) {
+                WIFI_GetMAC(ucMACAddress);
+                FreeRTOS_UpdateMACAddress(ucMACAddress);
+                xMACAdrInitialized = pdTRUE;
+            }
+            return pdTRUE;
     }
-    return pdFALSE;
+    return pdTRUE;
+
 }
 
 BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBuffer, BaseType_t xReleaseAfterSend )
@@ -109,7 +132,13 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     } else {
         pxSendingBuffer = pxNetworkBuffer;
     }
+    //printk("send:[%p]\r\n",pxSendingBuffer);
+    //last_buf_p = pxSendingBuffer->pucEthernetBuffer;
+    //last_dscr_p = pxSendingBuffer;
+    printk("tx len:%d\r\n",pxSendingBuffer->xDataLength);
+    DUMP_DATA(pxSendingBuffer->pucEthernetBuffer, pxSendingBuffer->xDataLength);
 
+    save_dscr_addr_before_buffer_addr((u32_t)(pxSendingBuffer->pucEthernetBuffer), (void *)pxSendingBuffer);
     ret = uwp_mgmt_tx(pxSendingBuffer->pucEthernetBuffer,
         pxSendingBuffer->xDataLength);
     if (ret != UWP_OK) {
@@ -146,12 +175,19 @@ void* wlanif_alloc_network_buffer(uint16_t len)
 
 void wlanif_free_network_buffer(uint32_t addr)
 {
-	NetworkBufferDescriptor_t *pxNetworkBuffer =
-			(NetworkBufferDescriptor_t *)(*(uint32_t *)(addr - ipconfigBUFFER_PADDING));
+#if 0
+    if((NetworkBufferDescriptor_t *)addr == last_buf_p) {
+	    vReleaseNetworkBufferAndDescriptor(last_dscr_p);
+    }
+    else {
+        printk("can not find the dscr\r\n");
+    }
+#else
+    NetworkBufferDescriptor_t *addr_dsc = get_dscr_addr_from_buffer_addr(addr);
+    //printk("free:[%p]\r\n",addr_dsc);
 
-	vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
-
-	return;
+    vReleaseNetworkBufferAndDescriptor(addr_dsc);
+#endif
 }
 
 BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
@@ -161,7 +197,7 @@ BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
     const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
 
     if( eConsiderFrameForProcessing( buffer ) != eProcessBuffer ) {
-        LOG_ERR("Dropping packet");
+        printk("Dropping packet");
         return UWP_OK;
     }
 
@@ -172,17 +208,21 @@ BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
 	pxNetworkBuffer->xDataLength = len;
 
 	/* Copy the packet data. */
+    printk("rx len:%d\r\n",len);
+
         memcpy(pxNetworkBuffer->pucEthernetBuffer, buffer, len);
+        DUMP_DATA(pxNetworkBuffer->pucEthernetBuffer,len);
+
         xRxEvent.pvData = (void *) pxNetworkBuffer;
 
         if ( xSendEventStructToIPTask( &xRxEvent, xDescriptorWaitTime) == pdFAIL ) {
-            LOG_ERR("Failed to enqueue packet to network stack %p, len %d", buffer, len);
+            printk("Failed to enqueue packet to network stack %p, len %d", buffer, len);
             vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
             return UWP_FAIL;
         }
         return UWP_OK;
     } else {
-        LOG_ERR("Failed to get buffer descriptor");
+        printk("Failed to get buffer descriptor");
         return UWP_FAIL;
     }
 }
@@ -199,33 +239,3 @@ BaseType_t xGetPhyLinkStatus( void )
     return pdFALSE;
 }
 
-#if 0
-/* FreeRTOS includes. */
-#include "FreeRTOS.h"
-#include "list.h"
-
-/* FreeRTOS+TCP includes. */
-#include "FreeRTOS_IP.h"
-
-/* If ipconfigETHERNET_DRIVER_FILTERS_FRAME_TYPES is set to 1, then the Ethernet
-driver will filter incoming packets and only pass the stack those packets it
-considers need processing. */
-#if( ipconfigETHERNET_DRIVER_FILTERS_FRAME_TYPES == 0 )
-#define ipCONSIDER_FRAME_FOR_PROCESSING( pucEthernetBuffer ) eProcessBuffer
-#else
-#define ipCONSIDER_FRAME_FOR_PROCESSING( pucEthernetBuffer ) eConsiderFrameForProcessing( ( pucEthernetBuffer ) )
-#endif
-
-BaseType_t xNetworkInterfaceInitialise( void )
-{
-    /* FIX ME. */
-    return pdFALSE;
-}
-
-BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkBuffer, BaseType_t xReleaseAfterSend )
-{
-    /* FIX ME. */
-    return pdFALSE;
-}
-
-#endif

@@ -248,31 +248,10 @@ int uwp_mgmt_scan(struct wifi_priv *priv,
 				wifi_dev->mode);
 		return -EINVAL;
 	}
-	/*
-    g_wifi_mgmt_queue = k_queue_create(10);
-    if(g_wifi_mgmt_queue == NULL){
-        LOG_ERR("malloc failed");
-        return -ENOMEM;
-    }
-
-	if (wifi_dev->scan_result_cb) {
-		return -EAGAIN;
-	}
-
-	wifi_dev->scan_result_cb = cb;
 
 	uwp_mgmt_empty_scan_result_list();
+	ret = wifi_cmd_scan(wifi_dev, params);
 
-	ret = wifi_cmd_scan(wifi_dev, params);
-    k_msg_get(g_wifi_mgmt_queue, &msg, 10000);
-    if(msg->type == STA_SCAN_TYPE)
-        ret = msg->arg1;
-    LOG_DBG("find ap:%d",ret);
-    free(msg);
-*/
-	uwp_mgmt_empty_scan_result_list();
-	ret = wifi_cmd_scan(wifi_dev, params);
-	UWP_SLEEP(3000);
 	LOG_ERR("uwp_mgmt_scan,exit.ret=%d\r\n",ret);
 	return ret;
 
@@ -322,7 +301,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	struct wifi_device *wifi_dev;
 	int ret;
 
-	configPRINT_STRING("uwp_mgmt_connect,enter");
+	LOG_DBG("%s,enter\r\n",__func__);
 	if (!priv || !params) {
 		return -EINVAL;
 	}
@@ -344,7 +323,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	}
 
 	ret = wifi_cmd_connect(wifi_dev, params);
-	configPRINT_STRING("uwp_mgmt_connect,exit\r\n");
+	LOG_DBG("%s,done.\r\n",__func__);
 	return ret;
 }
 
@@ -569,12 +548,14 @@ int uwp_mgmt_tx(uint8_t *pkt, uint32_t pkt_len)
     u16_t max_len;
     u8_t *debug_buf;
     int ret;
- 
-    wifi_tx_fill_msdu_dscr(&(uwp_wifi_priv.wifi_dev[WIFI_DEV_STA]), pkt, pkt_len, SPRDWL_TYPE_DATA, 0);
+    u8_t *pbuf = (u8_t *)pkt;
 
-    data_ptr = (u32_t)pkt;
+    pbuf -= sizeof(struct tx_msdu_dscr);
+    wifi_tx_fill_msdu_dscr(&(uwp_wifi_priv.wifi_dev[WIFI_DEV_STA]), pbuf, pkt_len, SPRDWL_TYPE_DATA, 0);
+
+    data_ptr = (u32_t)pbuf;
     /* FIXME Save pkt addr before payload. */
-    //uwp_save_addr_before_payload(addr, (void *)pkt);
+    uwp_save_addr_before_payload(data_ptr, (void *)pbuf);
 
     SPRD_AP_TO_CP_ADDR(data_ptr);
 
@@ -591,7 +572,7 @@ int uwp_mgmt_tx(uint8_t *pkt, uint32_t pkt_len)
                 debug_buf[6],debug_buf[7],debug_buf[8],debug_buf[9],debug_buf[10],debug_buf[11],
                     pkt,pkt_len);
 
-    wifi_tx_data((void *)data_ptr, pkt_len);
+    wifi_tx_data((void *)data_ptr, (pkt_len + sizeof(struct tx_msdu_dscr)));
 
     return 0;
 }

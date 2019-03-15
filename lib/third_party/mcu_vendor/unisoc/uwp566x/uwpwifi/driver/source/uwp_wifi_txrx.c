@@ -41,15 +41,7 @@ static u8_t rx_data_buf[RX_DATA_SIZE];
 static u8_t rx_cmdevt_buf[RX_CMDEVT_SIZE];
 extern void *packet_rx_queue;
 
-#if 0
-K_THREAD_STACK_MEMBER(txrx_stack, TXRX_STACK_SIZE);
-static struct k_thread txrx_thread_data;
-static void *event_sem = NULL;
-static void *rx_buf_mutex = NULL;
-static u8_t rx_buf[RX_BUF_SIZE];
-static wifi_slist_t rx_buf_list;
-#endif
-//extern int impl_empty_buf(int num);
+
 int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 {
     struct rxc *rx_complete_buf = (struct rxc *)data;
@@ -65,6 +57,7 @@ int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
 
     for (i = 0; i < rxc_addr->num; i++) {
         memcpy(&payload, rxc_addr->addr_addr[i], 4);
+
         WIFI_ASSERT(payload > SPRD_CP_DRAM_BEGIN
             && payload < SPRD_CP_DRAM_END,
             "Invalid buffer address: %p", (void *)payload);
@@ -80,32 +73,12 @@ int wifi_rx_complete_handle(struct wifi_priv *priv, void *data, int len)
         data_len = rx_msdu->msdu_len + rx_msdu->msdu_offset;
         WIFI_ASSERT(data_len > 0 && data_len < 1800,
             "Invalid data len: %d", data_len);
-#if 0
-        uwp_wifi_msg_t msg = malloc(sizeof(struct UWP_MSG_STRUCT));
-        msg->type = 0;
-        msg->arg1 = (uint32_t)(payload + rx_msdu->msdu_offset);
-        msg->arg2 = rx_msdu->msdu_len;
-        msg->arg3 = rx_msdu->msdu_offset;
 
-        debug_buf = (u8_t *) msg->arg1;
-        LOG_DBG("DATA IN:%02x:%02x:%02x:%02x:%02x:%02x <-- %02x:%02x:%02x:%02x:%02x:%02x addr:%p len:%d offset:%d", 
-            debug_buf[0],debug_buf[1],debug_buf[2],debug_buf[3],debug_buf[4],debug_buf[5],
-                debug_buf[6],debug_buf[7],debug_buf[8],debug_buf[9],debug_buf[10],debug_buf[11],
-                    msg->arg1,msg->arg2,msg->arg3);
-#if 0
-        u8_t temp_tplink[7];
-        temp_tplink[0] = 0x34;
-        temp_tplink[1] = 0x96;
-        temp_tplink[2] = 0x72;
-        temp_tplink[3] = 0xed;
-        temp_tplink[4] = 0xe3;
-        temp_tplink[5] = 0x04;
-        if(memcmp(temp_tplink,&(debug_buf[6]),6) == 0)
-            DUMP_DATA(msg->arg1,msg->arg2);
-#endif
-        uwp_msg_put(packet_rx_queue, &msg, UWP_FOREVER);
-#endif
+extern BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len);
+		wlanif_input(NULL, (void *)((uint32_t)(payload + rx_msdu->msdu_offset)), rx_msdu->msdu_len);
+        uwp_pkt_buf_free((void *)(payload));
     }
+
 
     /* Allocate new empty buffer to cp. */
     LOG_DBG("notify cp:%d\r\n",i);
@@ -124,10 +97,11 @@ int wifi_tx_complete_handle(void *data, int len)
     struct txc_addr_buff *txc_addr = &txc_complete_buf->txc_addr;
     u16_t payload_num;
     u32_t payload_addr;
+    u32_t tx_pkt;
+    u8_t* pbuf;
     int i;
 
     payload_num = txc_addr->number;
-    LOG_DBG("payload num:%d\r\n",payload_num);
     for (i = 0; i < payload_num; i++) {
         /* We use only 4 byte addr. */
         memcpy(&payload_addr,
@@ -139,13 +113,18 @@ int wifi_tx_complete_handle(void *data, int len)
             "Invalid buffer address: %p", (void *)payload_addr);
 
         SPRD_CP_TO_AP_ADDR(payload_addr);
-
+        tx_pkt = uwp_get_addr_from_payload(payload_addr);
         WIFI_ASSERT(payload_addr > SPRD_AP_DRAM_BEGIN
             && payload_addr < SPRD_AP_DRAM_END,
             "Invalid pkt address: %p", (void *)payload_addr);
 
         LOG_DBG("free TXBUFF:%p\r\n",payload_addr);
-		UWP_MEM_FREE(payload_addr);//free(payload_addr);
+        //UWP_MEM_FREE(payload_addr);//free(payload_addr);
+        pbuf = (u8_t *)tx_pkt;
+        
+        pbuf += sizeof(struct tx_msdu_dscr);
+        extern void wlanif_free_network_buffer(uint32_t addr);
+        wlanif_free_network_buffer((u32_t)pbuf);
     }
 
     return 0;
@@ -345,8 +324,8 @@ int wifi_tx_data(void *data, int len)
     addr_buf.offset = 7;
     addr_buf.tx_ctrl.pcie_mh_readcomp = 1;
 
-    memset(addr_buf.pcie_addr[0], 0, SPRDWL_PHYS_LEN);
-    memcpy(addr_buf.pcie_addr[0], &data, 4);  /* Copy addr to addr buf. */
+    memset(addr_buf.pcie_addr, 0, SPRDWL_PHYS_LEN);
+    memcpy(addr_buf.pcie_addr, &data, 4);  /* Copy addr to addr buf. */
 
     ret = wifi_ipc_send(SMSG_CH_WIFI_DATA_NOR, QUEUE_PRIO_NORMAL,
                 (void *)&addr_buf,
@@ -367,14 +346,12 @@ static void rx_data_thread(const char*p1)
     int len;
 
     while (1) {
-        LOG_DBG("Wait for data.");
 		ret = UWP_SEM_TAKE(data_sem, UWP_DELAY_FOREVER);//uwp_sem_acquire(data_sem, UWP_FOREVER);
 	    if(ret == 0){
-	        LOG_ERR("event_sem mutex lock failed.");
+	        printk("event_sem mutex lock failed.");
 	        //return; /* lock mutex failed */
 	    }
         while (1) {
-            LOG_DBG("rx_data_thread.");
             memset(addr, 0, RX_DATA_SIZE);
             ret = wifi_ipc_recv(SMSG_CH_WIFI_DATA_NOR,
                     addr, &len, 0);
