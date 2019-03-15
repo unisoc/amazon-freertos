@@ -1,4 +1,5 @@
 #include "uwp_hal.h"
+#include "hal_log.h"
 #include "cache.h"
 
 #ifndef NULL
@@ -10,10 +11,10 @@ static CACHE_BLOCK_OP_T C_ICACHE_DEFAULT_BLOCK_CFG[] = {
 	{ BLOCK_1, 0x00100000, TRUE, FALSE },
 	{ BLOCK_2, 0x001EE000, FALSE, FALSE },
 	{ BLOCK_3, 0x02000000, TRUE, FALSE },
-	{ BLOCK_4, 0x02180000, FALSE, FALSE },
-	{ BLOCK_5, 0x02400000, FALSE, FALSE },
-	{ BLOCK_6, 0x02480000, FALSE, FALSE },
-	{ BLOCK_7, 0x028B0000, FALSE, FALSE },
+	{ BLOCK_4, 0x04000000, FALSE, FALSE },
+	{ BLOCK_5, 0x04480000, FALSE, FALSE },
+	{ BLOCK_6, 0x048B0000, FALSE, FALSE },
+	{ BLOCK_7, 0x04900000, FALSE, FALSE },
 };
 
 static CACHE_BLOCK_OP_T C_DCACHE_DEFAULT_BLOCK_CFG[] = {
@@ -21,10 +22,10 @@ static CACHE_BLOCK_OP_T C_DCACHE_DEFAULT_BLOCK_CFG[] = {
 	{ BLOCK_1, 0x00100000, FALSE, FALSE },
 	{ BLOCK_2, 0x001EE000, FALSE, FALSE },
 	{ BLOCK_3, 0x02000000, TRUE, FALSE },
-	{ BLOCK_4, 0x02180000, FALSE, FALSE },
-	{ BLOCK_5, 0x02400000, FALSE, FALSE },
-	{ BLOCK_6, 0x02480000, FALSE, FALSE },
-	{ BLOCK_7, 0x028B0000, FALSE, FALSE },
+	{ BLOCK_4, 0x04000000, FALSE, FALSE },
+	{ BLOCK_5, 0x04480000, FALSE, FALSE },
+	{ BLOCK_6, 0x048B0000, FALSE, FALSE },
+	{ BLOCK_7, 0x04900000, FALSE, FALSE },
 };
 
 static u32_t icache_bus_cfg_addr[] = {
@@ -275,9 +276,9 @@ u32_t cache_execmd(CACHE_CMD_T *cmd, u32_t force)
 		}
 	}
 
-#if 0
 	if (ret == 0) {
 		sci_write32(CACHE_CMD_CFG2, value & CACHE_CMD_CFG2_MASK);
+#if 0
 		while (0 == (sci_read32(CACHE_INT_RAW_STS) & CACHE_CMD_IRQ_RAW)) {
 			if (t++ > 100000) {
 				LOG_INF("%s %d.\n", __func__, __LINE__);
@@ -285,8 +286,8 @@ u32_t cache_execmd(CACHE_CMD_T *cmd, u32_t force)
 			}
 		}
 		set_bits(CACHE_CMD_IRQ_CLR, CACHE_INT_CLR);
-	}
 #endif
+	}
 
 	return ret;
 }
@@ -455,6 +456,90 @@ void cache_execusecfg(CACHE_BLOCK_OP_T *pcfg, u32_t size)
 		for (i = 0; i < 20; ++i) ;
 		cache_enableblock(&pcfg[size - 1], C_WRITE);
 	}
+}
+
+uint32_t icache_check_all_block_disable(void)
+{
+	if (sci_read32(REG_ICACHE_BASE) & 0x000000FF)
+		return	0;
+	else
+		return	1;
+}
+
+uint32_t dcache_check_all_block_disable(void)
+{
+	if (sci_read32(REG_DCACHE_BASE) & 0x000000FF)
+		return	0;
+	else
+		return	1;
+}
+
+void dcache_clean_range(uint32_t start, uint32_t end)
+{
+	CACHE_CMD_T command;
+
+	LOG_DBG("start clean dcache, start:[%08x], end:[%08x]\n", (unsigned int)start, (unsigned int)end);
+
+	dcache_set_reg();
+	if (dcache_check_all_block_disable())
+	 {
+		 LOG_ERR("ERROR: to clean range is disable!\n");
+		 return;
+	 }
+	
+	command.type 		= C_CLEAN_RANGE;
+	command.start 	= start;
+	command.end		= end;
+
+	cache_execmd(&command, TRUE);
+}
+
+void icache_invalid_range(uint32_t start, uint32_t end)
+{
+	CACHE_CMD_T command;
+
+	icache_set_reg();
+
+	command.type		= C_INVALID_RANGE;
+	command.start 	= start;
+	command.end		= end;
+
+	cache_execmd(&command, TRUE);
+}
+
+void dcache_invalid_range(uint32_t start, uint32_t end)
+{
+	CACHE_CMD_T command;
+
+	dcache_set_reg();
+
+	command.type 		= C_INVALID_RANGE;
+	command.start 	= start;
+	command.end		= end;
+
+	cache_execmd(&command, TRUE);
+}
+
+void icache_invalid_range_hal(uint8_t *begin, uint32_t data_len)
+{
+	icache_invalid_range((uint32_t)begin, ((uint32_t)begin + data_len));
+}
+
+void dcache_invalid_range_hal(uint8_t *begin, uint32_t data_len)
+{
+	dcache_invalid_range((uint32_t)begin, ((uint32_t)begin + data_len));
+}
+
+void dcache_clean_range_hal(uint8_t *begin, uint32_t data_len)
+{
+	dcache_clean_range((uint32_t)begin, ((uint32_t)begin + data_len));
+}
+
+void cache_invalid_range_hal(uint8_t *begin, uint32_t data_len)
+{
+	LOG_DBG("Enter %s %d , addr from [%08x] to [%08x].\n", __func__, __LINE__, (unsigned int)begin, (unsigned int)((uint32_t)begin + data_len));
+	icache_invalid_range_hal(begin, data_len);
+	dcache_invalid_range_hal(begin, data_len);
 }
 
 void icache_phy_init(CACHE_SIZE_SEL_E icache_size)

@@ -20,10 +20,10 @@ void vStdioUARTOutput(char *DataToOutput){
 #include <string.h>
 
 void printk(const char *pcFormat, ...){
-    char LogForISRBuf[20];
+    char LogForISRBuf[40];
     va_list args;
     va_start(args, pcFormat);
-    vsnprintf( LogForISRBuf, 20, pcFormat, args );
+    vsnprintf( LogForISRBuf, 40, pcFormat, args );
     va_end(args);
     vStdioUARTOutput(LogForISRBuf);
 }

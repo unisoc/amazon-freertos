@@ -43,6 +43,12 @@
 #include "task.h"
 #include "FreeRTOSConfig.h"
 
+//#define WIFI_DUMP
+#include "uwp_log.h"
+#ifdef WIFI_DUMP
+#define DUMP_TIMES 4
+static char pucDumpObject[] = pkcs11configLABEL_CODE_VERIFICATION_KEY;
+#endif
 
 //#define USE_OFFLOAD_SSL
 #ifdef USE_OFFLOAD_SSL
@@ -422,7 +428,7 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     	void *pvBufToWrite = pvPortMalloc(UWP_FLASH_SECTOR_SIZE);
     	if( pvBufToWrite == NULL ){
     		vLoggingPrint("malloc fiald\r\n");
-            return eInvalidHandle;
+    		return eInvalidHandle;
     	}
     	memset(pvBufToWrite, 0, ulDataSize);
     	memcpy(pvBufToWrite, (const void *)(UWP_FLASH_BASE + pxFileEntry->ulFileAddrOffset), pxFileEntry->ulFileLen);
@@ -434,7 +440,7 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     		return eInvalidHandle;
     	}
 
-    	if( flash_uwp_erase(pxFileEntry->ulFileLen, UWP_FLASH_SECTOR_SIZE) != 0 ){
+    	if( flash_uwp_erase(pxFileEntry->ulFileAddrOffset, UWP_FLASH_SECTOR_SIZE) != 0 ){
     		vLoggingPrint("flash file erase failed\r\n");
     		return eInvalidHandle;
     	}
@@ -445,6 +451,7 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     		return eInvalidHandle;
     	}
 
+#if 0
     	if( flash_uwp_erase(UWP_FLASH_FILE_ENTRY_OFFSET, UWP_FLASH_SECTOR_SIZE) != 0 ){
     		vLoggingPrint("flash entry erase failed\r\n");
     		flash_uwp_write_protection(true);
@@ -456,13 +463,28 @@ CK_OBJECT_HANDLE PKCS11_PAL_SaveObject( CK_ATTRIBUTE_PTR pxLabel,
     		flash_uwp_write_protection(true);
     		return eInvalidHandle;
     	}
+#endif
 
     	if( flash_uwp_write_protection(true) != 0 ){
     		vLoggingPrint("flash protect failed\r\n");
     		return eInvalidHandle;
     	}
 
+#ifdef WIFI_DUMP
+    static int32_t iDumpTimes = 0;
+    if( (0 == strcmp(pucDumpObject, pxLabel->pValue)) && (iDumpTimes < DUMP_TIMES) ){
+        printk("origin data:\r\n");
+        DUMP_DATA(pucData, 16);
+        printk("Object read back:%x\r\n", pxFileEntry->ulFileAddrOffset);
+        DUMP_DATA(pxFileEntry->ulFileAddrOffset + UWP_FLASH_BASE, 16);
+        iDumpTimes++;
+    }
+#endif
     	vPortFree(pvBufToWrite);
+    }
+    else
+    {
+        vLoggingPrint("Fatal error: not find object\r\n");
     }
 
     return xHandle;
@@ -520,10 +542,10 @@ CK_RV PKCS11_PAL_GetObjectValue( CK_OBJECT_HANDLE xHandle,
     CK_BBOOL * pIsPrivate )
 {
     xObjectFileEntry *pxFileEntry = NULL;
-
 	prvHandleToFileEntry( xHandle, &pxFileEntry);
-	if( pxFileEntry == NULL)
+	if( pxFileEntry == NULL){
 		return CKR_KEY_HANDLE_INVALID;
+	}
 
 	*ppucData = (uint8_t *)(pxFileEntry->ulFileAddrOffset + UWP_FLASH_BASE);
 	*pulDataSize = (uint32_t) pxFileEntry->ulFileLen;
@@ -580,6 +602,7 @@ int mbedtls_hardware_poll( void * data,
     return 0;
 }
 
+#if 0
 /*  test case */
 void pkcs_self_test(void){
 	void * pvObjectAddr = NULL;
@@ -591,6 +614,8 @@ void pkcs_self_test(void){
 	uint8_t *pucData = NULL;
 	uint32_t ulDataSize;
 	CK_BBOOL IsPrivate;
+	uint8_t data;
+	int32_t iResult;
 
 	vLoggingPrint("pkcs test\r\n");
 	pvObjectAddr = prvGetAbsolutexObjectFileDictAddr();
@@ -606,8 +631,40 @@ void pkcs_self_test(void){
 		vLoggingPrint("test PKCS11_PAL_FindObject success\r\n");
 	}
 
+    for( int i = 0; i < 10; i++){
+
+	    if( PKCS11_PAL_SaveObject(&pxLabel,
+			                     (uint8_t *)&i, 1) != eAwsDeviceCertificate )
+	    {
+		    vLoggingPrint("test PKCS11_PAL_SaveObject failed\r\n");
+	    }
+	    else
+	    {
+		    vLoggingPrint("test PKCS11_PAL_SaveObject success\r\n");
+	    }
+
+	    if( PKCS11_PAL_GetObjectValue(eAwsDeviceCertificate, &pucData, &ulDataSize, &IsPrivate) != CKR_OK )
+	    {
+		    vLoggingPrint("test PKCS11_PAL_GetObjectValue failed\r\n");
+	    }
+	    else
+	    {
+	    	iResult = flash_uwp_read(0x2C1000, &data, 1);
+	    	if( !iResult )
+	    	{
+                vLoggingPrintf("contents:%d\r\n", data);
+	    	}
+	    	else
+	    	{
+	    		vLoggingPrintf("result:%d\r\n",iResult);
+	    	}
+	    }
+	    k_sleep(1000);
+	}
+
+#if 0
 	if( PKCS11_PAL_SaveObject(&pxLabel,
-			                     (uint8_t *)"123456789954123", sizeof("123456789954123")) != eAwsDeviceCertificate )
+			                     (uint8_t *)"adbdefflsdkkeddfgad", sizeof("adbdefflsdkkeddfgad")) != eAwsDeviceCertificate )
 	{
 		vLoggingPrint("test PKCS11_PAL_SaveObject failed\r\n");
 	}
@@ -622,7 +679,8 @@ void pkcs_self_test(void){
 	}
 	else
 	{
-        vLoggingPrintf("cert:%s\r\n", (char *)pucData);
+        vLoggingPrintf("contents:%s\r\n", (volatile char *)pucData);
 	}
-
+#endif
 }
+#endif

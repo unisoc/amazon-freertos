@@ -85,6 +85,10 @@ int flash_uwp_erase(uint32_t offset, uint32_t len)
     key = irq_lock_primask();
     ret = flash->erase(flash, ((u32_t)CONFIG_FLASH_BASE_ADDRESS + offset),
             len);
+    if(!ret){
+        cache_invalid_range_hal((u8_t *)(CONFIG_FLASH_BASE_ADDRESS + offset), len);
+        dcache_clean_range_hal((u8_t *)(CONFIG_FLASH_BASE_ADDRESS + offset), len);
+    }
     irq_unlock_primask(key);
 
     ret = flash_uwp_unlock();
@@ -109,6 +113,10 @@ int flash_uwp_write(uint32_t offset, const void *data, uint32_t len)
     key = irq_lock_primask();
     ret = flash->write(flash, ((u32_t)CONFIG_FLASH_BASE_ADDRESS + offset),
             len, data);
+    if(!ret){
+        cache_invalid_range_hal((u8_t *)(CONFIG_FLASH_BASE_ADDRESS + offset), len);
+        dcache_clean_range_hal((u8_t *)(CONFIG_FLASH_BASE_ADDRESS + offset), len);
+    }
     irq_unlock_primask(key);
 
     ret = flash_uwp_unlock();
