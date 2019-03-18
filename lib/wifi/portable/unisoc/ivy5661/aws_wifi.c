@@ -44,6 +44,11 @@ static SemaphoreHandle_t xWiFiSem;
 static const TickType_t xSemaphoreWaitTicks = pdMS_TO_TICKS( wificonfigMAX_SEMAPHORE_WAIT_TIME_MS );
 static WIFIDeviceMode_t prvcurDeviceMode;
 
+#define CHECK_VALID_SSID_LEN(x) \
+        ((x) > 0 && (x) <=  wificonfigMAX_SSID_LEN)
+#define CHECK_VALID_PASSPHRASE_LEN(x) \
+        ((x) > 0 && (x) <= wificonfigMAX_PASSPHRASE_LEN)
+
 /*-----------------------------------------------------------*/
 
 WIFIReturnCode_t WIFI_On( void )
@@ -88,49 +93,67 @@ WIFIReturnCode_t WIFI_Off( void )
 	return eWiFiFailure;
 }
 /*-----------------------------------------------------------*/
-
+#define WAIT_DHCP_DELAY       pdMS_TO_TICKS( 6000 )
 WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkParams )
 {
     /* FIX ME. */
-	int ret = eWiFiFailure;
+    int ret = eWiFiFailure;
     struct wifi_drv_scan_params scan_params;
-	struct wifi_drv_connect_params connect_params;
+    struct wifi_drv_connect_params connect_params;
 
-    //fixme: check if wifi on.
-
-    //scan param
-    scan_params.band = 0;
-    scan_params.channel = 0;
-    ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params);
-    if(ret) {
-        configPRINT_STRING("scan failed\r\n");
+    if (pxNetworkParams == NULL || pxNetworkParams->pcSSID == NULL
+            || (pxNetworkParams->xSecurity != eWiFiSecurityOpen && pxNetworkParams->pcPassword == NULL)) {
+        printk("invalid params!\r\n");
         return eWiFiFailure;
     }
 
-	/* SSID is mandatory */
-    connect_params.ssid_length = strlen(pxNetworkParams->pcSSID);
-	if (!pxNetworkParams->pcSSID || !connect_params.ssid_length)
-		return -eWiFiFailure;
-	connect_params.ssid = pxNetworkParams->pcSSID;
-
-	/* BSSID is optional */
-
-	/* Passphrase is only valid for WPA/WPA2-PSK */
-	connect_params.psk_length = strlen(pxNetworkParams->pcPassword);
-	//if (pxNetworkParams->pcPassword && !connect_params.psk_length)
-	//	return -eWiFiFailure;
-
-    connect_params.psk = pxNetworkParams->pcPassword;
-	ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
-	if(ret) {
-        configPRINT_STRING("connect failed\r\n");
-		return eWiFiFailure;
+    if (!CHECK_VALID_SSID_LEN(pxNetworkParams->ucSSIDLength) ||
+        (pxNetworkParams->xSecurity != eWiFiSecurityOpen && !CHECK_VALID_PASSPHRASE_LEN(pxNetworkParams->ucPasswordLength))) {
+        printk("invalid params 2!\r\n");
+        return eWiFiFailure;
     }
-    configPRINT_STRING("start dhcp\r\n");
-    //UWP_SLEEP(2000);
-    //vDHCPProcess(pdTRUE);
 
-	return eWiFiSuccess;
+    //fixme: check if wifi on.
+    if(!uwp_wifi_priv.wifi_dev[WIFI_DEV_STA].opened) {
+        printk("wifi not open!\r\n");
+        return eWiFiFailure;
+    }
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE ) {
+
+        //scan param
+        scan_params.band = 0;
+        scan_params.channel = 0;
+        ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params);
+        if(ret) {
+        configPRINT_STRING("scan failed\r\n");
+            return eWiFiFailure;
+        }
+
+        /* SSID is mandatory */
+        connect_params.ssid_length = strlen(pxNetworkParams->pcSSID);
+        if (!pxNetworkParams->pcSSID || !connect_params.ssid_length)
+            return -eWiFiFailure;
+        connect_params.ssid = pxNetworkParams->pcSSID;
+
+        /* BSSID is optional */
+
+        /* Passphrase is only valid for WPA/WPA2-PSK */
+        connect_params.psk_length = strlen(pxNetworkParams->pcPassword);
+        //if (pxNetworkParams->pcPassword && !connect_params.psk_length)
+        //	return -eWiFiFailure;
+
+        connect_params.psk = pxNetworkParams->pcPassword;
+        ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
+        if(ret) {
+            configPRINT_STRING("connect failed\r\n");
+            return eWiFiFailure;
+        }
+        xSemaphoreGive( xWiFiSem );
+        //vTaskDelay( WAIT_DHCP_DELAY );
+        configPRINT_STRING("wifi connect done.\r\n");
+    	return eWiFiSuccess;
+    }
+    return eWiFiFailure;
 }
 /*-----------------------------------------------------------*/
 
@@ -220,7 +243,7 @@ WIFIReturnCode_t WIFI_Ping( uint8_t * pucIPAddr,
 
 WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
 {
-    /* FIX ME. */
+
     WIFIReturnCode_t xRetVal;
 
     if (pucIPAddr == NULL) {
@@ -242,7 +265,7 @@ WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
     }
 
     return xRetVal;
-    //return eWiFiNotSupported;
+
 }
 /*-----------------------------------------------------------*/
 

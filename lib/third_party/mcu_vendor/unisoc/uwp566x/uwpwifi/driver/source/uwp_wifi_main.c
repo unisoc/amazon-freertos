@@ -572,6 +572,7 @@ int uwp_mgmt_tx(uint8_t *pkt, uint32_t pkt_len)
                 debug_buf[6],debug_buf[7],debug_buf[8],debug_buf[9],debug_buf[10],debug_buf[11],
                     pkt,pkt_len);
 
+    DUMP_DATA(pkt, pkt_len);
     wifi_tx_data((void *)data_ptr, (pkt_len + sizeof(struct tx_msdu_dscr)));
 
     return 0;

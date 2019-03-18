@@ -153,7 +153,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
 #else
     len = pxNetworkBuffer->xDataLength;
     more_space = sizeof(struct tx_msdu_dscr)+4+4;
-    data = (u8_t *)pvPortMalloc(len + more_space);//printk("alloc[%p]\r\n", data);
+    data = (u8_t *)pvPortMalloc(len + more_space);
     if (data == NULL) {
         printk("%s alloc buffer failed.\r\n", __func__);
         vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
@@ -212,16 +212,7 @@ void wlanif_free_network_buffer(uint32_t addr)
     vReleaseNetworkBufferAndDescriptor(addr_dsc);
 #else
     void *ptr = get_dscr_addr_from_buffer_addr(addr);
-    //printk("free:[%p]\r\n",ptr);
     vPortFree(ptr);
-#if 0
-    u32_t *ptr;
-    void *buf;
-    ptr = (u32_t *)(addr - (16+4));
-    buf = *ptr;
-    printk("free:[%p]\r\n",buf);
-    vPortFree(buf);
-#endif
 #endif
 }
 
