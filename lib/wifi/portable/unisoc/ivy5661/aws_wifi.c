@@ -346,5 +346,17 @@ WIFIReturnCode_t WIFI_GetPMMode( WIFIPMMode_t * pxPMModeType,
 BaseType_t WIFI_IsConnected(void)
 {
 	/* FIX ME. */
-	return pdFALSE;
+    BaseType_t xRetVal = pdFALSE;
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+        if (uwp_wifi_priv.wifi_dev[WIFI_DEV_STA].connected == true)
+        {
+            xRetVal = pdTRUE;
+        }
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    return xRetVal;
 }

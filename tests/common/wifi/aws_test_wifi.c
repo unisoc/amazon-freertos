@@ -2233,10 +2233,11 @@ static void prvConnectionTask( void * pvParameters )
 
         if( xWiFiConnectStatus != eWiFiSuccess )
         {
-            configPRINTF(
+ /*           configPRINTF(
                 ( "Task %d failed to connect to the AP %s with error code %d.\r\n",
                   pxTaskParams->usTaskId, xTestNetworkParams.pcSSID,
                   xWiFiConnectStatus ) );
+*/
             break;
         }
 
@@ -2249,10 +2250,11 @@ static void prvConnectionTask( void * pvParameters )
 
         if( xWiFiConnectStatus != eWiFiSuccess )
         {
-            configPRINTF(
+/*            configPRINTF(
                 ( "Task %d failed to connect to the AP %s with error code %d.\r\n",
                   pxTaskParams->usTaskId, xClientNetworkParams.pcSSID,
                   xWiFiConnectStatus ) );
+*/
             break;
         }
 
@@ -2325,8 +2327,9 @@ static void prvConnectionTask( void * pvParameters )
 
         if( xWiFiConnectStatus != eWiFiSuccess )
         {
-            configPRINTF( ( "Task %d failed to disconnect with Wi-Fi error code %d\r\n",
+/*            configPRINTF( ( "Task %d failed to disconnect with Wi-Fi error code %d\r\n",
                             pxTaskParams->usTaskId, xWiFiConnectStatus ) );
+*/
             break;
         }
 
