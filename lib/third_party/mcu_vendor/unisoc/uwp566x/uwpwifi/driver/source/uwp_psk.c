@@ -10,7 +10,7 @@
  */
 
 #include <string.h>
-//#include <mbedtls/pkcs5.h>
+#include <mbedtls/pkcs5.h>
 
 #include "uwp_psk.h"
 
@@ -30,7 +30,7 @@
 int pbkdf2_sha1(const char *passphrase, const char *ssid, int iterations,
 		char *buf, size_t buflen)
 {
-#if 0
+#if 1
 	mbedtls_md_context_t sha1_ctx;
 	const mbedtls_md_info_t *info_sha1;
 	int ret;

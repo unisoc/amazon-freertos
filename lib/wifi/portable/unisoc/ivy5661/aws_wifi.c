@@ -221,7 +221,28 @@ WIFIReturnCode_t WIFI_Ping( uint8_t * pucIPAddr,
 WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
 {
     /* FIX ME. */
-    return eWiFiNotSupported;
+    WIFIReturnCode_t xRetVal;
+
+    if (pucIPAddr == NULL) {
+        return eWiFiFailure;
+    }
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+        *( ( uint32_t * ) pucIPAddr ) = FreeRTOS_GetIPAddress();
+
+        xRetVal = eWiFiSuccess;
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    else
+    {
+        xRetVal = eWiFiTimeout;
+    }
+
+    return xRetVal;
+    //return eWiFiNotSupported;
 }
 /*-----------------------------------------------------------*/
 
@@ -256,7 +277,32 @@ WIFIReturnCode_t WIFI_GetHostIP( char * pcHost,
                                  uint8_t * pucIPAddr )
 {
     /* FIX ME. */
-    return eWiFiNotSupported;
+    WIFIReturnCode_t xRetVal = eWiFiFailure;
+    uint32_t IPAddr;
+
+    if (pcHost == NULL || pucIPAddr == NULL) {
+        return xRetVal;
+    }
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+        IPAddr = FreeRTOS_gethostbyname( pcHost );
+        if (IPAddr != 0UL)
+        {
+            *( ( uint32_t * ) pucIPAddr ) = IPAddr;
+            xRetVal = eWiFiSuccess;
+        }
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    else
+    {
+        xRetVal = eWiFiTimeout;
+    }
+
+    return xRetVal;
+    //return eWiFiNotSupported;
 }
 /*-----------------------------------------------------------*/
 
@@ -300,5 +346,17 @@ WIFIReturnCode_t WIFI_GetPMMode( WIFIPMMode_t * pxPMModeType,
 BaseType_t WIFI_IsConnected(void)
 {
 	/* FIX ME. */
-	return pdFALSE;
+    BaseType_t xRetVal = pdFALSE;
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+        if (uwp_wifi_priv.wifi_dev[WIFI_DEV_STA].connected == true)
+        {
+            xRetVal = pdTRUE;
+        }
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    return xRetVal;
 }

@@ -110,6 +110,11 @@
 			<locationURI>AFR_HOME/tests/common/tls</locationURI>
 		</link>
 		<link>
+			<name>application_code/common_test/wifi</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/common/wifi</locationURI>
+		</link>
+		<link>
 			<name>application_code/vendor_code/bsp</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</locationURI>

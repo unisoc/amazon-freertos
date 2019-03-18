@@ -375,13 +375,14 @@ void prvWifiConnect( void )
         if( xWifiStatus == eWiFiSuccess )
         {
             configPRINT_STRING( ( "Wi-Fi Connected to AP. Creating tasks which use network...\r\n" ) );
-            
+            vTaskDelay( 8000 );//wait for dhcp complete
             xWifiStatus = WIFI_GetIP( ucTempIp );
             if ( eWiFiSuccess == xWifiStatus ) 
             {
                 configPRINT_STRING( ( "IP Address acquired %d.%d.%d.%d\r\n",
                                 ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ] ) );
             }
+            printk("ips=%d,ipad=%d.%d.%d.%d\r\n",xWifiStatus, ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]);
         }
         else
         {
