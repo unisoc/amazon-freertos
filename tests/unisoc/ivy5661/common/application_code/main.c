@@ -284,7 +284,7 @@ void vApplicationDaemonTaskStartupHook( void )
         {
             /* Connect to the Wi-Fi before running the tests. */
             prvWifiConnect();
-#if 0
+
             /* Provision the device with AWS certificate and private key. */
             vDevModeKeyProvisioning();
 
@@ -295,7 +295,7 @@ void vApplicationDaemonTaskStartupHook( void )
                          NULL,
                          tskIDLE_PRIORITY,
                          NULL );
-#endif
+
         }
 
 }
@@ -379,8 +379,10 @@ void prvWifiConnect( void )
             xWifiStatus = WIFI_GetIP( ucTempIp );
             if ( eWiFiSuccess == xWifiStatus ) 
             {
-                configPRINT_STRING( ( "IP Address acquired %d.%d.%d.%d\r\n",
-                                ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ] ) );
+                printk("IP Address acquired %d.%d.%d.%d\r\n",
+                                ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]);
+            } else {
+                printk("get ip failed!\r\n");
             }
             printk("ips=%d,ipad=%d.%d.%d.%d\r\n",xWifiStatus, ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]);
         }
