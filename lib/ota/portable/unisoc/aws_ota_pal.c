@@ -63,7 +63,10 @@ static inline BaseType_t prvContextValidate( OTA_FileContext_t * C )
 #define UWP_FLASH_SECTOR_SIZE     (0x1000)
 
 /********************* function protype ***************************/
-static OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C );
+OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C );
+static CK_RV prvGetCertificate( const char * pcLabelName,
+                                uint8_t ** ppucData,
+                                uint32_t * pulDataSize );
 
 /*
  * @bref get a partition for app ota use
@@ -154,7 +157,7 @@ static int prvFlashEraseAndWrite(uint8_t *pcData, uint32_t ulAddrOffset, uint32_
  * @bref update partition information
  */
 static int prvUpdatePartitionInfo( uwp_ota_flash_partition_t * pxPartition ){
-    return prvFlashEraseAndWrite( (uint8_t *)pxPartition, (uint32_t)&xPartitionFlash[xOTACtx.partition.ucPartition],
+    return prvFlashEraseAndWrite( (uint8_t *)pxPartition, (uint32_t)&xPartitionFlash[xOTACtx.partition.ucPartition] - UWP_FLASH_BASE,
                                       sizeof(uwp_ota_flash_partition_t));
 }
 
@@ -237,8 +240,8 @@ OTA_Err_t prvPAL_Abort( OTA_FileContext_t * const C )
             ota_ret = kOTA_Err_None;
         }
         else if( C && ( C->pucFile == NULL ) ) {
-            OTA_LOG_L1( "[%s] ERR Invalid contex\r\n", OTA_METHOD_NAME );
-            ota_ret = kOTA_Err_FileAbort;
+            OTA_LOG_L1( "[%s] Invalid contex\r\n", OTA_METHOD_NAME );
+            ota_ret = kOTA_Err_None;
         }
     }
     else {
@@ -300,19 +303,21 @@ OTA_Err_t prvPAL_CloseFile( OTA_FileContext_t * const C )
             eResult = kOTA_Err_SignatureCheckFailed;
         }
 
-        /* Close the file. */
-        C->pucFile = NULL;
-        xOTACtx.pxCurOTAFileCtx = NULL;
-
         if( eResult == kOTA_Err_None )
         {
             xOTACtx.partition.bImageValid = true;
-            OTA_LOG_L1( "[%s] %s signature verification passed.\r\n", OTA_METHOD_NAME, pcOTA_JSON_FileSignatureKey );
+            /* Close the file. */
+            C->pucFile = NULL;
+            xOTACtx.pxCurOTAFileCtx = NULL;
+            //OTA_LOG_L1( "[%s] %s signature verification passed.\r\n", OTA_METHOD_NAME, pcOTA_JSON_FileSignatureKey );
+            OTA_LOG_L1( "[%s] signature verification passed.\r\n", OTA_METHOD_NAME );
         }
         else
         {
-            OTA_LOG_L1( "[%s] ERROR - Failed to pass %s signature verification: %d.\r\n", OTA_METHOD_NAME,
-                        pcOTA_JSON_FileSignatureKey, eResult );
+            /*OTA_LOG_L1( "[%s] ERROR - Failed to pass %s signature verification: %d.\r\n", OTA_METHOD_NAME,
+                        pcOTA_JSON_FileSignatureKey, eResult );*/
+
+            OTA_LOG_L1( "[%s] ERROR - Failed to pass signature verification: %d.\r\n", OTA_METHOD_NAME, eResult );
 
             /* If we fail to verify the file signature that means the image is not valid. We need to set the image state to aborted. */
             prvPAL_SetPlatformImageState( eOTA_ImageState_Aborted );
@@ -341,6 +346,8 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
 
     if( prvContextValidate( C ) == pdTRUE )
     {
+    	//OTA_LOG_L1( "[%s]  %x %d %d\r\n", OTA_METHOD_NAME, xOTACtx.partition.ulLastWriteOffset, ulOffset, ulBlockSize );
+
         if( ((xOTACtx.partition.ulLastWriteOffset + ulBlockSize) <= xOTACtx.partition.ulPartitionLength)
              && (xOTACtx.partition.ulLastWriteOffset == ulOffset) )
         {
@@ -353,6 +360,8 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
             }
 
             xOTACtx.partition.ulFileLength += ulBlockSize;
+            xOTACtx.partition.ulLastWriteOffset += ulBlockSize;
+            lResult = ulBlockSize;
         }
         else
         {
@@ -396,8 +405,10 @@ OTA_Err_t prvPAL_SetPlatformImageState( OTA_ImageState_t eState )
     /* do not distinguish self test mode */
     if( eState == eOTA_ImageState_Accepted )
     {
-        /* Mark the image as valid */
-        xOTACtx.partition.bImageValid = true;
+        /* check the image valid or not*/
+        if( xOTACtx.partition.bImageValid != true)
+        	return kOTA_Err_CommitFailed;
+
         iResult = prvUpdatePartitionInfo(&xOTACtx.partition);
         if( iResult == 0 )
         {
@@ -481,7 +492,7 @@ OTA_PAL_ImageState_t prvPAL_GetPlatformImageState(void)
 /* Read the specified signer certificate from the filesystem into a local buffer. The
  * allocated memory becomes the property of the caller who is responsible for freeing it.
  */
-static uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertName,
+uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertName,
                                                   uint32_t * const ulSignerCertSize )
 {
     DEFINE_OTA_METHOD_NAME( "prvPAL_ReadAndAssumeCertificate" );
@@ -491,6 +502,7 @@ static uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertN
     uint8_t * pucSignerCert = NULL;
     CK_RV xResult;
 
+#if 0
     xResult = prvGetCertificate( ( const char * ) pucCertName, &pucSignerCert, ulSignerCertSize );
 
     if( ( xResult == CKR_OK ) && ( pucSignerCert != NULL ) )
@@ -498,9 +510,15 @@ static uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertN
         OTA_LOG_L1( "[%s] Using cert with label: %s OK\r\n", OTA_METHOD_NAME, ( const char * ) pucCertName );
     }
     else
+#endif
     {
-        OTA_LOG_L1( "[%s] No such certificate file: %s. Using aws_ota_codesigner_certificate.h.\r\n", OTA_METHOD_NAME,
-                    ( const char * ) pucCertName );
+    	if( (strcmp((const char *)otatestpalCERTIFICATE_FILE, (const char *)pucCertName) != 0) &&
+    			(strcmp((const char *)pkcs11configLABEL_CODE_VERIFICATION_KEY, (const char *)pucCertName) != 0) ){
+    		OTA_LOG_L1( "[%s] No certificate file: %s.\r\n", OTA_METHOD_NAME , pucCertName );
+    		return NULL;
+    	}
+
+        OTA_LOG_L1( "[%s] Using aws_ota_codesigner_certificate.h replace %s.\r\n", OTA_METHOD_NAME , otatestpalCERTIFICATE_FILE );
 
         /* Allocate memory for the signer certificate plus a terminating zero so we can copy it and return to the caller. */
         ulCertSize = sizeof( signingcredentialSIGNING_CERTIFICATE_PEM );
@@ -523,7 +541,7 @@ static uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertN
     return pucSignerCert;
 }
 
-static OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
+OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
 {
     DEFINE_OTA_METHOD_NAME( "prvPAL_CheckFileSignature" );
 
@@ -540,8 +558,10 @@ static OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
     }
     else
     {
-        OTA_LOG_L1( "[%s] Started %s signature verification, file: %s\r\n", OTA_METHOD_NAME,
-                    pcOTA_JSON_FileSignatureKey, ( const char * ) C->pacCertFilepath );
+        /*OTA_LOG_L1( "[%s] Started %s signature verification, file: %s\r\n", OTA_METHOD_NAME,
+                    pcOTA_JSON_FileSignatureKey, ( const char * ) C->pacCertFilepath );*/
+    	OTA_LOG_L1( "[%s] Started signature verification. \r\n", OTA_METHOD_NAME );
+
         pucSignerCert = prvPAL_ReadAndAssumeCertificate( ( const uint8_t * const ) C->pacCertFilepath, &ulSignerCertSize );
 
         if( pucSignerCert == NULL )
@@ -552,8 +572,8 @@ static OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
         {
             uwp_ota_flash_partition_t xFlashFile;
             prvGetOTAPartition(&xFlashFile);
-            CRYPTO_SignatureVerificationUpdate( pvSigVerifyContext, (uint8_t *)(UWP_FLASH_BASE + xFlashFile.ulPartitionAddrOffset),
-                                                xFlashFile.ulFileLength );
+            CRYPTO_SignatureVerificationUpdate( pvSigVerifyContext, (uint8_t *)(UWP_FLASH_BASE + xOTACtx.partition.ulPartitionAddrOffset),
+                                                xOTACtx.partition.ulFileLength );
 
             if( CRYPTO_SignatureVerificationFinal( pvSigVerifyContext, ( char * ) pucSignerCert, ulSignerCertSize,
                                                    C->pxSignature->ucData, C->pxSignature->usSize ) == pdFALSE )
@@ -581,6 +601,131 @@ static OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
 
     return eResult;
 }
+
+#if 0
+static CK_RV prvGetCertificateHandle( CK_FUNCTION_LIST_PTR pxFunctionList,
+                                      CK_SESSION_HANDLE xSession,
+                                      const char * pcLabelName,
+                                      CK_OBJECT_HANDLE_PTR pxCertHandle )
+{
+    CK_ATTRIBUTE xTemplate;
+    CK_RV xResult = CKR_OK;
+    CK_ULONG ulCount = 0;
+    CK_BBOOL xFindInit = CK_FALSE;
+
+    /* Get the certificate handle. */
+    if( 0 == xResult )
+    {
+        xTemplate.type = CKA_LABEL;
+        xTemplate.ulValueLen = strlen( pcLabelName ) + 1;
+        xTemplate.pValue = ( char * ) pcLabelName;
+        xResult = pxFunctionList->C_FindObjectsInit( xSession, &xTemplate, 1 );
+    }
+
+    if( 0 == xResult )
+    {
+        xFindInit = CK_TRUE;
+        xResult = pxFunctionList->C_FindObjects( xSession,
+                                                 ( CK_OBJECT_HANDLE_PTR ) pxCertHandle,
+                                                 1,
+                                                 &ulCount );
+    }
+
+    if( CK_TRUE == xFindInit )
+    {
+        xResult = pxFunctionList->C_FindObjectsFinal( xSession );
+    }
+
+    return xResult;
+}
+
+/* Note that this function mallocs a buffer for the certificate to reside in,
+ * and it is the responsibility of the caller to free the buffer. */
+static CK_RV prvGetCertificate( const char * pcLabelName,
+                                uint8_t ** ppucData,
+                                uint32_t * pulDataSize )
+{
+    /* Find the certificate */
+    CK_OBJECT_HANDLE xHandle;
+    CK_RV xResult;
+    CK_FUNCTION_LIST_PTR xFunctionList;
+    CK_SLOT_ID xSlotId;
+    CK_ULONG xCount = 1;
+    CK_SESSION_HANDLE xSession;
+    CK_ATTRIBUTE xTemplate = { 0 };
+    uint8_t * pucCert = NULL;
+    CK_BBOOL xSessionOpen = CK_FALSE;
+
+    xResult = C_GetFunctionList( &xFunctionList );
+
+    if( CKR_OK == xResult )
+    {
+        xResult = xFunctionList->C_Initialize( NULL );
+    }
+
+    if( ( CKR_OK == xResult ) || ( CKR_CRYPTOKI_ALREADY_INITIALIZED == xResult ) )
+    {
+        xResult = xFunctionList->C_GetSlotList( CK_TRUE, &xSlotId, &xCount );
+    }
+
+    if( CKR_OK == xResult )
+    {
+        xResult = xFunctionList->C_OpenSession( xSlotId, CKF_SERIAL_SESSION, NULL, NULL, &xSession );
+    }
+
+    if( CKR_OK == xResult )
+    {
+        xSessionOpen = CK_TRUE;
+        xResult = prvGetCertificateHandle( xFunctionList, xSession, pcLabelName, &xHandle );
+    }
+
+    if( ( xHandle != 0 ) && ( xResult == CKR_OK ) ) /* 0 is an invalid handle */
+    {
+        /* Get the length of the certificate */
+        xTemplate.type = CKA_VALUE;
+        xTemplate.pValue = NULL;
+        xResult = xFunctionList->C_GetAttributeValue( xSession, xHandle, &xTemplate, xCount );
+
+        if( xResult == CKR_OK )
+        {
+            pucCert = pvPortMalloc( xTemplate.ulValueLen );
+        }
+
+        if( ( xResult == CKR_OK ) && ( pucCert == NULL ) )
+        {
+            xResult = CKR_HOST_MEMORY;
+        }
+
+        if( xResult == CKR_OK )
+        {
+            xTemplate.pValue = pucCert;
+            xResult = xFunctionList->C_GetAttributeValue( xSession, xHandle, &xTemplate, xCount );
+
+            if( xResult == CKR_OK )
+            {
+                *ppucData = pucCert;
+                *pulDataSize = xTemplate.ulValueLen;
+            }
+            else
+            {
+                vPortFree( pucCert );
+            }
+        }
+    }
+    else /* Certificate was not found. */
+    {
+        *ppucData = NULL;
+        *pulDataSize = 0;
+    }
+
+    if( xSessionOpen == CK_TRUE )
+    {
+        ( void ) xFunctionList->C_CloseSession( xSession );
+    }
+
+    return xResult;
+}
+#endif
 /*
  * @bref self test case
  */
@@ -627,6 +772,7 @@ void vOTASelfTest(void){
     vLoggingPrintf("write init partition info success: partition:%d addr:%x state:%d\r\n",
                       xPartitionFlash[0].ucPartition, xPartitionFlash[0].ulPartitionAddrOffset, xPartitionFlash[0].eState);
 
+#if 0
     iResult = prvGetOTAPartition(&xPartitionTemp);
     if( iResult != 0 ){
         vLoggingPrintf("get ota partition failed:%d\r\n", iResult);
@@ -641,7 +787,7 @@ void vOTASelfTest(void){
         vLoggingPrintf("prvFlashEraseAndWrite test failed\r\n");
     }
     vLoggingPrintf("prvFlashEraseAndWrite success:%s", (char *)(test_addr + UWP_FLASH_BASE));
-
+#endif
 
 }
 
