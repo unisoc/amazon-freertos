@@ -49,6 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aws_wifi.h"
 #include "uwp_wifi_main.h"
+#include "uwp_wifi_txrx.h"
 
 //#include "uwp5661_log.h"
 //#include "uwp5661_wifi.h"
@@ -67,14 +68,12 @@ enum if_idx {
 
 volatile static uint32_t xInterfaceState = INTERFACE_DOWN;
 extern struct wifi_priv uwp_wifi_priv;
-//static NetworkBufferDescriptor_t * last_dscr_p= NULL;
-//static NetworkBufferDescriptor_t * last_buf_p= NULL;
 
 static inline void save_dscr_addr_before_buffer_addr(u32_t payload, void *addr)
 {
 	u32_t *pkt_ptr;
 
-	pkt_ptr = (u32_t *)(payload - (16+4+4));
+	pkt_ptr = (u32_t *)(payload - (sizeof(struct tx_msdu_dscr)+4+4));
 	*pkt_ptr = (u32_t)addr;
 }
 
@@ -82,7 +81,7 @@ static inline u32_t get_dscr_addr_from_buffer_addr(u32_t payload)
 {
 	u32_t *ptr;
 
-	ptr = (u32_t *)(payload - (16+4+4));
+	ptr = (u32_t *)(payload - (sizeof(struct tx_msdu_dscr)+4+4));
 
 	return *ptr;
 }
@@ -111,12 +110,16 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
 	NetworkBufferDescriptor_t * pxSendingBuffer;
 	const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
     int ret = -1;
+    u8_t *data = NULL;
+    u8_t *alloc_ptr = NULL;
+    int more_space = 0;
+    int len = 0;
 
     if (pxNetworkBuffer == NULL || pxNetworkBuffer->pucEthernetBuffer == NULL || pxNetworkBuffer->xDataLength == 0) {
         LOG_ERR("Invalid params");
         return pdFALSE;
     }
-
+#if 0
     if (xReleaseAfterSend == pdFALSE) {
         // Duplicate Network descriptor and buffer
         pxSendingBuffer = pxGetNetworkBufferWithDescriptor(pxNetworkBuffer->xDataLength, xDescriptorWaitTime);
@@ -132,13 +135,12 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     } else {
         pxSendingBuffer = pxNetworkBuffer;
     }
-    //printk("send:[%p]\r\n",pxSendingBuffer);
-    //last_buf_p = pxSendingBuffer->pucEthernetBuffer;
-    //last_dscr_p = pxSendingBuffer;
+    save_dscr_addr_before_buffer_addr((u32_t)(pxSendingBuffer->pucEthernetBuffer), (void *)pxSendingBuffer);
+
     printk("tx len:%d\r\n",pxSendingBuffer->xDataLength);
     DUMP_DATA(pxSendingBuffer->pucEthernetBuffer, pxSendingBuffer->xDataLength);
 
-    save_dscr_addr_before_buffer_addr((u32_t)(pxSendingBuffer->pucEthernetBuffer), (void *)pxSendingBuffer);
+
     ret = uwp_mgmt_tx(pxSendingBuffer->pucEthernetBuffer,
         pxSendingBuffer->xDataLength);
     if (ret != UWP_OK) {
@@ -147,8 +149,36 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
                 pxSendingBuffer->xDataLength, ret);
         vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
     }
-
     return ret == UWP_OK ? pdTRUE : pdFALSE;
+#else
+    len = pxNetworkBuffer->xDataLength;
+    more_space = sizeof(struct tx_msdu_dscr)+4+4;
+    data = (u8_t *)pvPortMalloc(len + more_space);//printk("alloc[%p]\r\n", data);
+    if (data == NULL) {
+        printk("%s alloc buffer failed.\r\n", __func__);
+        vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+        return pdFALSE;
+    }
+    alloc_ptr = data;
+    data += more_space;
+    save_dscr_addr_before_buffer_addr((u32_t)(data), (void *)alloc_ptr);
+
+    memcpy(data, pxNetworkBuffer->pucEthernetBuffer, len);
+
+    if (xReleaseAfterSend) { //driver should release the NetworkBufferDescriptor_t
+        vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+    }
+    printk("tx len:%d\r\n", len);
+
+    ret = uwp_mgmt_tx(data, len);
+    if (ret != UWP_OK) {
+        LOG_ERR("Failed to tx buffer %p, len %d, err %d",
+                pxSendingBuffer->pucEthernetBuffer,
+                pxSendingBuffer->xDataLength, ret);
+        vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
+    }
+    return ret == UWP_OK ? pdTRUE : pdFALSE;
+#endif
 }
 
 void vNetworkNotifyIFDown()
@@ -176,17 +206,22 @@ void* wlanif_alloc_network_buffer(uint16_t len)
 void wlanif_free_network_buffer(uint32_t addr)
 {
 #if 0
-    if((NetworkBufferDescriptor_t *)addr == last_buf_p) {
-	    vReleaseNetworkBufferAndDescriptor(last_dscr_p);
-    }
-    else {
-        printk("can not find the dscr\r\n");
-    }
-#else
     NetworkBufferDescriptor_t *addr_dsc = get_dscr_addr_from_buffer_addr(addr);
     //printk("free:[%p]\r\n",addr_dsc);
 
     vReleaseNetworkBufferAndDescriptor(addr_dsc);
+#else
+    void *ptr = get_dscr_addr_from_buffer_addr(addr);
+    //printk("free:[%p]\r\n",ptr);
+    vPortFree(ptr);
+#if 0
+    u32_t *ptr;
+    void *buf;
+    ptr = (u32_t *)(addr - (16+4));
+    buf = *ptr;
+    printk("free:[%p]\r\n",buf);
+    vPortFree(buf);
+#endif
 #endif
 }
 
