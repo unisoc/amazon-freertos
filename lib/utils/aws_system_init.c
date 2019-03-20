@@ -39,11 +39,11 @@ BaseType_t SYSTEM_Init( void )
 {
     BaseType_t xResult = pdPASS;
 
-    //xResult = BUFFERPOOL_Init();
+    xResult = BUFFERPOOL_Init();
 
     if( xResult == pdPASS )
     {
-        //xResult = MQTT_AGENT_Init();
+        xResult = MQTT_AGENT_Init();
     }
 
     if( xResult == pdPASS )
