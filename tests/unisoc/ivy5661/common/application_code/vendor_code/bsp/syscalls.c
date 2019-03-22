@@ -109,6 +109,26 @@ int _lseek(int file, int ptr, int dir)
 	return 0;
 }
 
+void _exit(int __status)
+{
+    printf("_exit\n");
+    while (1) {
+        ;
+    }
+}
+
+int _kill(int pid, int sig)
+{
+    printf("_kill %d\n", sig);
+    return -1;
+}
+
+pid_t _getpid(void)
+{
+    printf("_getpid\n");
+    return 0;
+}
+
 // ================================================================================================
 // Implement FreeRTOS's memory API using newlib-provided malloc family.
 // ================================================================================================

@@ -46,6 +46,8 @@ typedef struct
 
 /*********************** variable *****************************/
 static uwp_ota_context_t xOTACtx;
+/* Specify the OTA signature algorithm we support on this platform. */
+const char pcOTA_JSON_FileSignatureKey[ OTA_FILE_SIG_KEY_STR_MAX_LENGTH ] = "sig-sha256-ecdsa";
 
 /********************alloc falsh memory************************/
 static uwp_ota_flash_partition_t xPartitionFlash[3] __attribute__ ( (section(".UWP_OTA_INFO")) );
@@ -376,6 +378,12 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
     }
 
     return ( int16_t ) lResult;
+}
+
+OTA_Err_t prvPAL_ResetDevice( void ){
+	DEFINE_OTA_METHOD_NAME( "prvPAL_ActivateNewImage" );
+	OTA_LOG_L1( "[%s] ERROR - NOT SUPPORTED.\r\n", OTA_METHOD_NAME );
+    return kOTA_Err_None;
 }
 
 /* Activates or launches the new firmware image. */
