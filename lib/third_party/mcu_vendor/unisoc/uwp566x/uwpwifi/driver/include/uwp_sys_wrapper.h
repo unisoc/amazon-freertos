@@ -10,11 +10,14 @@
 #define BIT1     (1<<2)
 #define BIT0     (1)
 
+#define UWP_DONE        1
 #define UWP_OK          0
 #define UWP_FAIL        -1
 #ifndef osOK
 #define osOK 0
 #endif
+
+#define uwpPriorityNormal 1
 
 /*list*/
 struct _snode{

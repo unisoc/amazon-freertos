@@ -11,6 +11,7 @@
 #include "uwp_psk.h"
 #include "uwp_log.h"
 #include "uwp_sys_wrapper.h"
+#include "uwp_wifi_main.h"
 
 #define RECV_BUF_SIZE (128)
 #define ALL_2_4_GHZ_CHANNELS (0X3FFF)
@@ -26,8 +27,8 @@ const int SCAN_DONE_BIT = BIT2;
 const int CMD_DONE_BIT = BIT3;
 
 extern void *g_wifi_mgmt_queue;
-extern struct list_head g_scan_list;
-
+//extern struct list_head g_scan_list;
+extern struct scan_list uwp_scan_list;
 static unsigned char recv_buf[RECV_BUF_SIZE];
 static unsigned int recv_len;
 static unsigned int seq = 1;
@@ -507,15 +508,15 @@ static int wifi_evt_scan_result(struct wifi_device *wifi_dev,
 	}
 
     scan_result_info_t *temp = NULL;
-    temp = (scan_result_info_t *)malloc(sizeof(scan_result_info_t));
+    temp = (scan_result_info_t *)UWP_MEM_ALLOC(sizeof(scan_result_info_t));
     if(temp == NULL){
         LOG_ERR("malloc failed");
         return -ENOMEM;
     }
 
     memcpy(&(temp->res), event, len);
-    list_add_tail(&temp->res_list, &g_scan_list);
-    scan_ap_cnt ++;
+    list_add_tail(&temp->res_list, &(uwp_scan_list.g_scan_list));
+    uwp_scan_list.g_scan_num ++;
     LOG_DBG("scan malloc:%p", temp);
     LOG_DBG("%s %d %d",temp->res.ssid, temp->res.encrypt_mode, temp->res.rssi);
 
@@ -691,6 +692,7 @@ int wifi_cmd_send(int u32cmd, char *data, int len, char *rbuf, int *rlen)
 
 	//ret = OS_SEM_TAKE(cmd_sem, OS_DELAY_FOREVER);//xEventGroupWaitBits(cmd_sem, CMD_DONE_BIT, pdTRUE, pdTRUE, OS_DELAY_FOREVER);//ret = uwp_sem_acquire(cmd_sem, 3000);
 	UWPEventGroupWaitBits(cmd_sem, CMD_DONE_BIT, pdTRUE, pdTRUE, UWP_DELAY_FOREVER);
+    UWPEventGroupClearBits(cmd_sem, CMD_DONE_BIT);//clear the bit for next cmd. eg. cannot scan after scan
 /*
 	if (ret == 0) {
 		LOG_ERR("Wait cmd(%d) timeout.", cmd);

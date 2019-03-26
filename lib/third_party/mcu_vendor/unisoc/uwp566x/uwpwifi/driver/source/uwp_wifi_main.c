@@ -32,7 +32,8 @@
 #define SEC2 (2)
 
 void *g_wifi_mgmt_queue = NULL;
-struct list_head g_scan_list;
+//struct list_head g_scan_list;
+struct scan_list uwp_scan_list;
 struct wifi_priv uwp_wifi_priv;
 
 
@@ -91,7 +92,7 @@ int uwp_mgmt_open(struct wifi_priv *priv)
 	if (wifi_dev->opened) {
 		return -EAGAIN;
 	}
-    __INIT_LIST_HEAD(&g_scan_list);
+    __INIT_LIST_HEAD(&(uwp_scan_list.g_scan_list));
 	ret = wifi_cmd_open(wifi_dev);
 	if (ret) {
 		LOG_ERR("wifi_cmd_open,failed.");
@@ -250,6 +251,7 @@ int uwp_mgmt_scan(struct wifi_priv *priv,
 	}
 
 	uwp_mgmt_empty_scan_result_list();
+	uwp_scan_list.g_scan_num = 0;//reset scan_num to 0
 	ret = wifi_cmd_scan(wifi_dev, params);
 
 	LOG_ERR("uwp_mgmt_scan,exit.ret=%d\r\n",ret);
@@ -283,7 +285,7 @@ static int uwp_mgmt_get_station(struct wifi_priv *priv,
 
 void uwp_mgmt_empty_scan_result_list() {
     struct list_head *p_node = NULL, *p_del = NULL;
-    struct list_head *p_head = &g_scan_list;
+    struct list_head *p_head = &(uwp_scan_list.g_scan_list);
 
     p_node = p_head->next;
     while(p_node != p_head){
@@ -327,8 +329,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	return ret;
 }
 
-static int uwp_mgmt_disconnect(struct wifi_priv *priv,
-		disconnect_cb_t cb)
+int uwp_mgmt_disconnect(struct wifi_priv *priv)
 {
 	struct wifi_device *wifi_dev;
 
@@ -492,11 +493,11 @@ static int wifi_tx_fill_msdu_dscr(struct wifi_device *wifi_dev,
     return 0;
 }
 
-/*
+
 int uwp_mgmt_get_scan_result(void *buf, int num){
     int cnt = 0;
     struct list_head *p_node = NULL, *p_del = NULL;
-    struct list_head *p_head = &g_scan_list;
+    struct list_head *p_head = &(uwp_scan_list.g_scan_list);
     struct event_scan_result *data = (struct event_scan_result*)buf;
 
     p_node = p_head->next;
@@ -518,7 +519,7 @@ int uwp_mgmt_get_scan_result(void *buf, int num){
 
     return cnt;
 }
-
+/*
 int uwp_mgmt_connect(const char *ssid, const char *password, uint8_t channel)
 {
  	printf("uwp_mgmt_connect\r\n");
@@ -583,4 +584,27 @@ int uwp_mgmt_getmac(uint8_t *addr){
     DUMP_DATA(addr,6);
     return 0;
 }
-
+/*connected,ret=1;else,ret=0*/
+int uwp_wifi_isConnected(UWP_WIFI_MODE_T mode)
+{
+	if(uwp_wifi_priv.wifi_dev[mode].connected)
+		return UWP_DONE;
+	else
+		return 0;
+}
+/*opened,ret=1;else,ret=0*/
+int uwp_wifi_opened(UWP_WIFI_MODE_T mode)
+{
+	if(uwp_wifi_priv.wifi_dev[mode].opened)
+		return UWP_DONE;
+	else
+		return 0;
+}
+/*initDone,ret=1;else,ret=0*/
+int uwp_wifi_initDone()
+{
+	if(uwp_wifi_priv.initialized)
+		return UWP_DONE;
+	else
+		return 0;
+}

@@ -245,6 +245,10 @@ typedef struct{
     struct event_scan_result res;
     struct list_head res_list;
 }scan_result_info_t;
+struct scan_list{
+    char g_scan_num;
+    struct list_head g_scan_list;
+};
 /* int wifi_cmd_load_ini(u8_t *pAd); */
 /* int wifi_cmd_set_sta_connect_info(u8_t *pAd, char *ssid, char *key); */
 

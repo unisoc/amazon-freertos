@@ -589,19 +589,19 @@ TEST_TEAR_DOWN( Full_WiFi )
 TEST_GROUP_RUNNER( Full_WiFi )
 {
     /* Happy path tests. */
-    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiOnOff );
+    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiOnOff );//sometime-pass
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiMode );
-    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiConnectionLoop );
+    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiConnectionLoop );//sometime-pass
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiNetworkAddGetDelete );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiPowerManagementMode )
-    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiGetIP );
+    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiGetIP );//ip is 0,fail
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiGetMAC );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiGetHostIP );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiScan );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiReset );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiPing );
-    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiIsConnected );
-    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiConnectMultipleAP );
+    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiIsConnected );//sometime-pass
+    RUN_TEST_CASE( Full_WiFi, AFQP_WiFiConnectMultipleAP );//sometime-pass
     RUN_TEST_CASE( Full_WiFi,
                    AFQP_WiFiSeperateTasksConnectingAndDisconnectingAtOnce );
     RUN_TEST_CASE( Full_WiFi, AFQP_WiFiOnOffLoop );
