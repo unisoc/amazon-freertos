@@ -49,16 +49,18 @@ extern void vLoggingPrintf(const char *fmt, ... );
 #endif
 
 #ifdef  WIFI_DUMP
+extern void vLoggingPrintf(const char *fmt, ... );
+extern void vLoggingPrint( const char * pcMessage );
 #define DUMP_DATA(buff, len) do {\
             u8_t *data = (u8_t *)buff;\
             for (int i=0;i<len;i++) {\
                     if(i%8 == 0)\
-                        printk("  ");\
-                    printk("%02x ", data[i]);\
+                        vLoggingPrint("  ");\
+                    vLoggingPrintf("%02x ", data[i]);\
                     if((i+1)%16 == 0)\
-                        printk("\r\n");\
+                        vLoggingPrint("\r\n");\
             }\
-            printk("len:%d\r\n", len);\
+            vLoggingPrintf("len:%d\r\n", len);\
     }while(0)
 #else
 #define DUMP_DATA(buff, len)
@@ -66,15 +68,13 @@ extern void vLoggingPrintf(const char *fmt, ... );
 
 #define WIFI_ASSERT(expression,fmt,...) do {\
             if(!(expression)){\
-                uwp_temp_printf("fatal err:%s   ",__func__);\
-                uwp_temp_printf(fmt"\r\n",##__VA_ARGS__);\
+                printk("fatal err:%s   ",__func__);\
+                printk(fmt"\r\n",##__VA_ARGS__);\
+                while(1);\
             }\
        } while(0)
 
 extern void printk(const char *pcFarmat, ... );
-
-void uwp_temp_printf(const char *fmt, ...);
-void mbed_error_printf(const char*fmt, ...);
 
 #ifdef __cplusplus
 }
