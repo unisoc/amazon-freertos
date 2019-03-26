@@ -114,6 +114,10 @@ int uwp_mgmt_open(struct wifi_priv *priv);
 void vUWPwifiInitialize(void);
 int uwp_mgmt_connect(struct wifi_priv *priv, struct wifi_drv_connect_params *params);
 int uwp_mgmt_scan(struct wifi_priv *priv, struct wifi_drv_scan_params *params);
+int uwp_mgmt_disconnect(struct wifi_priv *priv);
+int uwp_wifi_isConnected(UWP_WIFI_MODE_T mode);
+int uwp_wifi_opened(UWP_WIFI_MODE_T mode);
+int uwp_wifi_initDone();
 #ifdef __cplusplus
 }
 #endif
