@@ -435,7 +435,7 @@ static void prvResetRxMessageState( MQTTContext_t * pxMQTTContext );
  *
  * @param[in] pxMQTTContext The MQTT context to reset.
  */
-static void prvResetMQTTContext( MQTTContext_t * pxMQTTContext );
+void prvResetMQTTContext( MQTTContext_t * pxMQTTContext );
 
 /**
  * @brief Gets the current tick count.
@@ -803,7 +803,7 @@ static uint8_t prvDecodeRemainingLength( const uint8_t * const pucEncodedRemaini
  */
 #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
-    static MQTTTopicFilterType_t prvGetTopicFilterType( const uint8_t * const pucTopicFilter,
+    MQTTTopicFilterType_t prvGetTopicFilterType( const uint8_t * const pucTopicFilter,
                                                         uint16_t usTopicFilterLength );
 
 #endif /* mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT */
@@ -832,7 +832,7 @@ static uint8_t prvDecodeRemainingLength( const uint8_t * const pucEncodedRemaini
  */
 #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
-    static MQTTBool_t prvDoesTopicMatchTopicFilter( const uint8_t * const pucTopic,
+    MQTTBool_t prvDoesTopicMatchTopicFilter( const uint8_t * const pucTopic,
                                                     uint16_t usTopicLength,
                                                     const uint8_t * const pucTopicFilter,
                                                     uint16_t usTopicFilterLength );
@@ -1001,7 +1001,7 @@ static void prvResetRxMessageState( MQTTContext_t * pxMQTTContext )
 }
 /*-----------------------------------------------------------*/
 
-static void prvResetMQTTContext( MQTTContext_t * pxMQTTContext )
+void prvResetMQTTContext( MQTTContext_t * pxMQTTContext )
 {
     Link_t * pxLink, * pxTempLink;
     MQTTBufferHandle_t xBufferHandle;
@@ -2229,7 +2229,7 @@ static uint8_t prvDecodeRemainingLength( const uint8_t * const pucEncodedRemaini
 
 #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
-    static MQTTTopicFilterType_t prvGetTopicFilterType( const uint8_t * const pucTopicFilter,
+    MQTTTopicFilterType_t prvGetTopicFilterType( const uint8_t * const pucTopicFilter,
                                                         uint16_t usTopicFilterLength )
     {
         MQTTTopicFilterType_t xTopicFilterType = eMQTTTopicFilterTypeSimple;
@@ -2321,7 +2321,7 @@ static uint8_t prvDecodeRemainingLength( const uint8_t * const pucEncodedRemaini
 
 #if ( mqttconfigENABLE_SUBSCRIPTION_MANAGEMENT == 1 )
 
-    static MQTTBool_t prvDoesTopicMatchTopicFilter( const uint8_t * const pucTopic,
+    MQTTBool_t prvDoesTopicMatchTopicFilter( const uint8_t * const pucTopic,
                                                     uint16_t usTopicLength,
                                                     const uint8_t * const pucTopicFilter,
                                                     uint16_t usTopicFilterLength )
