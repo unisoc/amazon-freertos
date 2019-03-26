@@ -107,7 +107,7 @@ void uwp_ictl_irq_disable(uwp_irq_type_t irq_type, unsigned int irq){
 
 static void intc_uwp_irq(void)
 {
-    mbed_error_printf("%s\r\n",__func__);
+    printk("%s\r\n",__func__);
     volatile struct uwp_intc * intc = (volatile struct uwp_intc *)BASE_INTC;
     u32_t status = uwp_intc_status(intc);
     int ch;
@@ -122,7 +122,7 @@ static void intc_uwp_irq(void)
 
 static void intc_uwp_fiq(void)
 {
-    mbed_error_printf("%s\r\n",__func__);
+    printk("%s\r\n",__func__);
     volatile struct uwp_intc * intc = (volatile struct uwp_intc *)(BASE_INTC + 0x20);
     u32_t status = uwp_intc_status(intc);
     int ch;
