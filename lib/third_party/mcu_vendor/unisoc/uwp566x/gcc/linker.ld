@@ -61,12 +61,12 @@ MEMORY
 	dram           (rwx) : ORIGIN = 0x00180000, LENGTH =  400K
 	wifi_data_ram  (rwx) : ORIGIN = 0x00151000, LENGTH =  188K
 	flash_boot      (rx) : ORIGIN = 0x02000000, LENGTH =  192K
-	critical_info   (rx) : ORIGIN = 0x02030000, LENGTH =    4K
-	flash           (rx) : ORIGIN = 0x02040000, LENGTH =  512K
-	flash_modem     (rx) : ORIGIN = 0x020C0000, LENGTH =  768K
-	flash_filesys   (rx) : ORIGIN = 0x02180000, LENGTH = 1280K
-	flash_app_ota   (rx) : ORIGIN = 0x022C0000, LENGTH =  512K
-	flash_modem_ota (rx) : ORIGIN = 0x02340000, LENGTH =  768K
+    critical_info   (rx) : ORIGIN = 0x0200F000, LENGTH =    4K
+    flash           (rx) : ORIGIN = 0x02011000, LENGTH =  784K
+    flash_modem     (rx) : ORIGIN = 0x020D4000, LENGTH =  720K
+    flash_filesys   (rx) : ORIGIN = 0x02300000, LENGTH = 1024K
+    flash_app_ota   (rx) : ORIGIN = 0x02188000, LENGTH =  784K
+    flash_modem_ota (rx) : ORIGIN = 0x0224C000, LENGTH =  720K
 
 /*	flash (rx) : ORIGIN = 0x02000000, LENGTH = 512K
 	sram (rwx) : ORIGIN = 0x00100000, LENGTH = 400K */
