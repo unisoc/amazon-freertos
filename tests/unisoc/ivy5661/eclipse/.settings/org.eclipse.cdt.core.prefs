@@ -1,3 +1,9 @@
 eclipse.preferences.version=1
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/MAKE/delimiter=;
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/MAKE/operation=remove
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/MAKE/value=
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/SCRIPTS/delimiter=;
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/SCRIPTS/operation=replace
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/SCRIPTS/value=${PWD}\\..\\..\\common\\application_code\\vendor_code\\scripts
 environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/append=true
 environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078/appendContributed=true
