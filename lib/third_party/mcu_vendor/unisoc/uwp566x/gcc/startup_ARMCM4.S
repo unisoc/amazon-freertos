@@ -324,11 +324,11 @@ Default_Handler:
 	.set	\handler_name, Default_Handler
 	.endm
 
-	def_irq_handler	NMI_Handler
-	def_irq_handler	HardFault_Handler
-	def_irq_handler	MemManage_Handler
-	def_irq_handler	BusFault_Handler
-	def_irq_handler	UsageFault_Handler
+//	def_irq_handler	NMI_Handler
+//	def_irq_handler	HardFault_Handler
+//	def_irq_handler	MemManage_Handler
+//	def_irq_handler	BusFault_Handler
+//	def_irq_handler	UsageFault_Handler
 //	def_irq_handler	SVC_Handler
 	def_irq_handler	DebugMon_Handler
 //	def_irq_handler	PendSV_Handler
