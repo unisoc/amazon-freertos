@@ -168,7 +168,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     if (xReleaseAfterSend) { //driver should release the NetworkBufferDescriptor_t
         vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
     }
-    printk("tx len:%d\r\n", len);
+    //printk("tx len:%d\r\n", len);
 
     ret = uwp_mgmt_tx(data, len);
     if (ret != UWP_OK) {
@@ -223,7 +223,7 @@ BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
     const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
 
     if( eConsiderFrameForProcessing( buffer ) != eProcessBuffer ) {
-        printk("Dropping packet");
+        //printk("Dropping packet");
         return UWP_OK;
     }
 
@@ -234,7 +234,7 @@ BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
 	pxNetworkBuffer->xDataLength = len;
 
 	/* Copy the packet data. */
-    printk("rx len:%d\r\n",len);
+    //printk("rx len:%d\r\n",len);
 
         memcpy(pxNetworkBuffer->pucEthernetBuffer, buffer, len);
         DUMP_DATA(pxNetworkBuffer->pucEthernetBuffer,len);

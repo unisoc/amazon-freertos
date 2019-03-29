@@ -362,6 +362,7 @@ static void rx_data_thread(const char*p1)
             } else {
                 break;
             }
+            //portYIELD();
         }
     }
 }
@@ -433,7 +434,7 @@ int wifi_txrx_init(struct wifi_priv *priv)
     }
 
     UWPTaskCreate(rx_cmdevt_thread, "rx_cmdevt_thread", RX_STACK_SIZE, (void *)priv, uwpPriorityNormal, &rx_cmdevt_thread_data);
-    UWPTaskCreate(rx_data_thread, "rx_data_thread", RX_STACK_SIZE, (void *)priv, uwpPriorityNormal, &rx_data_thread_data);
+    UWPTaskCreate(rx_data_thread, "rx_data_thread", RX_STACK_SIZE, (void *)priv, 6, &rx_data_thread_data);
     //uwp_thread_create("rx_cmdevt_thread", rx_cmdevt_thread, (void *)priv, NULL, RX_STACK_SIZE, uwpPriorityNormal);
     //uwp_thread_create("rx_data_thread", rx_data_thread, (void *)priv, NULL, RX_STACK_SIZE, uwpPriorityNormal);
     LOG_DBG("wifi_txrx_init,exit\r\n");
