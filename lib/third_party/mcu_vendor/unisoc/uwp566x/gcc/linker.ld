@@ -60,8 +60,7 @@ MEMORY
 	sram           (rwx) : ORIGIN = 0x00100240, LENGTH = (324K - 0x240)
 	dram           (rwx) : ORIGIN = 0x00180000, LENGTH =  400K
 	wifi_data_ram  (rwx) : ORIGIN = 0x00151000, LENGTH =  188K
-	flash_boot      (rx) : ORIGIN = 0x02000000, LENGTH =  192K
-    critical_info   (rx) : ORIGIN = 0x0200F000, LENGTH =    4K
+	flash_boot      (rx) : ORIGIN = 0x02000000, LENGTH =   68K
     flash           (rx) : ORIGIN = 0x02011000, LENGTH =  784K
     flash_modem     (rx) : ORIGIN = 0x020D4000, LENGTH =  720K
     flash_filesys   (rx) : ORIGIN = 0x02300000, LENGTH = 1024K
@@ -75,6 +74,7 @@ MEMORY
 __SRAM_segment_start__ = ORIGIN( sram );
 __SRAM_segment_end__ = __SRAM_segment_start__ + LENGTH( sram );
 __FLASH_ISR_VECTOR__ = ORIGIN(flash);
+__FLASH_FILES_START = ORIGIN(flash_modem);
 
 OUTPUT_ARCH(arm)
 ENTRY(__start)

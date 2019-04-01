@@ -64,11 +64,11 @@ extern void vLoggingPrintf(const char *pcFormat, ... );
 
 /*-----------------------------------------------------------*/
 
+extern char __FLASH_FILES_START;
 #define UWP_FLASH_SECTOR_SIZE        (0x1000)
 #define UWP_FLASH_BASE               (0x02000000)
-#define UWP_FLASH_FILE_ENTRY_OFFSET  (0x30000)
 #define UWP_FLASH_FILE_SIZE          UWP_FLASH_SECTOR_SIZE
-#define UWP_FLASH_FILE_OFFSET        (UWP_FLASH_FILE_ENTRY_OFFSET + UWP_FLASH_FILE_SIZE)
+#define UWP_FLASH_FILE_OFFSET        (((uint32_t)(&__FLASH_FILES_START)) - UWP_FLASH_BASE)
 
 /*-----------------------------------------------------------*/
 
@@ -141,7 +141,7 @@ static xObjectFileEntry xObjectFileDict[4] = {
 };
 
 /*  alloc flash memory for xObjectFileDict  */
-static xObjectFileEntry xObjectFileDictFlash[4] __attribute__ ( (section(".CERTIFICATE_ENTRY")) );
+//static xObjectFileEntry xObjectFileDictFlash[4] __attribute__ ( (section(".CERTIFICATE_ENTRY")) );
 
 /*-----------------------------------------------------------*/
 
@@ -347,11 +347,11 @@ static xObjectFileEntry xObjectFileDictFlash[4] __attribute__ ( (section(".CERTI
 *@bref  get flash stroge address of xObjectFileEntryDict.
 *
 */
-
+#if 0
 static void * prvGetAbsolutexObjectFileDictAddr(){
     return (void *)xObjectFileDictFlash;
 }
-
+#endif
 /*
 *
 *@bref  Find a file entry according to label.
