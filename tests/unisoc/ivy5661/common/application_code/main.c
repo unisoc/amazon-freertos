@@ -513,7 +513,7 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask,
     portDISABLE_INTERRUPTS();
 
     /* Loop forever */
-    configPRINT_STRING("stack overflow\r\n");
+    printk("%s stack overflow\r\n",pcTaskName);
     for( ; ; )
     {
     }

@@ -18,7 +18,7 @@
 #define WIFI_LOG_INF
 #include "uwp_log.h"
 
-#define SMSG_STACK_SIZE		(2048)
+#define SMSG_STACK_SIZE		(configMINIMAL_STACK_SIZE*8)
 //struct k_thread smsg_thread;
 //K_THREAD_STACK_MEMBER(smsg_stack, SMSG_STACK_SIZE);
 static struct smsg_ipc smsg_ipcs[SIPC_ID_NR];
@@ -158,7 +158,6 @@ void smsg_msg_dispatch_thread(void *arg)
 	struct smsg_queue_buf *rx_buf;
 
 	while (1) {
-
 		ret = k_sem_take(ipc->irq_sem, K_FOREVER);
 		if(ret == 0){
 			LOG_WRN("mutex take failed.");
@@ -400,14 +399,12 @@ int smsg_send(u8_t dst, u8_t prio, struct smsg *msg, int timeout)
 
 	return ret;
 }
-
 static void smsg_irq_handler(void *arg)
 {
     struct smsg_ipc *ipc = &smsg_ipcs[0];
 
     NVIC_DisableIRQ(GNSS2BTWIFI_IPI_IRQn);
-
-    printk("\r\nipi\r\n");
+    printk("ipi\r\n");
 
     uwp_ipi_clear_remote(IPI_CORE_BTWF, IPI_TYPE_IRQ0);
 
@@ -440,7 +437,7 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 
 	k_sem_init( ipc->irq_sem, 15, 0 );
 
-    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,5,ipc->pid);
+    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,4,ipc->pid);
     if(ipc->pid == NULL)
         LOG_ERR("smsg thread create failed");
 
@@ -448,7 +445,7 @@ int smsg_init(u32_t dst, u32_t smsg_base)
     uwp_sys_enable(BIT(APB_EB_IPI));
     uwp_sys_reset(BIT(APB_EB_IPI));
 	// TODO: isr priority
-    NVIC_SetPriority(GNSS2BTWIFI_IPI_IRQn,5);
+    NVIC_SetPriority(GNSS2BTWIFI_IPI_IRQn,4);
     NVIC_SetVector(GNSS2BTWIFI_IPI_IRQn,(uint32_t)smsg_irq_handler);
     //NVIC_EnableIRQ(GNSS2BTWIFI_IPI_IRQn);
 
