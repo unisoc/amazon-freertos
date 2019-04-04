@@ -14,7 +14,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="${cross_rm} -rf" description="" id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078" name="Debug" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=" parent="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug" postbuildStep="${cross_prefix}${cross_objcopy} -O binary ${ProjName}.elf ${ProjName}.bin &amp; ${cross_prefix}${cross_objdump} ${ProjName}.elf -D &gt; ${ProjName}_asm.txt &amp; &quot;D:\Programs\Python\Python35\python.exe&quot; &quot;${SCRIPTS}/imgtool.py&quot; sign --key &quot;${SCRIPTS}/root-rsa-2048.pem&quot; --header-size 0x1000 --align 8 --version 1.2 --slot-size 0x60000 &quot;${PWD}/${ProjName}.bin&quot; &quot;${PWD}/${ProjName}_signed.bin&quot;">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="${cross_rm} -rf" description="" id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078" name="Debug" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=" parent="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug" postbuildStep="${cross_prefix}${cross_objcopy} -O binary ${ProjName}.elf ${ProjName}.bin &amp; ${cross_prefix}${cross_objdump} ${ProjName}.elf -D &gt; ${ProjName}_asm.txt &amp; &quot;D:\Python3\python.exe&quot; &quot;${SCRIPTS}/imgtool.py&quot; sign --key &quot;${SCRIPTS}/root-rsa-2048.pem&quot; --header-size 0x1000 --align 8 --version 1.2 --slot-size 0x60000 &quot;${PWD}/${ProjName}.bin&quot; &quot;${PWD}/${ProjName}_signed.bin&quot;">
 					<folderInfo id="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.1372078." name="/" resourcePath="">
 						<toolChain id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.elf.debug.78254140" name="ARM Cross GCC" superClass="ilg.gnuarmeclipse.managedbuild.cross.toolchain.elf.debug">
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createflash.640275933" name="Create flash image" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createflash" value="true" valueType="boolean"/>
@@ -77,6 +77,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib/third_party/mcu_vendor/unisoc/uwp566x/HAL_Driver/uwp_hal_api}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib/third_party/mcu_vendor/unisoc/uwp566x/newlibc/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/application_code/vendor_code/bsp}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib/third_party/jsmn}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/application_code/common_test/ota}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib/third_party/tinycbor}&quot;"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.722022803" name="Language standard" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std" useByScannerDiscovery="true" value="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.gnu99" valueType="enumerated"/>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.775827424" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
@@ -119,6 +122,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="application_code/common_test/ota/aws_test_ota_cbor.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -197,6 +203,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="application_code/common_test/ota/aws_test_ota_cbor.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

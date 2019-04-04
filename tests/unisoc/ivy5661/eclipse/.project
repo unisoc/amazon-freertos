@@ -100,6 +100,11 @@
 			<locationURI>AFR_HOME/tests/common/mqtt</locationURI>
 		</link>
 		<link>
+			<name>application_code/common_test/ota</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/common/ota</locationURI>
+		</link>
+		<link>
 			<name>application_code/common_test/pkcs11</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/tests/common/pkcs11</locationURI>
@@ -160,6 +165,11 @@
 			<locationURI>AFR_HOME/lib/mqtt</locationURI>
 		</link>
 		<link>
+			<name>lib/aws/ota</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>lib/aws/pkcs11</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/pkcs11/portable/unisoc/uwp566x</locationURI>
@@ -195,6 +205,11 @@
 			<locationURI>AFR_HOME/lib/pkcs11/mbedtls/aws_pkcs11_mbedtls.c</locationURI>
 		</link>
 		<link>
+			<name>lib/third_party/jsmn</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/jsmn</locationURI>
+		</link>
+		<link>
 			<name>lib/third_party/mbedtls</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -208,6 +223,11 @@
 			<name>lib/third_party/pkcs11</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/pkcs11</locationURI>
+		</link>
+		<link>
+			<name>lib/third_party/tinycbor</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/tinycbor</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/unity</name>
@@ -318,6 +338,21 @@
 			<name>lib/aws/FreeRTOS/timers.c</name>
 			<type>1</type>
 			<locationURI>AFR_HOME/lib/FreeRTOS/timers.c</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/ota/aws_ota_agent.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/ota/aws_ota_agent.c</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/ota/aws_ota_cbor.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/ota/aws_ota_cbor.c</locationURI>
+		</link>
+		<link>
+			<name>lib/aws/ota/aws_ota_pal.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/lib/ota/portable/unisoc/aws_ota_pal.c</locationURI>
 		</link>
 		<link>
 			<name>lib/aws/secure_sockets/aws_secure_sockets.c</name>
