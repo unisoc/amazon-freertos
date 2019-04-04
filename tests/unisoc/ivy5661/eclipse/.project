@@ -160,6 +160,11 @@
 			<locationURI>AFR_HOME/lib/mqtt</locationURI>
 		</link>
 		<link>
+			<name>lib/aws/pkcs11</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/pkcs11/portable/unisoc/uwp566x</locationURI>
+		</link>
+		<link>
 			<name>lib/aws/secure_sockets</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -198,11 +203,6 @@
 			<name>lib/third_party/mcu_vendor</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
-			<name>lib/third_party/pkcs11</name>
-			<type>2</type>
-			<locationURI>AFR_HOME/lib/third_party/pkcs11</locationURI>
 		</link>
 		<link>
 			<name>lib/third_party/unity</name>
@@ -340,11 +340,6 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
-			<name>lib/third_party/pkcs11/portable</name>
-			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
 			<name>lib/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c</name>
 			<type>1</type>
 			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c</locationURI>
@@ -361,11 +356,6 @@
 		</link>
 		<link>
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x</name>
-			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
-			<name>lib/third_party/pkcs11/portable/unisoc</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
@@ -398,11 +388,6 @@
 			<name>lib/third_party/mcu_vendor/unisoc/uwp566x/uwpwifi</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/mcu_vendor/unisoc/uwp566x/uwpwifi</locationURI>
-		</link>
-		<link>
-			<name>lib/third_party/pkcs11/portable/unisoc/uwp566x</name>
-			<type>2</type>
-			<locationURI>AFR_HOME/lib/pkcs11/portable/unisoc/uwp566x</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
