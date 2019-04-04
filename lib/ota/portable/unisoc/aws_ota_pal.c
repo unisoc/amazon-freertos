@@ -44,25 +44,28 @@ typedef struct
     bool valid_image;
 } uwp_ota_context_t;
 
+/***********************PARAMETERS*********************************/
+#define UWP_FLASH_BASE            (0x02000000)
+#define UWP_FLASH_SECTOR_SIZE     (0x1000)
+
 /*********************** variable *****************************/
 static uwp_ota_context_t xOTACtx;
 /* Specify the OTA signature algorithm we support on this platform. */
 const char pcOTA_JSON_FileSignatureKey[ OTA_FILE_SIG_KEY_STR_MAX_LENGTH ] = "sig-sha256-ecdsa";
 
-/********************alloc falsh memory************************/
-static uwp_ota_flash_partition_t xPartitionFlash[3] __attribute__ ( (section(".UWP_OTA_INFO")) );
+/********************  flash partition ************************/
+extern char __FLASH_APP_RUN_START__;
+extern char __FLASH_MODEM_START__;
+extern char __FLASH_APP_OTA_START__;
+extern char __FLASH_MODEM_OTA_START__;
+extern char __FLASH_END__;
+static uwp_ota_flash_partition_t xPartitionFlash[3];
 
 /*******************convenient function***************************/
 static inline BaseType_t prvContextValidate( OTA_FileContext_t * C )
 {
     return ( (C != NULL) && (C->pucFile == (uint8_t *)&xOTACtx) && (C == xOTACtx.pxCurOTAFileCtx) );
 }
-
-/***********************PARAMETERS*********************************/
-#define UWP_FLASH_BASE            (0x02000000)
-#define UWP_OTA_UPDATE_IMAGE_SIZE (512*1024)
-#define UWP_OTA_UPDATA_IMAGE_ADDR (0x002C0000)
-#define UWP_FLASH_SECTOR_SIZE     (0x1000)
 
 /********************* function protype ***************************/
 OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C );
@@ -159,8 +162,14 @@ static int prvFlashEraseAndWrite(uint8_t *pcData, uint32_t ulAddrOffset, uint32_
  * @bref update partition information
  */
 static int prvUpdatePartitionInfo( uwp_ota_flash_partition_t * pxPartition ){
+
+  /* update info notify to mcuboot included in ota image */
+#if 0
     return prvFlashEraseAndWrite( (uint8_t *)pxPartition, (uint32_t)&xPartitionFlash[xOTACtx.partition.ucPartition] - UWP_FLASH_BASE,
                                       sizeof(uwp_ota_flash_partition_t));
+#else
+    return 0;
+#endif
 }
 
 /*
@@ -261,12 +270,12 @@ OTA_Err_t prvPAL_CreateFileForRx( OTA_FileContext_t * const C )
 
     int iResult = 0;
 
-    if( (C != NULL) && (C->ulFileSize <= UWP_OTA_UPDATE_IMAGE_SIZE) ) {
+    if( C != NULL ) {
         if( xOTACtx.pxCurOTAFileCtx == NULL ){
             C->pucFile = (uint8_t *)&xOTACtx;
             xOTACtx.pxCurOTAFileCtx = C;
             iResult = prvGetOTAPartition(&(xOTACtx.partition));
-            if( iResult != 0 )
+            if( (iResult != 0) && (C->ulFileSize > xOTACtx.partition.ulPartitionLength) )
                 return kOTA_Err_RxFileCreateFailed;
             xOTACtx.partition.bImageValid = false;
             xOTACtx.partition.ulFileLength = 0;
@@ -526,7 +535,7 @@ uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertName,
     		return NULL;
     	}
 
-        OTA_LOG_L1( "[%s] Using aws_ota_codesigner_certificate.h replace %s.\r\n", OTA_METHOD_NAME , otatestpalCERTIFICATE_FILE );
+        OTA_LOG_L1( "Using aws_ota_codesigner_certificate.h replace %s.\r\n", otatestpalCERTIFICATE_FILE );
 
         /* Allocate memory for the signer certificate plus a terminating zero so we can copy it and return to the caller. */
         ulCertSize = sizeof( signingcredentialSIGNING_CERTIFICATE_PEM );
@@ -734,6 +743,41 @@ static CK_RV prvGetCertificate( const char * pcLabelName,
     return xResult;
 }
 #endif
+
+void vUWP5661FLASHPartitionInit(void){
+
+    xPartitionFlash[0].ulPartitionAddrOffset = (uint32_t)(&__FLASH_APP_RUN_START__) - UWP_FLASH_BASE - 0x1000;
+    xPartitionFlash[0].ulLastWriteOffset = 0;
+    xPartitionFlash[0].ulPartitionLength = ((uint32_t)(&__FLASH_MODEM_START__)) - ((uint32_t)(&__FLASH_APP_RUN_START__)) + 0x1000;
+    xPartitionFlash[0].ulFileLength = 0;
+    xPartitionFlash[0].bImageValid = false;
+    xPartitionFlash[0].eState = PartitionAppRunning;
+    xPartitionFlash[0].ucPartition = 0;
+
+    xPartitionFlash[1].ulPartitionAddrOffset = (uint32_t)(&__FLASH_APP_OTA_START__) - UWP_FLASH_BASE;
+    xPartitionFlash[1].ulLastWriteOffset = 0;
+    xPartitionFlash[1].ulPartitionLength = ((uint32_t)(&__FLASH_MODEM_OTA_START__)) - ((uint32_t)(&__FLASH_APP_OTA_START__));
+    xPartitionFlash[1].ulFileLength = 0;
+    xPartitionFlash[1].bImageValid = false;
+    xPartitionFlash[1].eState = PartitionAppOta;
+    xPartitionFlash[1].ucPartition = 1;
+
+    xPartitionFlash[2].ulPartitionAddrOffset = (uint32_t)(&__FLASH_MODEM_OTA_START__) - UWP_FLASH_BASE;
+    xPartitionFlash[2].ulLastWriteOffset = 0;
+    xPartitionFlash[2].ulPartitionLength = ((uint32_t)(&__FLASH_END__)) - ((uint32_t)(&__FLASH_MODEM_OTA_START__));
+    xPartitionFlash[2].ulFileLength = 0;
+    xPartitionFlash[2].bImageValid = false;
+    xPartitionFlash[2].eState = PartitionModemOta;
+    xPartitionFlash[2].ucPartition = 2;
+
+#if 0
+    for(int i = 0; i < 3; i++){
+        printk("Part Info addr: %x Len:%x\r\n",xPartitionFlash[i].ulPartitionAddrOffset, xPartitionFlash[i].ulPartitionLength);
+    }
+#endif
+
+}
+
 /*
  * @bref self test case
  */

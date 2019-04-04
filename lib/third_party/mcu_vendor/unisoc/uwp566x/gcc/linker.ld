@@ -61,7 +61,7 @@ MEMORY
 	dram           (rwx) : ORIGIN = 0x00180000, LENGTH =  400K
 	wifi_data_ram  (rwx) : ORIGIN = 0x00151000, LENGTH =  188K
 	flash_boot      (rx) : ORIGIN = 0x02000000, LENGTH =   68K
-    flash           (rx) : ORIGIN = 0x02011000, LENGTH =  784K
+    flash           (rx) : ORIGIN = 0x02011000, LENGTH =  780K
     flash_modem     (rx) : ORIGIN = 0x020D4000, LENGTH =  720K
     flash_filesys   (rx) : ORIGIN = 0x02300000, LENGTH = 1024K
     flash_app_ota   (rx) : ORIGIN = 0x02188000, LENGTH =  784K
@@ -71,10 +71,15 @@ MEMORY
 	sram (rwx) : ORIGIN = 0x00100000, LENGTH = 400K */
 }
 
-__SRAM_segment_start__ = ORIGIN( sram );
-__SRAM_segment_end__ = __SRAM_segment_start__ + LENGTH( sram );
-__FLASH_ISR_VECTOR__ = ORIGIN(flash);
-__FLASH_FILES_START = ORIGIN(flash_filesys);
+__SRAM_segment_start__    = ORIGIN( sram );
+__SRAM_segment_end__      = __SRAM_segment_start__ + LENGTH( sram );
+__FLASH_ISR_VECTOR__      = ORIGIN(flash);
+__FLASH_APP_RUN_START__   = ORIGIN(flash);
+__FLASH_MODEM_START__     = ORIGIN(flash_modem);
+__FLASH_FILES_START__     = ORIGIN(flash_filesys);
+__FLASH_APP_OTA_START__   = ORIGIN(flash_app_ota);
+__FLASH_MODEM_OTA_START__ = ORIGIN(flash_modem_ota);
+__FLASH_END__             = __FLASH_MODEM_OTA_START__ + LENGTH(flash_modem_ota);
 
 OUTPUT_ARCH(arm)
 ENTRY(__start)

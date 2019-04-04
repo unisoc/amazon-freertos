@@ -40,6 +40,7 @@
 #include "aws_pkcs11.h"
 #include "aws_ota_codesigner_certificate.h"
 #include "aws_test_ota_config.h"
+#include "aws_ota_pal_test_access_define.h"
 
 /* The Texas Instruments CC3220SF has special requirements on its file system security.
  * We enable code specially for testing the OTA PAL layer for this device. */

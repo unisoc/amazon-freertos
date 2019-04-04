@@ -71,4 +71,7 @@
  */
 #define otaconfigMAX_THINGNAME_LEN              64  /* FIX ME. */
 
+/* to fix aws_ota_agent.c compile error in TESTS */
+#define AMAZON_FREERTOS_ENABLE_UNIT_TESTS
+
 #endif /* _AWS_OTA_AGENT_CONFIG_H_ */

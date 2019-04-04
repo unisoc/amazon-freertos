@@ -64,11 +64,11 @@ extern void vLoggingPrintf(const char *pcFormat, ... );
 
 /*-----------------------------------------------------------*/
 
-extern char __FLASH_FILES_START;
+extern char __FLASH_FILES_START__;
 #define UWP_FLASH_SECTOR_SIZE        (0x1000)
 #define UWP_FLASH_BASE               (0x02000000)
 #define UWP_FLASH_FILE_SIZE          UWP_FLASH_SECTOR_SIZE
-#define UWP_FLASH_FILE_OFFSET        (((uint32_t)(&__FLASH_FILES_START)) - UWP_FLASH_BASE)
+#define UWP_FLASH_FILE_OFFSET        (((uint32_t)(&__FLASH_FILES_START__)) - UWP_FLASH_BASE)
 
 /*-----------------------------------------------------------*/
 
