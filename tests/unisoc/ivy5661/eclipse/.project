@@ -205,6 +205,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>lib/third_party/pkcs11</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/lib/third_party/pkcs11</locationURI>
+		</link>
+		<link>
 			<name>lib/third_party/unity</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/unity/src</locationURI>
