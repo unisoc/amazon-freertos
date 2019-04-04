@@ -35,6 +35,7 @@ void *g_wifi_mgmt_queue = NULL;
 //struct list_head g_scan_list;
 struct scan_list uwp_scan_list;
 struct wifi_priv uwp_wifi_priv;
+struct scanResult uwp_scanResult;
 
 
 /*success,ret=0*/
@@ -92,7 +93,14 @@ int uwp_mgmt_open(struct wifi_priv *priv)
 	if (wifi_dev->opened) {
 		return -EAGAIN;
 	}
+#if 0
     __INIT_LIST_HEAD(&(uwp_scan_list.g_scan_list));
+#endif
+#ifdef SCANP
+    uwp_scanResult.nresults = 0;
+    uwp_scanResult.maxnresults = 0;
+    uwp_scanResult.pscan_result = NULL;
+#endif
 	ret = wifi_cmd_open(wifi_dev);
 	if (ret) {
 		LOG_ERR("wifi_cmd_open,failed.");
@@ -226,9 +234,13 @@ static int uwp_mgmt_del_station(struct device *dev,
 	return 0;
 }
 #endif
-
+#ifndef SCANP
 int uwp_mgmt_scan(struct wifi_priv *priv,
 		struct wifi_drv_scan_params *params)
+#else
+int uwp_mgmt_scan(struct wifi_priv *priv,
+		struct wifi_drv_scan_params *params, struct event_scan_result * pResult, u8_t ucResults)
+#endif
 {
 	struct wifi_device *wifi_dev;
 	int ret;
@@ -249,10 +261,20 @@ int uwp_mgmt_scan(struct wifi_priv *priv,
 				wifi_dev->mode);
 		return -EINVAL;
 	}
-
+#if 0
 	uwp_mgmt_empty_scan_result_list();
 	uwp_scan_list.g_scan_num = 0;//reset scan_num to 0
+#endif
+#ifdef SCANP
+	uwp_scanResult.pscan_result = pResult;
+	uwp_scanResult.nresults = 0;
+	uwp_scanResult.maxnresults = ucResults;
+#endif
 	ret = wifi_cmd_scan(wifi_dev, params);
+    if(ret != UWP_OK) {
+        LOG_ERR("scan cmd send fail\n");
+        return ret;
+    }
 
 	LOG_ERR("uwp_mgmt_scan,exit.ret=%d\r\n",ret);
 	return ret;
@@ -325,6 +347,12 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 	}
 
 	ret = wifi_cmd_connect(wifi_dev, params);
+
+    if(ret != UWP_OK) {
+        LOG_ERR("con cmd send fail\n");
+        return ret;
+    }
+
 	LOG_DBG("%s,done.\r\n",__func__);
 	return ret;
 }
@@ -332,6 +360,7 @@ int uwp_mgmt_connect(struct wifi_priv *priv,
 int uwp_mgmt_disconnect(struct wifi_priv *priv)
 {
 	struct wifi_device *wifi_dev;
+	int ret;
 
 	if (!priv) {
 		return -EINVAL;
@@ -353,7 +382,11 @@ int uwp_mgmt_disconnect(struct wifi_priv *priv)
 		LOG_WRN("Disconnect again in disconnected.");
 	}
 
-	return wifi_cmd_disconnect(wifi_dev);
+	ret = wifi_cmd_disconnect(wifi_dev);
+	if(ret != UWP_OK) {
+		LOG_ERR("disc cmd send fail\n");
+		 return ret;
+	}
 }
 #if 0
 static int uwp_mgmt_set_ip(struct wifi_priv *priv, u8_t *ip, u8_t len)
@@ -607,4 +640,9 @@ int uwp_wifi_initDone()
 		return UWP_DONE;
 	else
 		return 0;
+}
+/*getmode*/
+void uwp_wifi_get_mode(UWP_WIFI_MODE_T* modePtr )
+{
+	modePtr = &uwp_wifi_priv.mode;
 }

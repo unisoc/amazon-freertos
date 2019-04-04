@@ -25,10 +25,11 @@ const int CONNECTED_BIT = BIT0;
 const int DISCONNECTED_BIT = BIT1;
 const int SCAN_DONE_BIT = BIT2;
 const int CMD_DONE_BIT = BIT3;
-
+extern struct wifi_priv uwp_wifi_priv;
 extern void *g_wifi_mgmt_queue;
 //extern struct list_head g_scan_list;
 extern struct scan_list uwp_scan_list;
+extern struct scanResult uwp_scanResult;
 static unsigned char recv_buf[RECV_BUF_SIZE];
 static unsigned int recv_len;
 static unsigned int seq = 1;
@@ -212,7 +213,8 @@ int wifi_cmd_scan(struct wifi_device *wifi_dev, struct wifi_drv_scan_params *par
 
 	UWP_MEM_FREE(cmd);//free(cmd);
     UWPEventGroupWaitBits(cmd_sem, SCAN_DONE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
-    UWPEventGroupClearBits(cmd_sem, SCAN_DONE_BIT);
+    //the third params is the flag of reset to 0
+    //UWPEventGroupClearBits(cmd_sem, SCAN_DONE_BIT);
 	return 0;
 }
 
@@ -507,6 +509,7 @@ static int wifi_evt_scan_result(struct wifi_device *wifi_dev,
 		return -EINVAL;
 	}
 
+#if 0
     scan_result_info_t *temp = NULL;
     temp = (scan_result_info_t *)UWP_MEM_ALLOC(sizeof(scan_result_info_t));
     if(temp == NULL){
@@ -519,7 +522,16 @@ static int wifi_evt_scan_result(struct wifi_device *wifi_dev,
     uwp_scan_list.g_scan_num ++;
     LOG_DBG("scan malloc:%p", temp);
     LOG_DBG("%s %d %d",temp->res.ssid, temp->res.encrypt_mode, temp->res.rssi);
-
+#endif
+#ifdef SCANP
+    if((uwp_scanResult.pscan_result != NULL) && (uwp_scanResult.nresults < uwp_scanResult.maxnresults))
+    {
+		struct event_scan_result *pscan_result;
+		pscan_result = &uwp_scanResult.pscan_result[uwp_scanResult.nresults];
+		uwp_scanResult.nresults++;
+		memcpy(pscan_result, event, len);
+    }
+#endif
 	return 0;
 }
 /*success,ret0*/

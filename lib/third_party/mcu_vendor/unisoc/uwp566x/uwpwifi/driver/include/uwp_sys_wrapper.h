@@ -17,6 +17,7 @@
 #define osOK 0
 #endif
 
+#define SCANP
 #define uwpPriorityNormal 1
 
 /*list*/
@@ -122,7 +123,7 @@ typedef QueueHandle_t OS_SemaphoreHandle_t;
 typedef QueueHandle_t OS_Queue_t;
 
 #ifndef UWP_QUEUE_INIT
-#define UWPOS_QUEUE_INIT(queue, queue_len, item_size) \
+#define UWP_QUEUE_INIT(queue, queue_len, item_size) \
 		do { \
 			queue = xQueueCreate(queue_len, item_size); \
 		} while(0);

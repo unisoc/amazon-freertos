@@ -39,7 +39,9 @@
 
 /* Wi-Fi configuration includes. */
 #include "aws_wifi_config.h"
-
+//for wifi Test
+#define testwifiCONNECTION_DELAY    pdMS_TO_TICKS( 3000 )//for testcase-ping
+#define testwifiMULTITASK_TEST_TIMEOUT    pdMS_TO_TICKS( 240000 )//for testcase-con&discAtOnce
 /**
  * @brief Return code denoting API status.
  *

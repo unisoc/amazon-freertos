@@ -16,7 +16,7 @@ extern "C" {
 #include "hal_type.h"
 #include "uwp_def.h"
 #include "uwp_wifi_drv.h"
-
+#include "uwp_sys_wrapper.h"
 //#define WIFI_MODE_NONE (0)
 //#define WIFI_MODE_STA (1)
 typedef enum{
@@ -63,6 +63,11 @@ struct wifi_priv {
 	u32_t cp_version;
 	bool initialized;
 	u8_t mode;
+};
+struct scanResult {
+	struct event_scan_result *pscan_result;
+	u16_t 	nresults;
+	u16_t 	maxnresults;
 };
 
 static inline void uwp_save_addr_before_payload(u32_t payload, void *addr)
@@ -113,11 +118,18 @@ int uwp_init(struct wifi_priv *priv, UWP_WIFI_MODE_T wifi_mode);
 int uwp_mgmt_open(struct wifi_priv *priv);
 void vUWPwifiInitialize(void);
 int uwp_mgmt_connect(struct wifi_priv *priv, struct wifi_drv_connect_params *params);
+
+#ifndef SCANP
 int uwp_mgmt_scan(struct wifi_priv *priv, struct wifi_drv_scan_params *params);
+#else
+int uwp_mgmt_scan(struct wifi_priv *priv, struct wifi_drv_scan_params *params, struct event_scan_result * pResult, u8_t ucResults);
+#endif
+
 int uwp_mgmt_disconnect(struct wifi_priv *priv);
 int uwp_wifi_isConnected(UWP_WIFI_MODE_T mode);
 int uwp_wifi_opened(UWP_WIFI_MODE_T mode);
 int uwp_wifi_initDone();
+void uwp_wifi_get_mode(UWP_WIFI_MODE_T* modePtr );
 #ifdef __cplusplus
 }
 #endif
