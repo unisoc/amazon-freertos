@@ -74,7 +74,7 @@ MEMORY
 __SRAM_segment_start__ = ORIGIN( sram );
 __SRAM_segment_end__ = __SRAM_segment_start__ + LENGTH( sram );
 __FLASH_ISR_VECTOR__ = ORIGIN(flash);
-__FLASH_FILES_START = ORIGIN(flash_modem);
+__FLASH_FILES_START = ORIGIN(flash_filesys);
 
 OUTPUT_ARCH(arm)
 ENTRY(__start)
