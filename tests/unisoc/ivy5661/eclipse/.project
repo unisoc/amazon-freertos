@@ -135,6 +135,11 @@
 			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code/bsp</locationURI>
 		</link>
 		<link>
+			<name>application_code/vendor_code/ota_include</name>
+			<type>2</type>
+			<locationURI>AFR_HOME/tests/unisoc/ivy5661/common/application_code/vendor_code/ota_include</locationURI>
+		</link>
+		<link>
 			<name>lib/FreeRTOS-Plus-TCP/include</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/FreeRTOS-Plus-TCP/include</locationURI>
@@ -238,6 +243,11 @@
 			<name>lib/third_party/unity_fixture</name>
 			<type>2</type>
 			<locationURI>AFR_HOME/lib/third_party/unity/extras/fixture/src</locationURI>
+		</link>
+		<link>
+			<name>application_code/common_test/ota/aws_ota_update_demo.c</name>
+			<type>1</type>
+			<locationURI>AFR_HOME/demos/common/ota/aws_ota_update_demo.c</locationURI>
 		</link>
 		<link>
 			<name>application_code/common_test/secure_sockets/aws_test_tcp.c</name>

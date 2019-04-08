@@ -17,6 +17,10 @@
 /* uwp Flash Driver */
 #include "hal_ramfunc.h"
 
+/************************** self test  ***************************/
+//#define UWP_OTA_SELF_TEST
+#define ivy5661_unisoc_test_crt_path "amazon-freertos/tests/common/ota/test_files/ecdsa-sha256-signer.crt.pem"
+
 /*************************** struct *****************************/
 typedef enum{
     PartitionInvalid = 0,
@@ -331,6 +335,7 @@ OTA_Err_t prvPAL_CloseFile( OTA_FileContext_t * const C )
             OTA_LOG_L1( "[%s] ERROR - Failed to pass signature verification: %d.\r\n", OTA_METHOD_NAME, eResult );
 
             /* If we fail to verify the file signature that means the image is not valid. We need to set the image state to aborted. */
+            vLoggingPrintf("[gxk] err trace [%s]\r\n",__func__);
             prvPAL_SetPlatformImageState( eOTA_ImageState_Aborted );
 
         }
@@ -362,6 +367,7 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
         if( ((xOTACtx.partition.ulLastWriteOffset + ulBlockSize) <= xOTACtx.partition.ulPartitionLength)
              && (xOTACtx.partition.ulLastWriteOffset == ulOffset) )
         {
+        	vLoggingPrintf("write block:%x %d\r\n",xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize);
             lResult = prvFlashEraseAndWrite( pacData, xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize );
 
             if( lResult != 0 )
@@ -390,8 +396,9 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
 }
 
 OTA_Err_t prvPAL_ResetDevice( void ){
-	DEFINE_OTA_METHOD_NAME( "prvPAL_ActivateNewImage" );
-	OTA_LOG_L1( "[%s] ERROR - NOT SUPPORTED.\r\n", OTA_METHOD_NAME );
+	DEFINE_OTA_METHOD_NAME( "prvPAL_ResetDevice" );
+	printk( "waiting Reset Handly.\r\n" );
+	while(1);
     return kOTA_Err_None;
 }
 
@@ -492,6 +499,10 @@ OTA_PAL_ImageState_t prvPAL_GetPlatformImageState(void)
     uwp_ota_flash_partition_t xOTAPartition;
     OTA_PAL_ImageState_t eImageState = eOTA_PAL_ImageState_Unknown;
 
+#ifdef UWP_OTA_SELF_TEST
+    return eOTA_PAL_ImageState_PendingCommit;
+#endif
+
     /* do not distinguish self test mode */
     if( prvGetOTAPartition(&xOTAPartition) != 0){
         OTA_LOG_L1( "[%s] can't get image.\r\n", OTA_METHOD_NAME );
@@ -519,7 +530,7 @@ uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertName,
     uint8_t * pucSignerCert = NULL;
     CK_RV xResult;
 
-#if 0
+#if 1
     xResult = prvGetCertificate( ( const char * ) pucCertName, &pucSignerCert, ulSignerCertSize );
 
     if( ( xResult == CKR_OK ) && ( pucSignerCert != NULL ) )
@@ -530,7 +541,8 @@ uint8_t * prvPAL_ReadAndAssumeCertificate( const uint8_t * const pucCertName,
 #endif
     {
     	if( (strcmp((const char *)otatestpalCERTIFICATE_FILE, (const char *)pucCertName) != 0) &&
-    			(strcmp((const char *)pkcs11configLABEL_CODE_VERIFICATION_KEY, (const char *)pucCertName) != 0) ){
+    			(strcmp((const char *)pkcs11configLABEL_CODE_VERIFICATION_KEY, (const char *)pucCertName) != 0) &&
+				(strcmp((const char *)ivy5661_unisoc_test_crt_path, (const char *)pucCertName) != 0) ){
     		OTA_LOG_L1( "[%s] No certificate file: %s.\r\n", OTA_METHOD_NAME , pucCertName );
     		return NULL;
     	}
@@ -619,7 +631,7 @@ OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
     return eResult;
 }
 
-#if 0
+#if 1
 static CK_RV prvGetCertificateHandle( CK_FUNCTION_LIST_PTR pxFunctionList,
                                       CK_SESSION_HANDLE xSession,
                                       const char * pcLabelName,

@@ -191,11 +191,6 @@ SECTIONS
 		*(SECTIONWIFIDATARAM)
 	} > wifi_data_ram
 
-	.critical_info_region (NOLOAD) : {
-		*(.CERTIFICATE_ENTRY)
-		*(.UWP_OTA_INFO)
-	} > critical_info
-	
 	/* Stabs debugging sections. */
 	.stab 0 : { *(.stab) }
 	.stabstr 0 : { *(.stabstr) }

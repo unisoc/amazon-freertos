@@ -53,12 +53,16 @@ void __env_unlock()  { (void)xTaskResumeAll();  };
 // Note: These functions are normally unused and stripped by linker.
 void *__wrap_malloc(size_t nbytes) {
     extern void * __real_malloc(size_t nbytes);
+    extern void printk(const char *pcFormat, ... );
     void *p = __real_malloc(nbytes); // Solely for debug breakpoint...
+    printk("M:%p\r\n",p);
     return p;
 };
 void *__wrap__malloc_r(void *reent, size_t nbytes) {
     extern void * __real__malloc_r(size_t nbytes);
+    extern void printk(const char *pcFormat, ... );
     void *p = __real__malloc_r(nbytes); // Solely for debug breakpoint...
+    printk("F:%p\r\n",p);
     return p;
 };
 #endif
