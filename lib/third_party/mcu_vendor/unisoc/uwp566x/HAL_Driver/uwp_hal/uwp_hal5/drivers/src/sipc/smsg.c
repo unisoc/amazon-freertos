@@ -404,7 +404,7 @@ static void smsg_irq_handler(void *arg)
     struct smsg_ipc *ipc = &smsg_ipcs[0];
 
     NVIC_DisableIRQ(GNSS2BTWIFI_IPI_IRQn);
-    printk("ipi\r\n");
+    //printk("ipi\r\n");
 
     uwp_ipi_clear_remote(IPI_CORE_BTWF, IPI_TYPE_IRQ0);
 
