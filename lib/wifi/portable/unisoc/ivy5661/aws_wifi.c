@@ -41,16 +41,20 @@
 #include "uwp_wifi_cmdevt.h"
 extern struct wifi_priv uwp_wifi_priv;
 extern struct scan_list uwp_scan_list;
+extern struct scanResult uwp_scanResult;
+void* uwp_netif_up;//The sem of netifup for waiting flag of netif
 static SemaphoreHandle_t xWiFiSem;
 static const TickType_t xSemaphoreWaitTicks = pdMS_TO_TICKS( wificonfigMAX_SEMAPHORE_WAIT_TIME_MS );
-static WIFIDeviceMode_t prvcurDeviceMode;
+//static WIFIDeviceMode_t prvcurDeviceMode;
 
 #define CHECK_VALID_SSID_LEN(x) \
         ((x) > 0 && (x) <=  wificonfigMAX_SSID_LEN)
 #define CHECK_VALID_PASSPHRASE_LEN(x) \
         ((x) > 0 && (x) <= wificonfigMAX_PASSPHRASE_LEN)
+#define CHECK_VALID_HOSTNAME_LEN(x) \
+        ((x) > 0 && (x) <= 253)
 
-extern int uwpNetifStatus;//the netifup flag for get ip 
+//extern int uwpNetifStatus;//the netifup flag for get ip 
 
 /*-----------------------------------------------------------*/
 
@@ -86,7 +90,9 @@ WIFIReturnCode_t WIFI_On( void )
    		}
 		static StaticSemaphore_t xSemaphoreBuffer;
 		xWiFiSem = xSemaphoreCreateMutexStatic( &( xSemaphoreBuffer ) );
-	   
+
+		UWP_SEM_INIT(uwp_netif_up, 1, 0);
+
    }
    LOG_ERR("WIFI_On done\r\n");
    return eWiFiSuccess;
@@ -132,37 +138,49 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
     WIFIReturnCode_t xRetVal = eWiFiFailure;
     struct wifi_drv_scan_params scan_params;
     struct wifi_drv_connect_params connect_params;
+//for thread-safe
+	if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE ) {
+		LOG_ERR("WIFI_ConnectAP,enter\r\n");
 
-    if(uwp_wifi_isConnected(WIFI_DEV_STA)) {//if connected
-    	ret = WIFI_Disconnect();
+	if(uwp_wifi_isConnected(WIFI_DEV_STA)) {//if connected
+        ret = uwp_mgmt_disconnect(&uwp_wifi_priv);
+        FreeRTOS_NetworkDown();
 		if( ret != eWiFiSuccess) {
 			LOG_ERR("WIFI_ConnectAP,disconnect fail\r\n");
+			xSemaphoreGive( xWiFiSem );//must give the sem
 			return eWiFiFailure;
 		}
-    }
-    if (pxNetworkParams == NULL || pxNetworkParams->pcSSID == NULL
-            || (pxNetworkParams->xSecurity != eWiFiSecurityOpen && pxNetworkParams->pcPassword == NULL)) {
-    	LOG_ERR("invalid params!\r\n");
-        return eWiFiFailure;
+	}
+
+	if (pxNetworkParams == NULL || pxNetworkParams->pcSSID == NULL || pxNetworkParams->pcPassword == NULL) {
+		LOG_ERR("invalid params!\r\n");
+		xSemaphoreGive( xWiFiSem );//must give the sem
+		return eWiFiFailure;
+	}
+
+	if (!CHECK_VALID_SSID_LEN(pxNetworkParams->ucSSIDLength) ||
+		(pxNetworkParams->xSecurity != eWiFiSecurityOpen && !CHECK_VALID_PASSPHRASE_LEN(pxNetworkParams->ucPasswordLength))) {
+		LOG_ERR("invalid params 2!\r\n");
+		xSemaphoreGive( xWiFiSem );//must give the sem
+		return eWiFiFailure;
+	}
+
+	//fixme: check if wifi on.
+	if(!uwp_wifi_opened(WIFI_DEV_STA)) {
+		LOG_ERR("wifi not open!\r\n");
+		xSemaphoreGive( xWiFiSem );//must give the sem
+		return eWiFiFailure;
     }
 
-    if (!CHECK_VALID_SSID_LEN(pxNetworkParams->ucSSIDLength) ||
-        (pxNetworkParams->xSecurity != eWiFiSecurityOpen && !CHECK_VALID_PASSPHRASE_LEN(pxNetworkParams->ucPasswordLength))) {
-    	LOG_ERR("invalid params 2!\r\n");
-        return eWiFiFailure;
-    }
-
-    //fixme: check if wifi on.
-    if(!uwp_wifi_opened(WIFI_DEV_STA)) {
-    	LOG_ERR("wifi not open!\r\n");
-        return eWiFiFailure;
-    }
-    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE ) {
 
         //scan param
         scan_params.band = 0;
         scan_params.channel = 0;
+#ifndef SCANP
         ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params);
+#else
+        ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params, NULL, 0);
+#endif
         if(ret) {
         	LOG_ERR("scan failed\r\n");
         	xSemaphoreGive( xWiFiSem );//must give the sem
@@ -185,14 +203,32 @@ WIFIReturnCode_t WIFI_ConnectAP( const WIFINetworkParams_t * const pxNetworkPara
         //	return -eWiFiFailure;
 
         connect_params.psk = pxNetworkParams->pcPassword;
+        FreeRTOS_NetworkDown();//dhcp reset to 0 because process of scan waste 2s, dhcp timeout is 5*2^n
         ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
         if(ret) {
-        	LOG_ERR("connect failed\r\n");
+            LOG_ERR("connect failed\r\n");
+            FreeRTOS_NetworkDown();
             xSemaphoreGive( xWiFiSem );//must give the sem
             return eWiFiFailure;
         }
-        xRetVal = eWiFiSuccess;
-        xSemaphoreGive( xWiFiSem );
+        else {
+			ret = UWP_SEM_TAKE(uwp_netif_up, 20000);//forever block,20s is results of tests
+
+			if(ret == pdFAIL) {
+				LOG_ERR("getipfailed\r\n");
+				ret = uwp_mgmt_disconnect(&uwp_wifi_priv);
+				//timeout to get ip,eg.error passwd,cause status error,so process disconnect
+				FreeRTOS_NetworkDown();
+				if (ret == UWP_OK) {
+					LOG_ERR("con_err,dis success\r\n");
+				}
+				xSemaphoreGive( xWiFiSem );
+				return eWiFiFailure;
+			}
+			xRetVal = eWiFiSuccess;
+			xSemaphoreGive( xWiFiSem );
+
+        }
         //vTaskDelay( WAIT_DHCP_DELAY );
         //configPRINT_STRING("wifi connect done.\r\n");
     }
@@ -211,22 +247,23 @@ WIFIReturnCode_t WIFI_Disconnect( void )
     WIFIReturnCode_t xRetVal = eWiFiFailure;
     int ret = UWP_FAIL;
 
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
     LOG_ERR("WIFI_Disconnect");
 
 	if(!uwp_wifi_isConnected(WIFI_DEV_STA))
 	{
 		LOG_ERR("WIFI_Disconnect,already");
+		FreeRTOS_NetworkDown();//for dhcp reset
+		xSemaphoreGive( xWiFiSem );
 		return eWiFiSuccess;//
 	}
-
-    /* Try to acquire the semaphore. */
-    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
-    {
         ret = uwp_mgmt_disconnect(&uwp_wifi_priv);
         if (ret == UWP_OK)
         {
         	xRetVal = eWiFiSuccess;
-        	//vNetworkNotifyIFDown();//notify the upper
+        	FreeRTOS_NetworkDown();//notify the upper
         }
         /* Return the semaphore. */
         xSemaphoreGive( xWiFiSem );
@@ -254,20 +291,20 @@ WIFIReturnCode_t WIFI_Scan( WIFIScanResult_t * pxBuffer,
 	int ret = UWP_FAIL;
     WIFIReturnCode_t xRetVal = eWiFiFailure;
 
-    LOG_ERR("WIFI_Scan");
-    if (pxBuffer == NULL) {
-        return xRetVal;
-    }
-
     /* Try to acquire the semaphore. */
     if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
     {
+    LOG_ERR("WIFI_Scan");
+    if (pxBuffer == NULL) {
+    	xSemaphoreGive( xWiFiSem );
+        return xRetVal;
+    }
         struct wifi_drv_scan_params scan_params;
 
         //scan param
         scan_params.band = 0;
         scan_params.channel = 0;
-
+#ifndef SCANP
 		ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params);
 
 		if(UWP_OK == ret)
@@ -292,6 +329,33 @@ WIFIReturnCode_t WIFI_Scan( WIFIScanResult_t * pxBuffer,
            	UWP_MEM_FREE(scan_result);
            	xRetVal = eWiFiSuccess;
 		}
+#else
+		struct event_scan_result *scan_result = (struct event_scan_result *)UWP_MEM_ALLOC(ucNumNetworks * sizeof(struct event_scan_result));
+		if(scan_result == NULL)
+		{
+			LOG_ERR("mem alloc null");
+			xSemaphoreGive( xWiFiSem );
+			return xRetVal;
+		}
+		else
+		{
+			ret = uwp_mgmt_scan(&uwp_wifi_priv, &scan_params, scan_result, ucNumNetworks);
+    		if (ret == UWP_OK) {
+               	for (int i = 0; i < uwp_scanResult.nresults; i++) {
+                   	strlcpy(pxBuffer[i].cSSID, (const char *)scan_result[i].ssid,
+                   			wificonfigMAX_SSID_LEN);
+                   	memcpy(pxBuffer[i].ucBSSID, scan_result[i].bssid,
+                   			wificonfigMAX_BSSID_LEN);
+
+                   	pxBuffer[i].cRSSI = scan_result[i].rssi;
+                   	pxBuffer[i].cChannel = scan_result[i].channel;
+               	}
+               	UWP_MEM_FREE(scan_result);
+               	xRetVal = eWiFiSuccess;
+            }
+
+		}
+#endif
         /* Return the semaphore. */
         xSemaphoreGive( xWiFiSem );
 	}
@@ -314,7 +378,38 @@ WIFIReturnCode_t WIFI_SetMode( WIFIDeviceMode_t xDeviceMode )
 WIFIReturnCode_t WIFI_GetMode( WIFIDeviceMode_t * pxDeviceMode )
 {
     /* FIX ME. */
-    return eWiFiNotSupported;
+    UWP_WIFI_MODE_T mode;
+    WIFIReturnCode_t xRetVal = eWiFiFailure;
+
+    /* Try to acquire the semaphore. */
+    if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
+    {
+
+        if (pxDeviceMode == NULL)
+        {
+            xSemaphoreGive( xWiFiSem );
+            return eWiFiFailure;
+        }
+
+        uwp_wifi_get_mode(&mode);
+        {
+            if (mode == WIFI_MODE_STA)
+            {
+                *pxDeviceMode = eWiFiModeStation;
+            } else if (mode == WIFI_MODE_AP)
+            {
+                *pxDeviceMode = eWiFiModeAP;
+            }
+            xRetVal = eWiFiSuccess;
+        }
+        /* Return the semaphore. */
+        xSemaphoreGive( xWiFiSem );
+    }
+    else
+    {
+        xRetVal = eWiFiTimeout;
+    }
+    return xRetVal;
 }
 /*-----------------------------------------------------------*/
 
@@ -356,14 +451,15 @@ WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
     WIFIReturnCode_t xRetVal = eWiFiFailure;
     uint32_t IPAddr;
 
-    LOG_ERR("WIFI_GetIP");
-    if (pucIPAddr == NULL) {
-        return xRetVal;
-    }
 
     /* Try to acquire the semaphore. */
     if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
     {
+        LOG_ERR("WIFI_GetIP");
+        if (pucIPAddr == NULL) {
+            xSemaphoreGive( xWiFiSem );
+            return xRetVal;
+        }
         IPAddr = FreeRTOS_GetIPAddress();
         LOG_ERR("ip=%x",IPAddr);
         if (IPAddr != 0UL)
@@ -420,13 +516,13 @@ WIFIReturnCode_t WIFI_GetHostIP( char * pcHost,
     WIFIReturnCode_t xRetVal = eWiFiFailure;
     uint32_t IPAddr;
 
-    if (pcHost == NULL || pucIPAddr == NULL) {
-        return xRetVal;
-    }
-
     /* Try to acquire the semaphore. */
     if( xSemaphoreTake( xWiFiSem, xSemaphoreWaitTicks ) == pdTRUE )
     {
+        if (pcHost == NULL || pucIPAddr == NULL || !CHECK_VALID_HOSTNAME_LEN(strlen(pcHost))) {
+            xSemaphoreGive( xWiFiSem );
+            return xRetVal;
+        }
         IPAddr = FreeRTOS_gethostbyname( pcHost );
         LOG_ERR("hostip=%x",IPAddr);
         if (IPAddr != 0UL)

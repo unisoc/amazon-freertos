@@ -139,12 +139,14 @@ static void prvWifiConnect( void );
  * @brief Initializes the board.
  */
 #include "uwp_wifi_main.h"
+#include "uwp_sys_wrapper.h"
 extern struct wifi_priv uwp_wifi_priv;
 static void prvMiscInitialization( void );
 extern void vUnisocInitialize(void);
 extern void prvUWPInitTask_func();
 void uwp_cp_init(void);
 /*-----------------------------------------------------------*/
+#if 0
 static TaskHandle_t uwp_cp_init_data;
 void vUWPwifiInitialize(void)
 {
@@ -209,6 +211,7 @@ void uwp_cp_init(void)
 	}
 
 }
+#endif
 /**
  * @brief Application runtime entry point.
  */
@@ -300,7 +303,7 @@ void vApplicationDaemonTaskStartupHook( void )
 
 }
 /*-----------------------------------------------------------*/
-
+extern void* uwp_netif_up;
 void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
 {
     /* FIX ME: If your application is using Ethernet network connections and the 
@@ -313,7 +316,8 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
     if (eNetworkEvent == eNetworkUp)
     {
         configPRINT("Network connection successful.\n\r");
-#if 1
+        UWP_SEM_GIVE(uwp_netif_up);
+#if 0//as 0 to make time short for wifiTest
         xWifiStatus = WIFI_GetIP( ucTempIp );
         if ( eWiFiSuccess == xWifiStatus )
         {
@@ -353,6 +357,7 @@ void prvWifiConnect( void )
         WIFINetworkParams_t xNetworkParams;
         WIFIReturnCode_t xWifiStatus;
         uint8_t ucTempIp[4] = { 0 };
+        int ret = 0;
         configPRINT_STRING("///prvWifiConnect enter\r\n");
 
         xWifiStatus = WIFI_On();
@@ -382,7 +387,33 @@ void prvWifiConnect( void )
         xNetworkParams.xSecurity = clientcredentialWIFI_SECURITY;
         xNetworkParams.cChannel = 0;
 
-        xWifiStatus = WIFI_ConnectAP( &( xNetworkParams ) );
+        //xWifiStatus = WIFI_ConnectAP( &( xNetworkParams ) );
+
+    	struct wifi_drv_scan_params params;
+    	params.band = 0;
+    	params.channel = 0;
+    	//params.ssid_len = 0;
+
+#ifndef SCANP
+        ret = uwp_mgmt_scan(&uwp_wifi_priv, &params);
+#else
+        ret = uwp_mgmt_scan(&uwp_wifi_priv, &params, NULL, 0);
+#endif
+    	if(!ret)
+    		xWifiStatus = eWiFiSuccess;
+    	else
+    		xWifiStatus = eWiFiFailure;
+
+    	struct wifi_drv_connect_params connect_params;
+        connect_params.ssid_length = strlen(xNetworkParams.pcSSID);
+        connect_params.ssid = xNetworkParams.pcSSID;
+        connect_params.psk_length = strlen(xNetworkParams.pcPassword);
+        connect_params.psk = xNetworkParams.pcPassword;
+        ret = uwp_mgmt_connect(&uwp_wifi_priv, &connect_params);
+    	if(!ret)
+    		xWifiStatus = eWiFiSuccess;
+    	else
+    		xWifiStatus = eWiFiFailure;
 
         if( xWifiStatus == eWiFiSuccess )
         {
