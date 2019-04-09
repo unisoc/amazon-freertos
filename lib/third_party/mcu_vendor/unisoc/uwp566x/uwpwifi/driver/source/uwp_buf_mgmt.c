@@ -102,6 +102,14 @@ int uwp_pkt_buf_free(void *buf){
         return -2; /* lock mutex failed */
     }
 
+    p_del = p_head_free->next;
+    while((p_del != p_head_free) && (((uwp_pkt_buf *)LIST_FIND_ENTRY(p_del, uwp_pkt_buf, list))->buf != buf))
+        p_del = p_del->next;
+    if( ((uwp_pkt_buf *)LIST_FIND_ENTRY(p_del, uwp_pkt_buf, list))->buf == buf ){
+        LOG_DBG("multiple free\r\n");
+        return UWP_MUTEX_UNLOCK(wifi_list_mutex);
+    }
+
     p_del = p_head_employ->next;
     while((p_del != p_head_employ) && (((uwp_pkt_buf *)LIST_FIND_ENTRY(p_del, uwp_pkt_buf, list))->buf != buf))
         p_del = p_del->next;
@@ -126,4 +134,25 @@ int uwp_pkt_buf_free(void *buf){
         return -2; /* lock mutex failed */
     }
     return 0;
+}
+
+void uwp_buf_self_test(void){
+
+    LOG_DBG("%s enter", __func__);
+    uwp_pkt_buf_init();
+    void *p[CONFIG_UWP_PKT_BUF_MAX];
+    for(int i = 0; i < CONFIG_UWP_PKT_BUF_MAX; i++){
+        p[i] = uwp_pkt_buf_get();
+        printk("get buf :%x", p[i]);
+    }
+
+    LOG_DBG("first free:%x", p[0]);
+    uwp_pkt_buf_free(p[0]);
+
+    LOG_DBG("second free:%x",p[0]);
+    uwp_pkt_buf_free(p[0]);
+
+    void *p1 = uwp_pkt_buf_get();
+    LOG_DBG("get buf:%x",p1);
+
 }
