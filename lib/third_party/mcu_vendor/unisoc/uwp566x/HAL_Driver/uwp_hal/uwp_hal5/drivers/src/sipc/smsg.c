@@ -437,7 +437,7 @@ int smsg_init(u32_t dst, u32_t smsg_base)
 
 	k_sem_init( ipc->irq_sem, 15, 0 );
 
-    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,4,ipc->pid);
+    k_thread_create("smsg_thread",smsg_msg_dispatch_thread,NULL,NULL,SMSG_STACK_SIZE,0,ipc->pid);
     if(ipc->pid == NULL)
         LOG_ERR("smsg thread create failed");
 

@@ -1,12 +1,16 @@
 #include <stdio.h>
 
 #include "uwp_sys_wrapper.h"
-
-
+void printk(const char *pcFormat, ...);
 void list_add_tail(struct list_head *node, struct list_head *list){
     struct list_head *p_node = list;
-    while(p_node->next != list)
+    while(p_node->next != list) {
+        if(p_node == node) {
+            printk("error: adding same pkt!\r\n");
+            return;
+        }
         p_node = p_node->next;
+    }
     __LIST_ADD(node,p_node,list);
 }
 

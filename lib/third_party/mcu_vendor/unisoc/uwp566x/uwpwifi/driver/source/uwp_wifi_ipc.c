@@ -7,10 +7,12 @@
 #include "mbed_retarget.h"
 #include "sblock.h"
 #include "sipc.h"
+#include "uwp_sys_wrapper.h"
 
 //#define WIFI_LOG_DBG
 //#define WIFI_DUMP
 #include "uwp_log.h"
+
 /*success ret0*/
 int wifi_ipc_create_channel(int ch, void (*callback)(int ch))
 {
@@ -66,8 +68,9 @@ int wifi_ipc_send(int ch, int prio, void *data, int len, int offset)
 {
 	int ret;
 	struct sblock blk;
-
+    //taskENTER_CRITICAL();
 	ret = sblock_get(0, ch, &blk, 0);
+    //taskEXIT_CRITICAL();
 	if (ret) {
 		LOG_ERR("Get block error: ch=%d,ret=%d", ch, ret);
 		return ret;
@@ -82,28 +85,45 @@ int wifi_ipc_send(int ch, int prio, void *data, int len, int offset)
 #endif
 
 	blk.length = len + offset;
+    taskENTER_CRITICAL();
 	ret = sblock_send(0, ch, prio, &blk);
+    taskEXIT_CRITICAL();
 
 	return ret;
 }
+#define RX_DATA_SIZE (2000)
 
 int wifi_ipc_recv(int ch, u8_t *data, int *len, int offset)
 {
 	int ret;
 	struct sblock blk;
-
+    taskENTER_CRITICAL();
 	ret = sblock_receive(0, ch, &blk, 0);
+    taskEXIT_CRITICAL();
 	if (ret) {
 		//LOG_ERR("wifi_ipc_recv,sblock_receive=%d",ret);
 		return ret;
 	}
 
+    if(blk.length > RX_DATA_SIZE) {
+        printk("pkt too long:%d\r\n", blk.length);
+        taskENTER_CRITICAL();
+        sblock_release(0, ch, &blk);
+        taskEXIT_CRITICAL();
+    	if (ret) {
+    		LOG_ERR("wifi_ipc_recv,sblock_release=%d",ret);
+    		return ret;
+    	}
+        return -1;
+    }
 	memcpy(data, blk.addr, blk.length);
 	*len = blk.length;
 
 	LOG_DBG("IPC Channel %d Get data:", ch);
 
+    taskENTER_CRITICAL();
 	sblock_release(0, ch, &blk);
+    taskEXIT_CRITICAL();
 	if (ret) {
 		LOG_ERR("wifi_ipc_recv,sblock_release=%d",ret);
 		return ret;
