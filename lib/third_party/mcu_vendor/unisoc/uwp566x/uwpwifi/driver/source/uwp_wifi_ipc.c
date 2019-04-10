@@ -72,7 +72,7 @@ int wifi_ipc_send(int ch, int prio, void *data, int len, int offset)
 	ret = sblock_get(0, ch, &blk, 0);
     //taskEXIT_CRITICAL();
 	if (ret) {
-		LOG_ERR("Get block error: ch=%d,ret=%d", ch, ret);
+		LOG_DBG("Get block error: ch=%d,ret=%d\r\n", ch, ret);
 		return ret;
 	}
 	LOG_DBG("IPC Channel %d Send data:", ch);
