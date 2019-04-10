@@ -364,8 +364,7 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
     {
     	//OTA_LOG_L1( "[%s]  %x %d %d\r\n", OTA_METHOD_NAME, xOTACtx.partition.ulLastWriteOffset, ulOffset, ulBlockSize );
 
-        if( ((xOTACtx.partition.ulLastWriteOffset + ulBlockSize) <= xOTACtx.partition.ulPartitionLength)
-             && (xOTACtx.partition.ulLastWriteOffset == ulOffset) )
+        if(  ulOffset + ulBlockSize <= xOTACtx.partition.ulPartitionLength )
         {
         	vLoggingPrintf("write block:%x %d\r\n",xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize);
             lResult = prvFlashEraseAndWrite( pacData, xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize );
@@ -377,7 +376,6 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
             }
 
             xOTACtx.partition.ulFileLength += ulBlockSize;
-            xOTACtx.partition.ulLastWriteOffset += ulBlockSize;
             lResult = ulBlockSize;
         }
         else
@@ -601,6 +599,7 @@ OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
         {
             uwp_ota_flash_partition_t xFlashFile;
             prvGetOTAPartition(&xFlashFile);
+            vLoggingPrintf("sinature verify:%x %d\r\n", (UWP_FLASH_BASE + xOTACtx.partition.ulPartitionAddrOffset), xOTACtx.partition.ulFileLength);
             CRYPTO_SignatureVerificationUpdate( pvSigVerifyContext, (uint8_t *)(UWP_FLASH_BASE + xOTACtx.partition.ulPartitionAddrOffset),
                                                 xOTACtx.partition.ulFileLength );
 
