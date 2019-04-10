@@ -315,7 +315,7 @@ void uwp_mgmt_empty_scan_result_list() {
         p_node->prev->next = p_node->next;
         p_del = p_node;
         p_node = p_node->next;
-        free((void *)LIST_FIND_ENTRY(p_del, scan_result_info_t, res_list));
+        vPortFree((void *)LIST_FIND_ENTRY(p_del, scan_result_info_t, res_list));
     }
 }
 
@@ -547,7 +547,7 @@ int uwp_mgmt_get_scan_result(void *buf, int num){
         p_del = p_node;
         p_node = p_node->next;
         LOG_DBG("scan free:%p",LIST_FIND_ENTRY(p_del, scan_result_info_t, res_list));
-        free((void *)LIST_FIND_ENTRY(p_del, scan_result_info_t, res_list));
+        vPortFree((void *)LIST_FIND_ENTRY(p_del, scan_result_info_t, res_list));
     }
 
     return cnt;
@@ -592,6 +592,9 @@ int uwp_mgmt_tx(uint8_t *pkt, uint32_t pkt_len)
     uwp_save_addr_before_payload(data_ptr, (void *)pbuf);
 
     SPRD_AP_TO_CP_ADDR(data_ptr);
+    WIFI_ASSERT(data_ptr > SPRD_CP_DRAM_BEGIN
+        && data_ptr < SPRD_CP_DRAM_END,
+        "Invalid buffer address: %p", (void *)data_ptr);
 
     max_len = MTU + sizeof(struct tx_msdu_dscr) + 14 /* link layer header length */;
 

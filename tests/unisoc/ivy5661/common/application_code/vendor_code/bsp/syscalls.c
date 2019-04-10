@@ -136,13 +136,22 @@ pid_t _getpid(void)
 // ================================================================================================
 // Implement FreeRTOS's memory API using newlib-provided malloc family.
 // ================================================================================================
-
 void *pvPortMalloc( size_t xSize )  {
-    void *p = malloc(xSize);
+    void *p = NULL;
+    p=malloc(xSize);
+    if ((p < 0x00180000) || (p > 0x001e4000)) {
+        printk("!!malloc invalid[%p][%d]\r\n",p,xSize);
+        return NULL;
+    }
     return p;
 }
 void vPortFree( void *pv )  {
+    if ((pv < 0x00180000) || (pv > 0x001e4000)) {
+        printk("!!free invalid buffer:[%p]\r\n",pv);
+        return;
+    }
     free(pv);
+    pv = NULL;
 };
 
 size_t xPortGetFreeHeapSize( void )  {

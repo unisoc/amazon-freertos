@@ -418,6 +418,7 @@ int sblock_get(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 			ret = -EIO;
 		}
 	}
+    taskENTER_CRITICAL();
 	/* multi-gotter may cause got failure */
 	if (poolhd->txblk_rdptr != poolhd->txblk_wrptr &&
 			sblock->state == SBLOCK_STATE_READY) {
@@ -435,6 +436,7 @@ int sblock_get(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 	} else {
 		ret = sblock->state == SBLOCK_STATE_READY ? -EAGAIN : -EIO;
 	}
+    taskEXIT_CRITICAL();
 
 	return ret;
 }

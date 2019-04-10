@@ -66,6 +66,7 @@ enum if_idx {
 	INTERFACE_AP,
 };
 
+static int more_space = sizeof(struct tx_msdu_dscr)+4+4+ipBUFFER_PADDING;
 volatile static uint32_t xInterfaceState = INTERFACE_DOWN;
 extern struct wifi_priv uwp_wifi_priv;
 
@@ -112,7 +113,6 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     int ret = -1;
     u8_t *data = NULL;
     u8_t *alloc_ptr = NULL;
-    int more_space = 0;
     int len = 0;
 
     if (pxNetworkBuffer == NULL || pxNetworkBuffer->pucEthernetBuffer == NULL || pxNetworkBuffer->xDataLength == 0) {
@@ -152,30 +152,35 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     return ret == UWP_OK ? pdTRUE : pdFALSE;
 #else
     len = pxNetworkBuffer->xDataLength;
-    more_space = sizeof(struct tx_msdu_dscr)+4+4;
     data = (u8_t *)pvPortMalloc(len + more_space);
     if (data == NULL) {
         printk("%s alloc buffer failed.\r\n", __func__);
-        vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+        if (xReleaseAfterSend)
+            vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+        return pdFALSE;
+    } else if (((u32_t)data < 0x00180000) || ((u32_t)data > 0x001e4000)) {
+        printk("\r\n%s invaid[%x].\r\n", __func__, (u32_t)data);
+        if (xReleaseAfterSend)
+            vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
         return pdFALSE;
     }
     alloc_ptr = data;
     data += more_space;
-    save_dscr_addr_before_buffer_addr((u32_t)(data), (void *)alloc_ptr);
+    //save_dscr_addr_before_buffer_addr((u32_t)(data), (void *)alloc_ptr);
 
     memcpy(data, pxNetworkBuffer->pucEthernetBuffer, len);
 
     if (xReleaseAfterSend) { //driver should release the NetworkBufferDescriptor_t
         vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
     }
-    //printk("tx len:%d\r\n", len);
 
     ret = uwp_mgmt_tx(data, len);
     if (ret != UWP_OK) {
         LOG_ERR("Failed to tx buffer %p, len %d, err %d",
                 pxSendingBuffer->pucEthernetBuffer,
                 pxSendingBuffer->xDataLength, ret);
-        vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
+        if (xReleaseAfterSend)
+            vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
     }
     return ret == UWP_OK ? pdTRUE : pdFALSE;
 #endif
@@ -205,15 +210,13 @@ void* wlanif_alloc_network_buffer(uint16_t len)
 
 void wlanif_free_network_buffer(uint32_t addr)
 {
-#if 0
-    NetworkBufferDescriptor_t *addr_dsc = get_dscr_addr_from_buffer_addr(addr);
-    //printk("free:[%p]\r\n",addr_dsc);
+    void *ptr = (void*)addr - more_space;
+    if (((u32_t)ptr < 0x00180000) || ((u32_t)ptr > 0x001e4000)) {
+        printk("invalid buffer do not free:%p\r\n",ptr);
+        return;
+    }
 
-    vReleaseNetworkBufferAndDescriptor(addr_dsc);
-#else
-    void *ptr = get_dscr_addr_from_buffer_addr(addr);
     vPortFree(ptr);
-#endif
 }
 
 BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
@@ -230,17 +233,14 @@ BaseType_t wlanif_input(void *netif, void *buffer, uint16_t len)
     pxNetworkBuffer = pxGetNetworkBufferWithDescriptor(len, xDescriptorWaitTime);
     if (pxNetworkBuffer != NULL) {
 
-	/* Set the packet size, in case a larger buffer was returned. */
-	pxNetworkBuffer->xDataLength = len;
+	    /* Set the packet size, in case a larger buffer was returned. */
+	    pxNetworkBuffer->xDataLength = len;
 
-	/* Copy the packet data. */
-    //printk("rx len:%d\r\n",len);
-
+	    /* Copy the packet data. */
         memcpy(pxNetworkBuffer->pucEthernetBuffer, buffer, len);
         DUMP_DATA(pxNetworkBuffer->pucEthernetBuffer,len);
 
         xRxEvent.pvData = (void *) pxNetworkBuffer;
-
         if ( xSendEventStructToIPTask( &xRxEvent, xDescriptorWaitTime) == pdFAIL ) {
             printk("Failed to enqueue packet to network stack %p, len %d", buffer, len);
             vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
