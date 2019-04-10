@@ -17,6 +17,10 @@
 /* uwp Flash Driver */
 #include "hal_ramfunc.h"
 
+/* debug info */
+//#define WIFI_DUMP
+#include "uwp_log.h"
+
 /************************** self test  ***************************/
 //#define UWP_OTA_SELF_TEST
 #define ivy5661_unisoc_test_crt_path "amazon-freertos/tests/common/ota/test_files/ecdsa-sha256-signer.crt.pem"
@@ -122,7 +126,7 @@ static int prvFlashEraseAndWrite(uint8_t *pcData, uint32_t ulAddrOffset, uint32_
         ulAddrErase = ulAddrWrite / UWP_FLASH_SECTOR_SIZE * UWP_FLASH_SECTOR_SIZE;
         ulDataWritePos = ulAddrWrite - ulAddrErase;
         ulDataToWriteLen = (ulDataLen <= (UWP_FLASH_SECTOR_SIZE - ulDataWritePos)) ? ulDataLen : (UWP_FLASH_SECTOR_SIZE - ulDataWritePos);
-        memcpy( pvWriteBuf, (void *)ulAddrErase, UWP_FLASH_SECTOR_SIZE);
+        memcpy( pvWriteBuf, (void *)(UWP_FLASH_BASE + ulAddrErase), UWP_FLASH_SECTOR_SIZE);
         memcpy( pvWriteBuf + ulDataWritePos , (void *)pucDataWriting, ulDataToWriteLen);
 
         if( flash_uwp_write_protection(false) != 0 ){
@@ -366,7 +370,6 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
 
         if(  ulOffset + ulBlockSize <= xOTACtx.partition.ulPartitionLength )
         {
-        	vLoggingPrintf("write block:%x %d\r\n",xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize);
             lResult = prvFlashEraseAndWrite( pacData, xOTACtx.partition.ulPartitionAddrOffset + ulOffset, ulBlockSize );
 
             if( lResult != 0 )
@@ -599,7 +602,6 @@ OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C )
         {
             uwp_ota_flash_partition_t xFlashFile;
             prvGetOTAPartition(&xFlashFile);
-            vLoggingPrintf("sinature verify:%x %d\r\n", (UWP_FLASH_BASE + xOTACtx.partition.ulPartitionAddrOffset), xOTACtx.partition.ulFileLength);
             CRYPTO_SignatureVerificationUpdate( pvSigVerifyContext, (uint8_t *)(UWP_FLASH_BASE + xOTACtx.partition.ulPartitionAddrOffset),
                                                 xOTACtx.partition.ulFileLength );
 
