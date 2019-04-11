@@ -41,20 +41,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "FreeRTOS_DNS.h"
 #include "NetworkBufferManagement.h"
 #include "NetworkInterface.h"
-#include "uwp_sys_wrapper.h"
-//#include "sdkconfig.h"
-//#include "uwp566x_types.h"
-#include "uwp_log.h"
-//#include "uwp_err.h"
 
+#include "uwp_sys_wrapper.h"
+#include "uwp_log.h"
 #include "aws_wifi.h"
 #include "uwp_wifi_main.h"
 #include "uwp_wifi_txrx.h"
-
-//#include "uwp5661_log.h"
-//#include "uwp5661_wifi.h"
-//#include "uwp5661_wifi_internal.h"
-//#include "tcpip_adapter.h"
 
 enum if_state_t {
     INTERFACE_DOWN = 0,
@@ -108,7 +100,6 @@ BaseType_t xNetworkInterfaceInitialise( void )
 
 BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBuffer, BaseType_t xReleaseAfterSend )
 {
-	NetworkBufferDescriptor_t * pxSendingBuffer;
 	const TickType_t xDescriptorWaitTime = pdMS_TO_TICKS( 250 );
     int ret = -1;
     u8_t *data = NULL;
@@ -119,51 +110,17 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
         LOG_ERR("Invalid params");
         return pdFALSE;
     }
-#if 0
-    if (xReleaseAfterSend == pdFALSE) {
-        // Duplicate Network descriptor and buffer
-        pxSendingBuffer = pxGetNetworkBufferWithDescriptor(pxNetworkBuffer->xDataLength, xDescriptorWaitTime);
-            if (pxSendingBuffer != NULL) {
-                memcpy((uint8_t *)pxSendingBuffer, (uint8_t *)pxNetworkBuffer, sizeof(NetworkBufferDescriptor_t));
-                memcpy(pxSendingBuffer->pucEthernetBuffer,
-                        pxNetworkBuffer->pucEthernetBuffer,
-                        pxSendingBuffer->xDataLength);
 
-            } else {
-                return pdFALSE;
-            }
-    } else {
-        pxSendingBuffer = pxNetworkBuffer;
-    }
-    save_dscr_addr_before_buffer_addr((u32_t)(pxSendingBuffer->pucEthernetBuffer), (void *)pxSendingBuffer);
-
-    printk("tx len:%d\r\n",pxSendingBuffer->xDataLength);
-    DUMP_DATA(pxSendingBuffer->pucEthernetBuffer, pxSendingBuffer->xDataLength);
-
-
-    ret = uwp_mgmt_tx(pxSendingBuffer->pucEthernetBuffer,
-        pxSendingBuffer->xDataLength);
-    if (ret != UWP_OK) {
-        LOG_ERR("Failed to tx buffer %p, len %d, err %d",
-                pxSendingBuffer->pucEthernetBuffer,
-                pxSendingBuffer->xDataLength, ret);
-        vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
-    }
-    return ret == UWP_OK ? pdTRUE : pdFALSE;
-#else
     len = pxNetworkBuffer->xDataLength;
     data = (u8_t *)pvPortMalloc(len + more_space);
     if (data == NULL) {
         printk("%s alloc buffer failed.\r\n", __func__);
-        if (xReleaseAfterSend)
-            vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
-        return pdFALSE;
+        goto fail;
     } else if (((u32_t)data < 0x00180000) || ((u32_t)data > 0x001e4000)) {
         printk("\r\n%s invaid[%x].\r\n", __func__, (u32_t)data);
-        if (xReleaseAfterSend)
-            vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
-        return pdFALSE;
+        goto fail;
     }
+
     alloc_ptr = data;
     data += more_space;
     //save_dscr_addr_before_buffer_addr((u32_t)(data), (void *)alloc_ptr);
@@ -173,17 +130,20 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     if (xReleaseAfterSend) { //driver should release the NetworkBufferDescriptor_t
         vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
     }
-
     ret = uwp_mgmt_tx(data, len);
     if (ret != UWP_OK) {
-        LOG_ERR("Failed to tx buffer %p, len %d, err %d",
-                pxSendingBuffer->pucEthernetBuffer,
-                pxSendingBuffer->xDataLength, ret);
-        if (xReleaseAfterSend)
-            vReleaseNetworkBufferAndDescriptor(pxSendingBuffer);
+        LOG_DBG("Failed to tx buffer %p, len %d, err %d\r\n",
+                pxNetworkBuffer->pucEthernetBuffer,
+                pxNetworkBuffer->xDataLength, ret);
+        vPortFree(alloc_ptr);
+        vTaskDelay(pdMS_TO_TICKS(15));
     }
     return ret == UWP_OK ? pdTRUE : pdFALSE;
-#endif
+
+fail:
+    if (xReleaseAfterSend)
+        vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
+    return pdFALSE;
 }
 
 void vNetworkNotifyIFDown()

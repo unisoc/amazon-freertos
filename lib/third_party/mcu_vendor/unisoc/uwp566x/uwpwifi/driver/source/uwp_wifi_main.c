@@ -610,9 +610,7 @@ int uwp_mgmt_tx(uint8_t *pkt, uint32_t pkt_len)
                     pkt,pkt_len);
 
     DUMP_DATA(pkt, pkt_len);
-    wifi_tx_data((void *)data_ptr, (pkt_len + sizeof(struct tx_msdu_dscr)));
-
-    return 0;
+    return wifi_tx_data((void *)data_ptr, (pkt_len + sizeof(struct tx_msdu_dscr)));
 }
 
 int uwp_mgmt_getmac(uint8_t *addr){
