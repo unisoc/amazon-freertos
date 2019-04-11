@@ -24,6 +24,9 @@
 /************************** self test  ***************************/
 //#define UWP_OTA_SELF_TEST
 #define ivy5661_unisoc_test_crt_path "amazon-freertos/tests/common/ota/test_files/ecdsa-sha256-signer.crt.pem"
+#ifndef otatestpalCERTIFICATE_FILE
+#define otatestpalCERTIFICATE_FILE "ecdsa-sha256-signer.crt.pem"
+#endif
 
 /*************************** struct *****************************/
 typedef enum{
