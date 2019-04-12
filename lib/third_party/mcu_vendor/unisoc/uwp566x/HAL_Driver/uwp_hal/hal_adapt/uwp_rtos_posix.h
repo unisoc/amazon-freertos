@@ -16,12 +16,17 @@ extern "C"{
 #include "task.h"
 #include "hal_type.h"
 
+/* macro define: max delay of RTOS */
 #define K_FOREVER portMAX_DELAY
 
-#define RTOS_RETURN_VALUE_SUCCESS  1
-#define RTOS_RETURN_VALUE_FAILED   0
+/* macro define consistent with true return of RTOS */
+#define RTOS_RETURN_VALUE_SUCCESS  pdPASS
+#define RTOS_RETURN_VALUE_FAILED   pdFAIL
 
-#define k_sleep( X ) vTaskDelay( pdMS_TO_TICKS(X) )
+/* os delay can cause task scheduling
+ * unit: ms
+ * accuracy affected by systick */
+#define k_sleep(X) vTaskDelay( pdMS_TO_TICKS(X) )
 
 #define k_queue_init( QueueHandle, ulQueueLength, ulQueueItemSize) \
 	do { \
@@ -71,6 +76,14 @@ extern "C"{
 
 #define k_thread_create( pcTaskName, pvTaskCode, pvParameter, pvTaskStack, usStackSize, uxPriority, TaskHandle ) \
     xTaskCreate( pvTaskCode, pcTaskName, usStackSize, pvParameter, uxPriority, &(TaskHandle) )
+
+#if (configUSE_UWP_ASSISTANT == 1)
+
+extern void k_task_list(void);
+extern void k_get_current_task(void);
+extern void k_get_last_task(void);
+
+#endif
 
 #else
 #error "no support posix yet"
