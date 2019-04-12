@@ -418,8 +418,8 @@ void prvWifiConnect( void )
         if( xWifiStatus == eWiFiSuccess )
         {
             configPRINT_STRING( ( "Wi-Fi Connected to AP. Creating tasks which use network...\r\n" ) );
-#if 0
-            vTaskDelay( 8000 );//wait for dhcp complete
+#if 1
+            UWP_SEM_TAKE(uwp_netif_up, pdMS_TO_TICKS(10000));
             xWifiStatus = WIFI_GetIP( ucTempIp );
             if ( eWiFiSuccess == xWifiStatus ) 
             {
