@@ -156,7 +156,7 @@ void vPortFree( void *pv )  {
 
 size_t xPortGetFreeHeapSize( void )  {
     struct mallinfo mi = mallinfo();
-    return mi.fordblks; + heapBytesRemaining;
+    return mi.fordblks + heapBytesRemaining;
 }
 
 // GetMinimumEverFree is not available in newlib's malloc implementation.
