@@ -276,5 +276,12 @@ extern uint32_t ulRand();
 
 /* Header required for the tracealyzer recorder library. */
 /* #include "trcRecorder.h" */
+#define configUSE_UWP_ASSISTANT 1
+#if (configUSE_UWP_ASSISTANT == 1)
+extern char *pcLastTaskName;
+extern char *pcCurrentTaskName;
+#define traceTASK_SWITCHED_OUT() pcLastTaskName = pxCurrentTCB->pcTaskName
+#define traceTASK_SWITCHED_IN()  pcCurrentTaskName = pxCurrentTCB->pcTaskName
+#endif
 
 #endif /* FREERTOS_CONFIG_H */
