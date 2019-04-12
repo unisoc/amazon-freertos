@@ -70,7 +70,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_ALTERNATIVE_API                  0
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS    3      /* FreeRTOS+FAT requires 2 pointers if a CWD is supported. */
 #define configRECORD_STACK_HIGH_ADDRESS            1
-#define configUSE_NEWLIB_REENTRANT                 1
+#define configUSE_NEWLIB_REENTRANT                 0
 
 /* Hook function related definitions. */
 #define configUSE_TICK_HOOK                        0
