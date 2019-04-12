@@ -423,12 +423,13 @@ void prvWifiConnect( void )
             xWifiStatus = WIFI_GetIP( ucTempIp );
             if ( eWiFiSuccess == xWifiStatus ) 
             {
-                printk("IP Address acquired %d.%d.%d.%d\r\n",
-                                ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]);
+                configPRINTF( ("IP Address acquired %d.%d.%d.%d\r\n",
+                                ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]) );
             } else {
-                printk("get ip failed!\r\n");
+                configPRINT("get ip failed!\r\n");
             }
-            printk("ips=%d,ipad=%d.%d.%d.%d\r\n",xWifiStatus, ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]);
+            configPRINTF( ("ips=%d,ipad=%d.%d.%d.%d\r\n",
+                                xWifiStatus, ucTempIp[ 0 ], ucTempIp[ 1 ], ucTempIp[ 2 ], ucTempIp[ 3 ]) );
 #endif
         }
         else
