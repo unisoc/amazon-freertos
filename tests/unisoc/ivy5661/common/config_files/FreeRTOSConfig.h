@@ -53,7 +53,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_PREEMPTION                       1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #define configMAX_PRIORITIES                       ( 7 )
-#define configTICK_RATE_HZ                         ( 1000 )
+#define configTICK_RATE_HZ                         ( 200 )
 #define configMINIMAL_STACK_SIZE                   ( ( unsigned short ) 256 )
 /* heap: 0x00180000 size:400k */
 #define configAPPLICATION_ALLOCATED_HEAP           1
@@ -155,7 +155,7 @@ void vAssertCalled( const char * pcFile,
 /* The function that implements FreeRTOS printf style output, and the macro
  * that maps the configPRINTF() macros to that function. */
 extern void vLoggingPrintf( const char * pcFormat, ... );
-#define configPRINTF    vLoggingPrintf
+#define configPRINTF( X )   vLoggingPrintf X
 
 /* Non-format version thread-safe print */
 extern void vLoggingPrint( const char * pcMessage );

@@ -83,6 +83,7 @@ OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C );
 static CK_RV prvGetCertificate( const char * pcLabelName,
                                 uint8_t ** ppucData,
                                 uint32_t * pulDataSize );
+static void mcuboot_test(void);
 
 /*
  * @bref get a partition for app ota use
@@ -126,7 +127,8 @@ static int prvFlashEraseAndWrite(uint8_t *pcData, uint32_t ulAddrOffset, uint32_
     }
 
     do {
-        ulAddrErase = ulAddrWrite / UWP_FLASH_SECTOR_SIZE * UWP_FLASH_SECTOR_SIZE;
+        //ulAddrErase = ulAddrWrite / UWP_FLASH_SECTOR_SIZE * UWP_FLASH_SECTOR_SIZE;
+        ulAddrErase = ulAddrWrite & 0xFFFFF000;
         ulDataWritePos = ulAddrWrite - ulAddrErase;
         ulDataToWriteLen = (ulDataLen <= (UWP_FLASH_SECTOR_SIZE - ulDataWritePos)) ? ulDataLen : (UWP_FLASH_SECTOR_SIZE - ulDataWritePos);
         memcpy( pvWriteBuf, (void *)(UWP_FLASH_BASE + ulAddrErase), UWP_FLASH_SECTOR_SIZE);
@@ -179,6 +181,7 @@ static int prvUpdatePartitionInfo( uwp_ota_flash_partition_t * pxPartition ){
     return prvFlashEraseAndWrite( (uint8_t *)pxPartition, (uint32_t)&xPartitionFlash[xOTACtx.partition.ucPartition] - UWP_FLASH_BASE,
                                       sizeof(uwp_ota_flash_partition_t));
 #else
+    mcuboot_test();
     return 0;
 #endif
 }
@@ -400,9 +403,10 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
 }
 
 OTA_Err_t prvPAL_ResetDevice( void ){
-	DEFINE_OTA_METHOD_NAME( "prvPAL_ResetDevice" );
-	printk( "waiting Reset Handly.\r\n" );
-	while(1);
+    DEFINE_OTA_METHOD_NAME( "prvPAL_ResetDevice" );
+    mcuboot_test();
+    printk( "waiting Reset Handly.\r\n" );
+    while(1);
     return kOTA_Err_None;
 }
 
@@ -857,5 +861,20 @@ void vOTASelfTest(void){
     vLoggingPrintf("prvFlashEraseAndWrite success:%s", (char *)(test_addr + UWP_FLASH_BASE));
 #endif
 
+}
+
+void mcuboot_test(void){
+
+    const uint32_t boot_img_magic[] = {
+        0xf395c277,
+        0x7fefd260,
+        0x0f505235,
+        0x8079b62c,
+    };
+
+    uint32_t *p = (uint32_t *)(UWP_FLASH_BASE + 0x0024bff0);
+    prvFlashEraseAndWrite(boot_img_magic, 0x0024bff0, 16);
+
+    printk("%x %x %x %x %x\r\n", *p, *(p+1), *(p+2), *(p+3), *(uint8_t *)(UWP_FLASH_BASE + 0X0024bfe8));
 }
 
