@@ -77,6 +77,8 @@ extern "C"{
 #define k_thread_create( pcTaskName, pvTaskCode, pvParameter, pvTaskStack, usStackSize, uxPriority, TaskHandle ) \
     xTaskCreate( pvTaskCode, pcTaskName, usStackSize, pvParameter, uxPriority, &(TaskHandle) )
 
+#define k_thread_terminate( X )    vTaskDelete( X )
+
 #if (configUSE_UWP_ASSISTANT == 1)
 
 extern void k_task_list(void);

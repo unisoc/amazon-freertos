@@ -219,7 +219,7 @@ int smsg_ipc_destroy(u8_t dst)
 {
 	struct smsg_ipc *ipc = &smsg_ipcs[dst];
 
-	//k_thread_terminate(ipc->pid);
+	k_thread_terminate(ipc->pid);
 
 	return 0;
 }
