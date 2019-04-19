@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include "hal_sfc.h"
+#include "hal_sfc_hal.h"
 #include "hal_config_def.h"
 #include "mbed_retarget.h"
 #include "hal_ramfunc.h"
@@ -148,11 +149,8 @@ int uwp_flash_init(void)
     return ret;
 }
 #if 1
-extern void vUWP5661FLASHPartitionInit(void);
 int flash_init_supplement(void){
-    int ret = -1;
     k_sem_init( flash_op_sem, 1, 0);
-    vUWP5661FLASHPartitionInit();
     return (flash_op_sem == NULL ? -1 : 0);
 }
 #endif
