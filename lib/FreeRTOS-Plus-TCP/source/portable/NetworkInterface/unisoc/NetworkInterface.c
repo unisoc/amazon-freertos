@@ -116,9 +116,6 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     if (data == NULL) {
         printk("%s alloc buffer failed.\r\n", __func__);
         goto fail;
-    } else if (((u32_t)data < 0x00180000) || ((u32_t)data > 0x001e4000)) {
-        printk("\r\n%s invaid[%x].\r\n", __func__, (u32_t)data);
-        goto fail;
     }
 
     alloc_ptr = data;
