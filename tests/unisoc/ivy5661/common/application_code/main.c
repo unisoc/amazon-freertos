@@ -251,6 +251,7 @@ extern int uwp_flash_init(void);
 extern void intc_uwp_init(void);
 extern void aon_intc_uwp_init(void);
 extern int flash_init_supplement(void);
+extern void vUWP5661FLASHPartitionInit(void);
 gpio_t led1;
 static void prvMiscInitialization( void )
 {
@@ -267,6 +268,7 @@ static void prvMiscInitialization( void )
         configPRINT_STRING("flash init failed\r\n");
     if( flash_init_supplement() != 0)
         configPRINT_STRING("flash supplement failed\r\n");
+    vUWP5661FLASHPartitionInit();
     intc_uwp_init();
     aon_intc_uwp_init();
 }
