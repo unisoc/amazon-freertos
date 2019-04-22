@@ -24,7 +24,108 @@
  */
 #ifndef _AWS_TLS_TEST_H_
 #define _AWS_TLS_TEST_H_
+#if 1 //iot OTA
+/*
+* PEM-encoded client certificate.
+*
+* Certificate for P-256 elliptic curve key.
+*/
 
+static const char tlstestCLIENT_CERTIFICATE_PEM_EC[] = "-----BEGIN CERTIFICATE-----\n"
+"MIICtjCCAZ6gAwIBAgIVAJ/BDrkMmwCP1qwX+XEUlhmTSlFsMA0GCSqGSIb3DQEB\n"
+"CwUAME0xSzBJBgNVBAsMQkFtYXpvbiBXZWIgU2VydmljZXMgTz1BbWF6b24uY29t\n"
+"IEluYy4gTD1TZWF0dGxlIFNUPVdhc2hpbmd0b24gQz1VUzAeFw0xOTA0MTgwOTQy\n"
+"MTJaFw00OTEyMzEyMzU5NTlaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21l\n"
+"LVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwWTATBgcq\n"
+"hkjOPQIBBggqhkjOPQMBBwNCAARg7rWYk4B5+tQd9kc9Ibo9hVFAQsHj4gez9M51\n"
+"HRdwbbd2CDYl5O8cpLrP/v4nsfQ2ANCKn/JCgtJUq9zbKPYto2AwXjAfBgNVHSME\n"
+"GDAWgBTDv/moHkkZYmU6U43jZGcBXMZ6WzAdBgNVHQ4EFgQUjJgbGrMFQrDeZXCs\n"
+"JEvdWUWIMsgwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwDQYJKoZIhvcN\n"
+"AQELBQADggEBALrcM3sxQ6KmkRCIhPokz7A5Eh69sHrUcof1tjBg0tVc8fuY4oZA\n"
+"E09Frn7kpHS5f/+lsdVUwJyFWUaGv/0RrT4BuKZYV6rDerZNMOyEzd+dzLSGIHLH\n"
+"taiK+3MujeCB4p5dzsYSp2Oixazk5KRYHWsLQf/EtwfWen3XMtgyAPI3NqRB7Fu5\n"
+"oB3nG5okfIs/wO1atsWE8clskrUNNaNPqjS79YJ46/4XWvI5EeaKz+hfTh1N+dyV\n"
+"Sg2WqOA7IVfslsMpfsmVQJAacJfeLKGfJlXqQswmm7BOHUBwhJhnnW137sLG0QTM\n"
+"vJ50U5WrAjg/OAXVTUuIOoae6jo72fdsc+M=\n"
+"-----END CERTIFICATE-----";
+
+/*
+* PEM-encoded client private key.
+*
+* This is a P-256 elliptic curve key.
+*/
+
+static const char tlstestCLIENT_PRIVATE_KEY_PEM_EC[] = "-----BEGIN EC PRIVATE KEY-----\n"
+"MHcCAQEEIJvAWBJei8wdSwBlpuYFH1l2+FmFbpkRQVH6Oz+fp5s4oAoGCCqGSM49\n"
+"AwEHoUQDQgAEYO61mJOAefrUHfZHPSG6PYVRQELB4+IHs/TOdR0XcG23dgg2JeTv\n"
+"HKS6z/7+J7H0NgDQip/yQoLSVKvc2yj2LQ==\n"
+"-----END EC PRIVATE KEY-----";
+
+/* One character of this certificate has been changed in the issuer
+ * name from Amazon Web Services to Amazon Web Cervices. */
+static const char tlstestCLIENT_CERTIFICATE_PEM_MALFORMED[] = "-----BEGIN CERTIFICATE-----\n"
+"MIIDWjCCAkKgAwIBAgIVAMoxHqvpzJEho9TH5p/RG2Sa8bCKMA0GCSqGSIb3DQEB\n"
+"CwUAME0xSzBJBgNVBAsMQkFtYXpvbiBXZWIgQ2VydmljZXMgTz1BbWF6b24uY29t\n"
+"IEluYy4gTD1TZWF0dGxlIFNUPVdhc2hpbmd0b24gQz1VUzAeFw0xOTAzMjgwODUx\n"
+"MzhaFw00OTEyMzEyMzU5NTlaMB4xHDAaBgNVBAMME0FXUyBJb1QgQ2VydGlmaWNh\n"
+"dGUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDzror42EqPVW/H9NZ8\n"
+"UEuJ3RFWB36WEJXbyRvBIZmGcYkz5rGPFro5omNdU5usNylMqEJp5wkT4EF0SCp4\n"
+"T8a4K6hgV7jjn1mBYSspEa0NjDU/wNbdGq6K7VK5fNsiozFMK5daktxcriK7ni3q\n"
+"4/XtlOLd4Klszf+TlMZZ8CJoAJ6WE9TW58XUqWhxdvJAgj9PAAarCvLxXUQM6Bi6\n"
+"K0ZDOY22RuKSKJZLGOk//Q9E6JWFdXOCzWo8wJ9t5o122r8RGdK2zzP9b+QjZ8rD\n"
+"XIdwFLT2w8EgNKmO+TKYKfmTdw4ljBWl3NzYBNpiR5fOdcGNuIGbrwbfpl3dq24C\n"
+"/AqfAgMBAAGjYDBeMB8GA1UdIwQYMBaAFKfKMHEn1eZasCkL28yq//CZicvZMB0G\n"
+"A1UdDgQWBBT/BrWXVCgj7J40dSAnXORD9ecbkjAMBgNVHRMBAf8EAjAAMA4GA1Ud\n"
+"DwEB/wQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAQEAGSUzdgG1hyhIn+a6vAEqfDH/\n"
+"1uWOonEQmc1V9UxGrJf54enr065tNmYyesiWb/RM5RyKKBUb17cI6ZXzixPLs8qr\n"
+"K02reTtJ2EpB2mmVXF9yBQpp9xX2+FTH2Y/hnXrA+4BNYiZl/5myRJXaFFvNgscG\n"
+"w4vh9WyW6zUIL10fBUde8/hmXmcys6fVfkGtB88biGk1TD5NOffdv3ZKen2JQiRA\n"
+"qtQww9iie2KevCzXIhVVL0efJAs+DEg4Dowi2fS+CAbICZQJmg/MxgnHCJtI737V\n"
+"Ir9oxW6Txb1fnxLJMa/ZXuIalvpsynqnziKr+5k1QrINMNldOXZ7wPkhc2CagQ==\n"
+"-----END CERTIFICATE-----";
+
+
+/* Certificate which is not trusted by the broker. */
+static const char tlstestCLIENT_UNTRUSTED_CERTIFICATE_PEM[] = "-----BEGIN CERTIFICATE-----\n"
+"MIIBljCCATwCCQDDKC73p+hTZTAKBggqhkjOPQQDAjBTMQswCQYDVQQGEwJBVTET\n"
+"MBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQ\n"
+"dHkgTHRkMQwwCgYDVQQDDANhYWEwHhcNMTkwNDE4MTE0NTE5WhcNMjAwODMwMTE0\n"
+"NTE5WjBTMQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UE\n"
+"CgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMQwwCgYDVQQDDANiYmIwWTATBgcq\n"
+"hkjOPQIBBggqhkjOPQMBBwNCAASifPjHQJuXlbzSA0kazMDdLwChmZUWQMNRJJOy\n"
+"x35imSTZkxCOuEyuKZ3y2ktuQdWRlP5go0YCpYSfTs756tEsMAoGCCqGSM49BAMC\n"
+"A0gAMEUCIGs5fCpltG+5cRumaFr9EKOKzkVdcCqYycBzu+8F/5CUAiEAmcsIpXON\n"
+"pjiHukmSmqWSfy7x2Mvbj9IvHael/4zzuec=\n"
+"-----END CERTIFICATE-----";
+
+/* Private key corresponding to the untrusted certificate. */
+static const char tlstestCLIENT_UNTRUSTED_PRIVATE_KEY_PEM[] = "-----BEGIN EC PRIVATE KEY-----\n"
+"MHcCAQEEIIGGS+K2c3ABXehdVwOEMSHGdfOZaEdZ6EtMF0k2+PRcoAoGCCqGSM49\n"
+"AwEHoUQDQgAEonz4x0Cbl5W80gNJGszA3S8AoZmVFkDDUSSTssd+Ypkk2ZMQjrhM\n"
+"rimd8tpLbkHVkZT+YKNGAqWEn07O+erRLA==\n"
+"-----END EC PRIVATE KEY-----";
+
+/* Device certificate created using BYOC instructions. */
+static const char tlstestCLIENT_BYOC_CERTIFICATE_PEM[] = "-----BEGIN CERTIFICATE-----\n"
+"MIIBnjCCAUMCCQCpOKlkwG0pPTAKBggqhkjOPQQDAjBWMQswCQYDVQQGEwJBVTET\n"
+"MBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQ\n"
+"dHkgTHRkMQ8wDQYDVQQDDAZ4dWVjYWkwHhcNMTkwNDE5MDYyNTQ2WhcNMjAwODMx\n"
+"MDYyNTQ2WjBXMQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8G\n"
+"A1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMRAwDgYDVQQDDAdpdnk1NjYx\n"
+"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELY1NQshm0WK20TjXDilnuBOTJm9y\n"
+"bgIaZVUSFLx5qdTHfnjlOMjCGdodKBoSIJoGuKgk1OAS7F9/MwNuDpHZCzAKBggq\n"
+"hkjOPQQDAgNJADBGAiEAwqBUpspMjZmEjnCdcbbbPhk1jgn9vTKM2ceQ94yqCkIC\n"
+"IQCwyi6st46WIFOeKWEw1utf8tzqKcd9KxJmFxj354WOqQ==\n"
+"-----END CERTIFICATE-----";
+
+/* Device private key created using BYOC instructions. */
+static const char tlstestCLIENT_BYOC_PRIVATE_KEY_PEM[] = "-----BEGIN EC PRIVATE KEY-----\n"
+"MHcCAQEEIKHLl+gry1m/TNd3rgWhWAu/l6RCKEPO0N8V9ybGz10roAoGCCqGSM49\n"
+"AwEHoUQDQgAELY1NQshm0WK20TjXDilnuBOTJm9ybgIaZVUSFLx5qdTHfnjlOMjC\n"
+"GdodKBoSIJoGuKgk1OAS7F9/MwNuDpHZCw==\n"
+"-----END EC PRIVATE KEY-----";
+
+#else //iot caixue
 /*
 * PEM-encoded client certificate.
 *
@@ -131,4 +232,5 @@ static const char tlstestCLIENT_BYOC_PRIVATE_KEY_PEM[] =
 "PgA8fuTjnmbOEMcRJVCZn5RmBKgYdJsUsQ==\n"
 "-----END EC PRIVATE KEY-----";
 
+#endif
 #endif
