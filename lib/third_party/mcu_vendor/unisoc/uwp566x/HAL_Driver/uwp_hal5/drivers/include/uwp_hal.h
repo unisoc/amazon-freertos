@@ -34,6 +34,8 @@ extern "C" {
 #include "hal_pinmap.h"
 #include "hal_pinmux_api.h"
 
+#include "hal_config_def.h"
+
 #define TRUE   (1)
 #define FALSE  (0)
 

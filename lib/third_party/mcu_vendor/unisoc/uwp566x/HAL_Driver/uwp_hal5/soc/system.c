@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2018, UNISOC Incorporated
- * All rights reserved.
  *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <hal_log.h>
@@ -35,8 +35,22 @@ void uwp_clock_init(void)
 }
 
 
+void uwp5662_clock_init(void)
+{
+	/*set 320M cpu*/
+	/*0x40844200 + 0x24*/
+	sci_write32(0x40844224, BIT(8));
+	/*0x40844200 + 0x20*/
+	sci_write32(0x40844220, 0x5);
+}
+
 void uwp_glb_init(void)
 {
+#ifdef CONFIG_SOC_UWP5661
 	uwp_clock_init();
+#endif
+#ifdef CONFIG_SOC_UWP5662
+	uwp5662_clock_init();
+#endif
 	uwp_cache_init();
 }
