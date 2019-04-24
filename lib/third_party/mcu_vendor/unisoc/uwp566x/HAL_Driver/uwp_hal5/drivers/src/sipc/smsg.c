@@ -57,8 +57,12 @@ static struct smsg_ipc smsg_ipcs[SIPC_ID_NR];
 
 // TODO:need porting
 void wakeup_smsg_task_all(void *sem){
-    uwp_temp_printf("%s\r\n",__func__);
-    return;
+
+    for(;;){
+        printk("%s not supported\r\n",__func__);
+        k_sleep(1000);
+    }
+
 }
 
 /*
@@ -192,6 +196,7 @@ void smsg_msg_dispatch_thread(void *arg)
 					recv_smsg.channel, recv_smsg.type);
 				continue;
 			}
+#if defined(CONFIG_SOC_UWP5661)
 			if (recv_smsg.type == SMSG_TYPE_WIFI_IRQ) {
 				if (recv_smsg.flag == SMSG_WIFI_IRQ_OPEN) {
 					sprd_wifi_irq_enable_num(
@@ -207,6 +212,7 @@ void smsg_msg_dispatch_thread(void *arg)
 				}
 				continue;
 			}
+#endif
 			ch = &ipc->channels[recv_smsg.channel];
 
 			sblock_process(&recv_smsg);

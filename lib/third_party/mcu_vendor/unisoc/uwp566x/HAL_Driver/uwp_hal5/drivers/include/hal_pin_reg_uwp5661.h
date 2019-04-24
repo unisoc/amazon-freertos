@@ -4,14 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _HAL_PIN_REG_H
-#define _HAL_PIN_REG_H
+#ifndef _HAL_PIN_REG_UWP5661_H
+#define _HAL_PIN_REG_UWP5661_H
 
 #ifdef __cpluscplus
 extern "C"
 {
 #endif
 
+#include <sys/types.h>
 #include "hal_pinmap.h"
 #include <uwp_hal.h>
 #define CTL_BASE_PIN        (BASE_AON_PIN)

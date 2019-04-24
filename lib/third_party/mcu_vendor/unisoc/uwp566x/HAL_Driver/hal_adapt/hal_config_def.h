@@ -1,7 +1,7 @@
 #ifndef __HAL_CONFIG_DEF_H
 #define __HAL_CONFIG_DEF_H
 
-/* board taget */
+/* soc target */
 #define CONFIG_SOC_UWP5661
 //#define CONFIG_SOC_UWP5662
 
