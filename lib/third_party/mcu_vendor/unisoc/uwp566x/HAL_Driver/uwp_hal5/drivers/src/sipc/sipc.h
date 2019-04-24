@@ -7,7 +7,7 @@
 #ifndef __UWP_SIPC_H
 #define __UWP_SIPC_H
 
-#include "hal_type.h"
+#include "uwp_hal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,13 +89,13 @@ extern "C" {
 #ifndef SZ_1K
 #define SZ_1K                               0x400
 #endif
-
+#if defined(CONFIG_SOC_UWP5661)
 #define IPC_RING_ADDR       0x001EF000
+#elif defined(CONFIG_SOC_UWP5662)
+#define IPC_RING_ADDR       0x001E6000
+#endif
 #define IPC_DST             0
 
-void wifi_irq_init(void);
-void sprd_wifi_irq_disable_num(u32_t num);
-void sprd_wifi_irq_enable_num(u32_t num);
 /**
  * smsg_ch_open -- open a channel for smsg
  *
@@ -184,12 +184,12 @@ struct sblock {
 #define	SBLOCK_NOTIFY_CLOSE	0x10
 
 extern int sipc_probe(void);
+
+#if defined(CONFIG_SOC_UWP5661)
 extern void wifi_irq_init(void);
-extern void sprd_bt_irq_init(void);
-extern int sipc_init(void);
 extern void sprd_wifi_irq_disable_num(u32_t num);
 extern void sprd_wifi_irq_enable_num(u32_t num);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

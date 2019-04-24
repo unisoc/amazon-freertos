@@ -1019,7 +1019,7 @@ __ramfunc int spiflash_reset_anyway(void)
 	int i = 0;
 	SFC_CMD_DES_T cmd_desc[2];
 	BIT_MODE_E bitmode = BIT_MODE_1;
-
+#ifdef CONFIG_QPI_MODE_ENABLE
 	bitmode = BIT_MODE_4;
 	CREATE_CMD_(cmd_desc[0], CMD_RSTEN, BYTE_NUM_1, CMD_MODE_WRITE,
 			bitmode);
@@ -1027,15 +1027,20 @@ __ramfunc int spiflash_reset_anyway(void)
 
 	CREATE_CMD_(cmd_desc[0], CMD_RST, BYTE_NUM_1, CMD_MODE_WRITE, bitmode);
 	spiflash_read_write(cmd_desc, 1, NULL);
-	for (i = 0; i < 1000; i++) ;
-
+	for (i = 0; i < 3000; i++) {
+		sci_read32(SFC_STATUS);
+	}
+#endif
 	bitmode = BIT_MODE_1;
 	CREATE_CMD_(cmd_desc[0], CMD_RSTEN, BYTE_NUM_1, CMD_MODE_WRITE,
 			bitmode);
 	spiflash_read_write(cmd_desc, 1, NULL);
 	CREATE_CMD_(cmd_desc[0], CMD_RST, BYTE_NUM_1, CMD_MODE_WRITE, bitmode);
 	spiflash_read_write(cmd_desc, 1, NULL);
-	for (i = 0; i < 1000; i++) ;
+	/*flash chip request to reset delay 30us and add read for preventing optimize*/
+	for (i = 0; i < 3000; i++) {
+		sci_read32(SFC_STATUS);
+	}
 
 	return 0;
 }
@@ -1065,7 +1070,6 @@ __ramfunc int spiflash_erase(struct spi_flash *flash, u32_t offset, u32_t len)
 	}
 
 	sectors_nr = len / flash->sector_size;
-
 	for (i = 0; i < sectors_nr; i++) {
 		if (spiflash_cmd_erase(flash, CMD_SECTOR_ERASE, offset))
 			return -1;
@@ -1316,6 +1320,7 @@ static int spiflash_read(struct spi_flash *flash, u32_t offset,
 
 	/* modify for xip-sfc */
 	key = irq_lock_primask();
+
 	ret = spiflash_read_data_xip(flash, offset, (u32_t *) &read_char,
 				     dump_byte, type);
 	irq_unlock_primask(key);
@@ -1332,23 +1337,20 @@ static int spiflash_read(struct spi_flash *flash, u32_t offset,
 
 __ramfunc static void spiflash_exit_xip(void)
 {
-	/* pin mux and drive configuration */
-	sci_write32(PIN_ESMCLK_REG, 0x4100);
 
-	sci_write32(SFC_CMD_CFG, 0x00);
-	sci_write32(SFC_CMD_BUF0, 0x06);
-	sci_write32(SFC_TYPE_BUF0, 0x01);
-	sci_write32(SFC_TYPE_BUF1, 0x00000000);
-	sci_write32(SFC_TYPE_BUF2, 0x00000000);
+	sfcdrv_setcmdcfgreg(CMD_MODE_WRITE, 0, INI_CMD_BUF_7);
+
 }
 
 __ramfunc static void spiflash_enter_xip(void)
 {
-	sci_write32(SFC_CMD_CFG, 0x01);
+
 	sci_write32(SFC_CMD_BUF0, 0x0b);
 	sci_write32(SFC_TYPE_BUF0, 0x419101);
 	sci_write32(SFC_TYPE_BUF1, 0x00000000);
 	sci_write32(SFC_TYPE_BUF2, 0x00000000);
+	sfcdrv_setcmdcfgreg(CMD_MODE_READ, 0, INI_CMD_BUF_7);
+
 }
 
 __ramfunc void spiflash_select_xip(u32_t op)

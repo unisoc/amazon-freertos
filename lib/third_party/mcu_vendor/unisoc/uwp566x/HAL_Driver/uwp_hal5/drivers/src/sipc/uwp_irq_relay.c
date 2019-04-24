@@ -15,7 +15,6 @@
 //#define WIFI_LOG_DBG
 #include "uwp_log.h"
 
-#if 0
 #if defined(CONFIG_BT_CTLR_WORKER_PRIO)
 #define RADIO_TICKER_USER_ID_WORKER_PRIO CONFIG_BT_CTLR_WORKER_PRIO
 #else
@@ -26,7 +25,6 @@
 #define RADIO_TICKER_USER_ID_JOB_PRIO CONFIG_BT_CTLR_JOB_PRIO
 #else
 #define RADIO_TICKER_USER_ID_JOB_PRIO 0
-#endif
 #endif
 
 #define CTL_INTC_BASE            0x40000000
@@ -90,47 +88,81 @@
 #define ATOR_INTR1        (1<<1)
 #define ATOR_INTR2        (1<<2)
 
-
-void clear_bt_int(int irq_num)
+#define SHARE_MEM_WATCH   (0x1EEF00)
+u16_t clear_bt_int(int irq_num)
 {
+	u16_t tem=0;
 	switch (irq_num) {
-	case BT_MASKED_TIM_INTR0_IRQn:
+	case NVIC_BT_MASKED_TIM_INTR0:
+		*((u16_t *)(SHARE_MEM_WATCH+0x0c)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x0c));
 		CEVA_IP_int_clear(TIM_INTRO_CLR); break;
-	case BT_MASKED_TIM_INTR1_IRQn:
+	case NVIC_BT_MASKED_TIM_INTR1:
+		*((u16_t *)(SHARE_MEM_WATCH+0x10)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x10));
 		CEVA_IP_int_clear(TIM_INTR1_CLR); break;
-	case BT_MASKED_TIM_INTR2_IRQn:
+	case NVIC_BT_MASKED_TIM_INTR2:
+		*((u16_t *)(SHARE_MEM_WATCH+0x14)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x14));
 		CEVA_IP_int_clear(TIM_INTR2_CLR); break;
-	case BT_MASKED_TIM_INTR3_IRQn:
+	case NVIC_BT_MASKED_TIM_INTR3:
+		*((u16_t *)(SHARE_MEM_WATCH+0x18)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x18));
 		CEVA_IP_int_clear(TIM_INTR3_CLR); break;
-	case BT_MASKED_AUX_TMR_INTR_IRQn:
+	case NVIC_BT_MASKED_AUX_TMR_INTR:
+		*((u16_t *)(SHARE_MEM_WATCH+0x24)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x24));
 		CEVA_IP_int_clear(AUX_TMR_INTR); break;
-	case BT_MASKED_PKA_INTR_IRQn:
-		CEVA_IP_int_MASK(PKA_INTR_MASK); break;
-	case BT_MASKED_SYNC_DET_INTR_IRQn:
-		CEVA_IP_int_MASK(SYNC_DET_INTR_MASK); break;
-	case BT_MASKED_PKD_RX_HDR_IRQn:
-		CEVA_IP_int_MASK(PKD_RX_HDR_INTR_MASK); break;
-	case BT_MASKED_PKD_INTR_IRQn:
-		CEVA_IP_int_MASK(PKD_INTR_MASK); break;
-	case BT_MASKED_PAGE_TIMEOUT_INTR_IRQn:
+	case NVIC_BT_MASKED_PKA_INTR:
+		*((u16_t *)(SHARE_MEM_WATCH+0x20)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x20));
+		CEVA_IP_int_clear(PKA_INTR); break;
+	case NVIC_BT_MASKED_SYNC_DET_INTR:
+		*((u16_t *)(SHARE_MEM_WATCH+0x04)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x04));
+		CEVA_IP_int_clear(SYNC_DET_INTR); break;
+	case NVIC_BT_MASKED_PKD_RX_HDR:
+		*((u16_t *)(SHARE_MEM_WATCH+0x08)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x08));
+		CEVA_IP_int_clear(PKD_RX_HDR); break;
+	case NVIC_BT_MASKED_PKD_INTR:
+		*((u16_t *)(SHARE_MEM_WATCH+0x1c)) += 1;
+		tem =  *((u16_t *)(SHARE_MEM_WATCH+0x1c));
+		CEVA_IP_int_clear(PKD_INTR); break;
+	case NVIC_BT_MASKED_PAGE_TIMEOUT_INTR:
+		*((u16_t *)(SHARE_MEM_WATCH+0)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0));
 		CEVA_IP_int_MASK(PKD_NO_PKD_INTR_MASK); break;
-	case BT_ACCELERATOR_INTR0_IRQn:
+	case NVIC_BT_ACCELERATOR_INTR0:
+		*((u16_t *)(SHARE_MEM_WATCH+0x28)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x28));
 		HW_DEC_int_clear(ATOR_INTR0); break;
-	case BT_ACCELERATOR_INTR1_IRQn:
+	case NVIC_BT_ACCELERATOR_INTR1:
+		*((u16_t *)(SHARE_MEM_WATCH+0x2c)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x2c));
 		HW_DEC_int_clear(ATOR_INTR1); break;
-	case BT_ACCELERATOR_INTR2_IRQn:
+	case NVIC_BT_ACCELERATOR_INTR2:
+		*((u16_t *)(SHARE_MEM_WATCH+0x30)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x30));
 		HW_DEC_int_clear(ATOR_INTR2); break;
-	case BT_ACCELERATOR_INTR3_IRQn:
+	case NVIC_BT_ACCELERATOR_INTR3:
+		*((u16_t *)(SHARE_MEM_WATCH+0x34)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x34));
 		HW_DEC_int_clear_sts; break;
-	case BT_ACCELERATOR_INTR4_IRQn:
+	case NVIC_BT_ACCELERATOR_INTR4:
+		*((u16_t *)(SHARE_MEM_WATCH+0x38)) += 1;
+		tem = *((u16_t *)(SHARE_MEM_WATCH+0x38));
 		HW_DEC_int1_clear_sts; break;
 
-	default:
+    default:
 		LOG_INF("bt clear irq error %d\n", irq_num); break;
 	}
-
+	if((tem == SMSG_OPEN_MAGIC) || (tem == SMSG_CLOSE_MAGIC)) {
+		return 0;
+	} else {
+		return tem;
+	}
 }
-
 
 void sprd_bt_irq_enable(void)
 {
@@ -443,63 +475,63 @@ void sprd_bt_irq_init(void)
 {
     NVIC_DisableIRQ(BT_MASKED_PAGE_TIMEOUT_INTR_IRQn);
     NVIC_SetVector(BT_MASKED_PAGE_TIMEOUT_INTR_IRQn,(uint32_t)bt_masked_page_timeout_handler);
-    NVIC_SetPriority(BT_MASKED_PAGE_TIMEOUT_INTR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_PAGE_TIMEOUT_INTR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_SYNC_DET_INTR_IRQn);
     NVIC_SetVector(BT_MASKED_SYNC_DET_INTR_IRQn,(uint32_t)bt_masked_sync_det_handler);
-    NVIC_SetPriority(BT_MASKED_SYNC_DET_INTR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_SYNC_DET_INTR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_PKD_RX_HDR_IRQn);
     NVIC_SetVector(BT_MASKED_PKD_RX_HDR_IRQn,(uint32_t)bt_masked_pkd_rx_hdr_handler);
-    NVIC_SetPriority(BT_MASKED_PKD_RX_HDR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_PKD_RX_HDR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_TIM_INTR0_IRQn);
     NVIC_SetVector(BT_MASKED_TIM_INTR0_IRQn,(uint32_t)bt_masked_tim_intr0_handler);
-    NVIC_SetPriority(BT_MASKED_TIM_INTR0_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_TIM_INTR0_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_TIM_INTR1_IRQn);
     NVIC_SetVector(BT_MASKED_TIM_INTR1_IRQn,(uint32_t)bt_masked_tim_intr1_handler);
-    NVIC_SetPriority(BT_MASKED_TIM_INTR1_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_TIM_INTR1_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_TIM_INTR2_IRQn);
     NVIC_SetVector(BT_MASKED_TIM_INTR2_IRQn,(uint32_t)bt_masked_tim_intr2_handler);
-    NVIC_SetPriority(BT_MASKED_TIM_INTR2_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_TIM_INTR2_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_TIM_INTR3_IRQn);
     NVIC_SetVector(BT_MASKED_TIM_INTR3_IRQn,(uint32_t)bt_masked_tim_intr3_handler);
-    NVIC_SetPriority(BT_MASKED_TIM_INTR3_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_TIM_INTR3_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_PKD_INTR_IRQn);
     NVIC_SetVector(BT_MASKED_PKD_INTR_IRQn,(uint32_t)bt_masked_pkd_handler);
-    NVIC_SetPriority(BT_MASKED_PKD_INTR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_PKD_INTR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_PKA_INTR_IRQn);
     NVIC_SetVector(BT_MASKED_PKA_INTR_IRQn,(uint32_t)bt_masked_pka_handler);
-    NVIC_SetPriority(BT_MASKED_PKA_INTR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_PKA_INTR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_MASKED_AUX_TMR_INTR_IRQn);
     NVIC_SetVector(BT_MASKED_AUX_TMR_INTR_IRQn,(uint32_t)bt_masked_aux_tmr_handler);
-    NVIC_SetPriority(BT_MASKED_AUX_TMR_INTR_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_MASKED_AUX_TMR_INTR_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_ACCELERATOR_INTR0_IRQn);
     NVIC_SetVector(BT_ACCELERATOR_INTR0_IRQn,(uint32_t)bt_masked_accelerator_intr0_handler);
-    NVIC_SetPriority(BT_ACCELERATOR_INTR0_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_ACCELERATOR_INTR0_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_ACCELERATOR_INTR1_IRQn);
     NVIC_SetVector(BT_ACCELERATOR_INTR1_IRQn,(uint32_t)bt_masked_accelerator_intr1_handler);
-    NVIC_SetPriority(BT_ACCELERATOR_INTR1_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_ACCELERATOR_INTR1_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_ACCELERATOR_INTR2_IRQn);
     NVIC_SetVector(BT_ACCELERATOR_INTR2_IRQn,(uint32_t)bt_masked_accelerator_intr2_handler);
-    NVIC_SetPriority(BT_ACCELERATOR_INTR2_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_ACCELERATOR_INTR2_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_ACCELERATOR_INTR3_IRQn);
     NVIC_SetVector(BT_ACCELERATOR_INTR3_IRQn,(uint32_t)bt_masked_accelerator_intr3_handler);
-    NVIC_SetPriority(BT_ACCELERATOR_INTR3_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_ACCELERATOR_INTR3_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
     NVIC_DisableIRQ(BT_ACCELERATOR_INTR4_IRQn);
     NVIC_SetVector(BT_ACCELERATOR_INTR4_IRQn,(uint32_t)bt_masked_accelerator_intr4_handler);
-    NVIC_SetPriority(BT_ACCELERATOR_INTR4_IRQn,0x1FUL);
+    NVIC_SetPriority(BT_ACCELERATOR_INTR4_IRQn,RADIO_TICKER_USER_ID_WORKER_PRIO);
 
 	sprd_bt_irq_enable();
 }
