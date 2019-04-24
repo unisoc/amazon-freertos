@@ -1,15 +1,19 @@
+/*
+ * Copyright (c) 2018, UNISOC Incorporated
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "uwp_hal.h"
 #include "hal_log.h"
 #include "cache.h"
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
+#include <stdio.h>
 
 static CACHE_BLOCK_OP_T C_ICACHE_DEFAULT_BLOCK_CFG[] = {
 	{ BLOCK_0, 0x00000000, FALSE, FALSE },
 	{ BLOCK_1, 0x00100000, TRUE, FALSE },
-	{ BLOCK_2, 0x001EE000, FALSE, FALSE },
+	{ BLOCK_2, 0x001E1000, FALSE, FALSE },
 	{ BLOCK_3, 0x02000000, TRUE, FALSE },
 	{ BLOCK_4, 0x04000000, FALSE, FALSE },
 	{ BLOCK_5, 0x04480000, FALSE, FALSE },
@@ -20,7 +24,7 @@ static CACHE_BLOCK_OP_T C_ICACHE_DEFAULT_BLOCK_CFG[] = {
 static CACHE_BLOCK_OP_T C_DCACHE_DEFAULT_BLOCK_CFG[] = {
 	{ BLOCK_0, 0x00000000, FALSE, FALSE },
 	{ BLOCK_1, 0x00100000, FALSE, FALSE },
-	{ BLOCK_2, 0x001EE000, FALSE, FALSE },
+	{ BLOCK_2, 0x001E1000, FALSE, FALSE },
 	{ BLOCK_3, 0x02000000, TRUE, FALSE },
 	{ BLOCK_4, 0x04000000, FALSE, FALSE },
 	{ BLOCK_5, 0x04480000, FALSE, FALSE },
