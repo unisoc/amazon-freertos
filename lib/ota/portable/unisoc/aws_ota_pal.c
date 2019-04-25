@@ -22,7 +22,7 @@
 #include "uwp_log.h"
 
 /************************** self test  ***************************/
-//#define UWP_OTA_SELF_TEST
+#define UWP_OTA_SELF_TEST
 #define ivy5661_unisoc_test_crt_path "amazon-freertos/tests/common/ota/test_files/ecdsa-sha256-signer.crt.pem"
 #ifndef otatestpalCERTIFICATE_FILE
 #define otatestpalCERTIFICATE_FILE "ecdsa-sha256-signer.crt.pem"
@@ -70,6 +70,9 @@ extern char __FLASH_MODEM_START__;
 extern char __FLASH_APP_OTA_START__;
 extern char __FLASH_MODEM_OTA_START__;
 extern char __FLASH_END__;
+extern char __FLASH_FILES_START__;
+#define UWP_FLASH_SECTOR_SIZE (0x1000)
+static OTA_ImageState_t eUWP_OTA_ImageState;
 static uwp_ota_flash_partition_t xPartitionFlash[3];
 
 /*******************convenient function***************************/
@@ -83,7 +86,7 @@ OTA_Err_t prvPAL_CheckFileSignature( OTA_FileContext_t * const C );
 static CK_RV prvGetCertificate( const char * pcLabelName,
                                 uint8_t ** ppucData,
                                 uint32_t * pulDataSize );
-static void mcuboot_test(void);
+static void mcuboot_mark(void);
 
 /*
  * @bref get a partition for app ota use
@@ -174,16 +177,11 @@ static int prvFlashEraseAndWrite(uint8_t *pcData, uint32_t ulAddrOffset, uint32_
 /*
  * @bref update partition information
  */
-static int prvUpdatePartitionInfo( uwp_ota_flash_partition_t * pxPartition ){
+static int prvUpdateOTAImageState(void){
 
-  /* update info notify to mcuboot included in ota image */
-#if 0
-    return prvFlashEraseAndWrite( (uint8_t *)pxPartition, (uint32_t)&xPartitionFlash[xOTACtx.partition.ucPartition] - UWP_FLASH_BASE,
-                                      sizeof(uwp_ota_flash_partition_t));
-#else
-    mcuboot_test();
-    return 0;
-#endif
+    return prvFlashEraseAndWrite( (uint8_t *)&eUWP_OTA_ImageState,
+            (uint32_t)(&__FLASH_FILES_START__ + (UWP_FLASH_SECTOR_SIZE << 2) - UWP_FLASH_BASE), 1);
+
 }
 
 /*
@@ -225,6 +223,7 @@ static int prvErasePartition( uwp_ota_flash_partition_t * pxPartition ){
  * @bref swap partition information
  * excute before return bootloader
  */
+#if 0
 static int prvSwapPartitionInfo(void){
 
     if( xOTACtx.partition.bImageValid == false ){
@@ -245,7 +244,7 @@ static int prvSwapPartitionInfo(void){
     vLoggingPrint("can't identify running image\r\n");
     return -201;
 }
-
+#endif
 /* Abort receiving the specified OTA update by closing the file. */
 OTA_Err_t prvPAL_Abort( OTA_FileContext_t * const C )
 {
@@ -404,9 +403,10 @@ int16_t prvPAL_WriteBlock( OTA_FileContext_t * const C,
 
 OTA_Err_t prvPAL_ResetDevice( void ){
     DEFINE_OTA_METHOD_NAME( "prvPAL_ResetDevice" );
-    mcuboot_test();
-    printk( "waiting Reset Handly.\r\n" );
-    while(1);
+    portENTER_CRITICAL();
+    printk( "[%s] waiting Reset Handly.\r\n", OTA_METHOD_NAME );
+    for(;;);
+    portEXIT_CRITICAL();
     return kOTA_Err_None;
 }
 
@@ -414,7 +414,11 @@ OTA_Err_t prvPAL_ResetDevice( void ){
 OTA_Err_t prvPAL_ActivateNewImage( void )
 {
     DEFINE_OTA_METHOD_NAME( "prvPAL_ActivateNewImage" );
-
+#ifdef UWP_OTA_SELF_TEST
+    eUWP_OTA_ImageState = eOTA_ImageState_Testing;
+    prvUpdateOTAImageState();
+#endif
+    mcuboot_mark();
     prvPAL_ResetDevice();
 
     OTA_LOG_L1( "[%s] ERROR - you should nerver see this.\r\n", OTA_METHOD_NAME );
@@ -438,10 +442,9 @@ OTA_Err_t prvPAL_SetPlatformImageState( OTA_ImageState_t eState )
     if( eState == eOTA_ImageState_Accepted )
     {
         /* check the image valid or not*/
-        if( xOTACtx.partition.bImageValid != true)
-        	return kOTA_Err_CommitFailed;
-
-        iResult = prvUpdatePartitionInfo(&xOTACtx.partition);
+        xOTACtx.partition.bImageValid = true;
+        eUWP_OTA_ImageState = eOTA_ImageState_Accepted;
+        iResult = prvUpdateOTAImageState();
         if( iResult == 0 )
         {
             OTA_LOG_L1( "[%s] Accepted and committed final image.\r\n", OTA_METHOD_NAME );
@@ -457,7 +460,8 @@ OTA_Err_t prvPAL_SetPlatformImageState( OTA_ImageState_t eState )
     {
         /* Mark the image as invalid */
         xOTACtx.partition.bImageValid = false;
-        iResult = prvUpdatePartitionInfo(&xOTACtx.partition);
+        eUWP_OTA_ImageState = eOTA_ImageState_Rejected;
+        iResult = prvUpdateOTAImageState();
         if( iResult == 0)
         {
             OTA_LOG_L1( "[%s] Rejected image.\r\n", OTA_METHOD_NAME );
@@ -473,7 +477,8 @@ OTA_Err_t prvPAL_SetPlatformImageState( OTA_ImageState_t eState )
     {
         /* Mark the image as invalid */
         xOTACtx.partition.bImageValid = false;
-        iResult = prvUpdatePartitionInfo(&xOTACtx.partition);
+        eUWP_OTA_ImageState = eOTA_ImageState_Aborted;
+        iResult = prvUpdateOTAImageState();
         if( iResult == 0 )
         {
             OTA_LOG_L1( "[%s] Aborted image.\r\n", OTA_METHOD_NAME );
@@ -487,7 +492,8 @@ OTA_Err_t prvPAL_SetPlatformImageState( OTA_ImageState_t eState )
     }
     else if( eState == eOTA_ImageState_Testing )
     {
-            eResult = kOTA_Err_None;
+        eUWP_OTA_ImageState = eOTA_ImageState_Testing;
+        eResult = kOTA_Err_None;
     }
     else
     {
@@ -507,9 +513,8 @@ OTA_PAL_ImageState_t prvPAL_GetPlatformImageState(void)
     uwp_ota_flash_partition_t xOTAPartition;
     OTA_PAL_ImageState_t eImageState = eOTA_PAL_ImageState_Unknown;
 
-#ifdef UWP_OTA_SELF_TEST
-    return eOTA_PAL_ImageState_PendingCommit;
-#endif
+    if( eUWP_OTA_ImageState == eOTA_ImageState_Testing )
+        return eOTA_PAL_ImageState_PendingCommit;
 
     /* do not distinguish self test mode */
     if( prvGetOTAPartition(&xOTAPartition) != 0){
@@ -790,6 +795,12 @@ void vUWP5661FLASHPartitionInit(void){
     xPartitionFlash[2].eState = PartitionModemOta;
     xPartitionFlash[2].ucPartition = 2;
 
+    memcpy((void *)&eUWP_OTA_ImageState,(const void *)(&__FLASH_FILES_START__ + (UWP_FLASH_SECTOR_SIZE << 2)), 1 );
+    if( eUWP_OTA_ImageState < eOTA_ImageState_Unknown && eUWP_OTA_ImageState > eOTA_ImageState_Aborted ){
+        printk( "OTA Image State ERR: %d\r\n", eUWP_OTA_ImageState);
+        eUWP_OTA_ImageState = eOTA_ImageState_Unknown;
+    }
+
 #if 0
     for(int i = 0; i < 3; i++){
         printk("Part Info addr: %x Len:%x\r\n",xPartitionFlash[i].ulPartitionAddrOffset, xPartitionFlash[i].ulPartitionLength);
@@ -844,7 +855,7 @@ void vOTASelfTest(void){
     vLoggingPrintf("write init partition info success: partition:%d addr:%x state:%d\r\n",
                       xPartitionFlash[0].ucPartition, xPartitionFlash[0].ulPartitionAddrOffset, xPartitionFlash[0].eState);
 
-#if 0
+#if 1
     iResult = prvGetOTAPartition(&xPartitionTemp);
     if( iResult != 0 ){
         vLoggingPrintf("get ota partition failed:%d\r\n", iResult);
@@ -863,7 +874,7 @@ void vOTASelfTest(void){
 
 }
 
-void mcuboot_test(void){
+void mcuboot_mark(void){
 
     const uint32_t boot_img_magic[] = {
         0xf395c277,
@@ -873,7 +884,7 @@ void mcuboot_test(void){
     };
 
     uint32_t *p = (uint32_t *)(UWP_FLASH_BASE + 0x0024bff0);
-    prvFlashEraseAndWrite(boot_img_magic, 0x0024bff0, 16);
+    prvFlashEraseAndWrite((uint8_t *)boot_img_magic, 0x0024bff0, 16);
 
     printk("%x %x %x %x %x\r\n", *p, *(p+1), *(p+2), *(p+3), *(uint8_t *)(UWP_FLASH_BASE + 0X0024bfe8));
 }
