@@ -41,6 +41,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "FreeRTOS_DNS.h"
 #include "NetworkBufferManagement.h"
 #include "NetworkInterface.h"
+#include "mbed_retarget.h"
 
 #include "uwp_sys_wrapper.h"
 #include "uwp_log.h"
@@ -105,6 +106,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     u8_t *data = NULL;
     u8_t *alloc_ptr = NULL;
     int len = 0;
+    int retry_cnt = 5;
 
     if (pxNetworkBuffer == NULL || pxNetworkBuffer->pucEthernetBuffer == NULL || pxNetworkBuffer->xDataLength == 0) {
         LOG_ERR("Invalid params");
@@ -127,13 +129,23 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t *const pxNetworkBu
     if (xReleaseAfterSend) { //driver should release the NetworkBufferDescriptor_t
         vReleaseNetworkBufferAndDescriptor(pxNetworkBuffer);
     }
+
+send:
     ret = uwp_mgmt_tx(data, len);
     if (ret != UWP_OK) {
         LOG_DBG("Failed to tx buffer %p, len %d, err %d\r\n",
                 pxNetworkBuffer->pucEthernetBuffer,
                 pxNetworkBuffer->xDataLength, ret);
+        if ((ret == -ENOMEM) && (retry_cnt > 0)) {
+            retry_cnt--;
+            vTaskDelay(pdMS_TO_TICKS(5));
+            goto send;
+        }
+        if (retry_cnt == 0) {
+            LOG_ERR("Send failed for 5 times\r\n");
+        }
+        LOG_ERR("Tx data failed:%d\r\n", ret);
         vPortFree(alloc_ptr);
-        vTaskDelay(pdMS_TO_TICKS(15));
     }
     return ret == UWP_OK ? pdTRUE : pdFALSE;
 

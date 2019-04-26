@@ -340,7 +340,7 @@ int wifi_tx_data(void *data, int len)
                 1 * SPRDWL_PHYS_LEN + sizeof(struct hw_addr_buff_t),
                 WIFI_DATA_NOR_MSG_OFFSET);
     if (ret < 0) {
-        LOG_ERR("IPC send fail %d\r\n", ret);
+        LOG_DBG("IPC send fail %d\r\n", ret);
         return ret;
     }
 

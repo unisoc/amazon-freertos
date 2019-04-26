@@ -416,7 +416,7 @@ int sblock_get(u8_t dst, u8_t channel, struct sblock *blk, int timeout)
 		ret1 = k_sem_take(ring->getwait, timeout);//ret = k_sem_acquire(ring->getwait, timeout);
 		if (ret1 == 0) {//0 is failed
 			LOG_WRN("wait timeout!");
-			return -ETIME;
+			return -ENOMEM;
 		}
 
 		if (sblock->state == SBLOCK_STATE_IDLE) {
