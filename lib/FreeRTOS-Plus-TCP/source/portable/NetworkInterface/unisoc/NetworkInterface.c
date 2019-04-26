@@ -59,7 +59,7 @@ enum if_idx {
 	INTERFACE_AP,
 };
 
-static int more_space = sizeof(struct tx_msdu_dscr)+4+4+ipBUFFER_PADDING;
+static int more_space = sizeof(struct tx_msdu_dscr) + 4;//4byte to save buffer addr of struct tx_msdu_dscr
 volatile static uint32_t xInterfaceState = INTERFACE_DOWN;
 extern struct wifi_priv uwp_wifi_priv;
 
