@@ -502,7 +502,7 @@ WIFIReturnCode_t WIFI_Ping( uint8_t * pucIPAddr,
             /* The ping was sent.  Wait for a reply.  */
             if( xQueueReceive( Uwp_PingReplyQueue,
                                &usPingReplySeqNum,
-                               pdMS_TO_TICKS( ulIntervalMS ) ) == pdPASS )
+                               pdMS_TO_TICKS(1000) ) == pdPASS )
             {
                 /* A ping reply was received.  Was it a reply to the ping just sent? */
                 if( usPingSeqNum == usPingReplySeqNum )
