@@ -30,6 +30,7 @@
 
 /* Socket and Wi-Fi interface includes. */
 #include "FreeRTOS.h"
+
 #include "aws_wifi.h"
 
 /* Wi-Fi configuration includes. */
@@ -39,6 +40,8 @@
 #include "uwp_sys_wrapper.h"
 #include "uwp_log.h"
 #include "uwp_wifi_cmdevt.h"
+#include "FreeRTOS_IP.h"
+
 extern struct wifi_priv uwp_wifi_priv;
 extern struct scan_list uwp_scan_list;
 extern struct scanResult uwp_scanResult;
@@ -435,14 +438,92 @@ WIFIReturnCode_t WIFI_NetworkDelete( uint16_t usIndex )
     return eWiFiNotSupported;
 }
 /*-----------------------------------------------------------*/
+TaskHandle_t waiting_task;
+static QueueHandle_t Uwp_PingReplyQueue = NULL;
+#define WIFI_PING_PKT_SIZE                     256
+void vApplicationPingReplyHook( ePingReplyStatus_t eStatus,
+                                uint16_t usIdentifier )
+{
+    /*handle ping reply. */
+    switch( eStatus )
+    {
+        case eSuccess:
+            /* A valid ping reply has been received. */
+            xQueueSend( Uwp_PingReplyQueue, &usIdentifier, pdMS_TO_TICKS( 10 ) );
+            break;
+        case eInvalidChecksum:
+        case eInvalidData:
+            /* A reply was received but it was not valid. */
+            break;
+    }
+}
 
 WIFIReturnCode_t WIFI_Ping( uint8_t * pucIPAddr,
                             uint16_t usCount,
                             uint32_t ulIntervalMS )
 {
-    /* FIX ME. */
-    return eWiFiNotSupported;
+    uint32_t ulIPAddress = 0;
+    uint16_t usPingSeqNum = pdFAIL;
+    uint16_t usPingReplySeqNum = pdFAIL;
+    uint32_t ulIndex = 0;
+    int ret = pdFAIL;
+
+    if( ( NULL == pucIPAddr ) || ( 0 == usCount ) )
+    {
+        LOG_ERR("invaild param\r\n");
+        return eWiFiFailure;
+    }
+
+    if(!uwp_wifi_isConnected(WIFI_DEV_STA))
+    {
+        LOG_ERR("invaild param\r\n");
+        return eWiFiFailure;
+    }
+
+    Uwp_PingReplyQueue = xQueueCreate( 5, sizeof(uint16_t) );
+    if(Uwp_PingReplyQueue == NULL) {
+        LOG_ERR("queue creadted faild\r\n");
+        return eWiFiFailure;
+    }
+
+    for( ulIndex = 0; ulIndex < usCount; ulIndex++ )
+    {
+        usPingSeqNum = FreeRTOS_SendPingRequest( (*((uint32_t *)pucIPAddr)), WIFI_PING_PKT_SIZE, pdMS_TO_TICKS( ulIntervalMS ) );
+        LOG_DBG("\r\nSending Ping request %d\r\n", usPingSeqNum );
+
+        if(usPingSeqNum == pdFAIL)
+        {
+            LOG_ERR( "\r\nSending Ping request failed\r\n" );
+            ret = eWiFiFailure;
+            break;
+        }
+        else
+        {
+            /* The ping was sent.  Wait for a reply.  */
+            if( xQueueReceive( Uwp_PingReplyQueue,
+                               &usPingReplySeqNum,
+                               pdMS_TO_TICKS( ulIntervalMS ) ) == pdPASS )
+            {
+                /* A ping reply was received.  Was it a reply to the ping just sent? */
+                if( usPingSeqNum == usPingReplySeqNum )
+                {
+                    /* This was a reply to the request just sent. */
+                    printk("Reply[%d] from %d.%d.%d.%d\r\n", ulIndex+1, pucIPAddr[0], pucIPAddr[1], pucIPAddr[2], pucIPAddr[3]);
+                }
+                else
+                    LOG_ERR("ping reply seq num wrong\r\n");
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(ulIntervalMS));
+    }
+    printk("\r\n");
+
+    /* all ping were sent*/
+    ret = eWiFiSuccess;
+    vQueueDelete(Uwp_PingReplyQueue);
+    return ret;
 }
+
 /*-----------------------------------------------------------*/
 
 WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
