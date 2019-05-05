@@ -1,0 +1,58 @@
+{ 
+    "name": "ivy5661",
+    "exclude": false,
+    "afr_root": "..",
+    "demos_or_tests": "tests",
+    "vendor_board_path":"unisoc/ivy5661",
+    "wifi_ssid":"yttest",
+    "wifi_password":"12345678",
+    "wifi_security":"eWiFiSecurityWPA2",
+    "build_config": {
+        "project_dir": "{afr_root}/build",
+        "output": "{afr_root}/build/aws_{demos_or_tests}_signed.bin",
+        "tool_paths": [
+        ],
+        "commands": [
+        "make"
+        ],
+        "use_reference_bootloader": false,
+        "bootloader_hardware_platform": "",
+        "bootloader_private_key_path": "",
+        "bootloader_output": ""
+    },
+    "ota_config": {
+        "aws_s3_bucket_name":"unisoc-test1",
+        "aws_ota_update_role_arn":"arn:aws:iam::429265583819:role/unisoc_ivy5661_test",
+        "ota_firmware_file_path": "{afr_root}/build/aws_{demos_or_tests}_signed.bin",
+        "device_firmware_file_name": "flash_filesys/",
+        "ota_timeout_sec":600,
+        "aws_signer_platform": "AmazonFreeRTOS-Default",
+        "aws_signer_certificate_arn": "arn:aws:acm:us-east-2:429265583819:certificate/6b5c420a-581c-4285-9761-e85d74cedec9",
+        "aws_untrusted_signer_certificate_arn": "arn:aws:acm:us-east-2:429265583819:certificate/49f31b2e-e915-4c28-b7b5-b821287c328d",
+        "aws_signer_certificate_file_name": "amazon-freertos/tests/common/ota/test_files/ecdsa-sha256-signer.crt.pem",
+        "aws_signer_oid": "sig-sha256-ecdsa",
+        "compile_codesigner_certificate": false,
+        "supported_tests": [
+            "OtaTestGreaterVersion"
+        ]
+    },
+    "flash_config": {
+        "project_dir":"{afr_root}/{demos_or_tests}/{vendor_board_path}/elipse",
+        "output": "{project_dir}/Build/aws_{demos_or_tests}.out",
+        "tool_paths": [
+            "/d/VM_share/RESEARCHDOWNLOAD_R17.17.2001/Bin/"
+        ],
+        "commands": [
+            "echo flash erase",
+            "sleep 1m",
+            "echo flash download image",
+            "sleep 30s"
+        ],
+        "flash_delay_sec": 3,
+        "flash_num_retry": 3,
+        "flash_after_serial_open": false, 
+        "serial_port": "COM7",
+        "serial_baudrate": 921600,
+        "serial_timeout_sec": 30
+    }
+}
