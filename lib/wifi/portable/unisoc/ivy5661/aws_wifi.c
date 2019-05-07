@@ -30,17 +30,16 @@
 
 /* Socket and Wi-Fi interface includes. */
 #include "FreeRTOS.h"
-
 #include "aws_wifi.h"
-
 /* Wi-Fi configuration includes. */
 #include "aws_wifi_config.h"
-
 #include "uwp_wifi_main.h"
 #include "uwp_sys_wrapper.h"
 #include "uwp_log.h"
 #include "uwp_wifi_cmdevt.h"
 #include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
+#include "aws_secure_sockets.h"
 
 extern struct wifi_priv uwp_wifi_priv;
 extern struct scan_list uwp_scan_list;
@@ -525,7 +524,148 @@ WIFIReturnCode_t WIFI_Ping( uint8_t * pucIPAddr,
 }
 
 /*-----------------------------------------------------------*/
+/*for example:
+    u8_t ip[4] = {192,168,1,100};
+    WIFI_Iperf_TcpTx(ip, 3600);
+*/
+WIFIReturnCode_t WIFI_Iperf_TcpTx( uint8_t * pucIPAddr, uint32_t time_s)
+{
+    int ret = eWiFiFailure;
+    volatile Socket_t iperf_socket = SOCKETS_INVALID_SOCKET;
+    SocketsSockaddr_t xEchoServerAddress;
+    BaseType_t xIsConnected = pdFALSE;
+    BaseType_t xRetry = 0;
+    TickType_t xRetryTimeoutTicks = 30;
+    BaseType_t xResult;
+    TickType_t xRxTimeOut = pdMS_TO_TICKS(5000);
+    TickType_t xTxTimeOut = pdMS_TO_TICKS(5000);
+    u8_t data[/*ipconfigTCP_MSS*/1200] = {6};
+    uint32_t time_ms = time_s * 1000;
+    TickType_t xStartTime;
+    TickType_t xCurrentTime;
+    TickType_t xTimeout = pdMS_TO_TICKS(time_ms);
+    u8_t pcRxBuffer[1600];
 
+    printk("Start iperf.\r\n");
+
+    if( ( NULL == pucIPAddr ))
+    {
+        LOG_ERR("invaild param\r\n");
+        return eWiFiFailure;
+    }
+
+    if(!uwp_wifi_isConnected(WIFI_DEV_STA))
+    {
+        printk("invaild param\r\n");
+        return eWiFiFailure;
+    }
+
+connect:
+    /* Create the socket. */
+    iperf_socket = SOCKETS_Socket( SOCKETS_AF_INET, SOCKETS_SOCK_STREAM,
+                              SOCKETS_IPPROTO_TCP );
+    if(iperf_socket == SOCKETS_INVALID_SOCKET)
+    {
+        printk("invaild socket!\r\n");
+        return eWiFiFailure;
+    }
+
+    /* Set the appropriate socket options for the destination.
+    Echo requests are sent to the echo server.  The echo server is
+    * listening to tcptestECHO_PORT on this computer's IP address. */
+    xEchoServerAddress.ulAddress =
+        SOCKETS_inet_addr_quick(pucIPAddr[0], pucIPAddr[1], pucIPAddr[2], pucIPAddr[3]);
+    xEchoServerAddress.usPort = SOCKETS_htons(5001);
+    xEchoServerAddress.ucLength = sizeof( SocketsSockaddr_t);
+    xEchoServerAddress.ucSocketDomain = SOCKETS_AF_INET;
+
+    /* Set socket timeout options. */
+    xResult = SOCKETS_SetSockOpt(iperf_socket, 0, SOCKETS_SO_RCVTIMEO,
+        &xRxTimeOut, sizeof( xRxTimeOut ));
+    if( xResult != SOCKETS_ERROR_NONE )
+    {
+        printk("set receive time fail!\r\n");
+        return eWiFiFailure;
+    }
+    xResult = SOCKETS_SetSockOpt( iperf_socket, 0, SOCKETS_SO_SNDTIMEO,
+        &xTxTimeOut, sizeof( xTxTimeOut ) );
+    if( xResult != SOCKETS_ERROR_NONE )
+    {
+        printk("set send time fail!\r\n");
+        return eWiFiFailure;
+    }
+
+    /* Attempt, with possible retries, to connect to the destination. */
+    xResult = SOCKETS_Connect( iperf_socket,
+                               &xEchoServerAddress,
+                               sizeof( xEchoServerAddress ) );
+    if( SOCKETS_ERROR_NONE == xResult )
+    {
+        xIsConnected = pdTRUE;
+    }
+    else
+    {
+        if( xRetry < 6 )
+        {
+            SOCKETS_Close(iperf_socket);
+            iperf_socket = SOCKETS_INVALID_SOCKET;
+            xResult = SOCKETS_ERROR_NONE;
+            xRetry++;
+            vTaskDelay( xRetryTimeoutTicks );
+            /* Exponetially backoff the retry times */
+            xRetryTimeoutTicks *= 2; /*Arbitrarily chose 2*/
+            goto connect;
+        }
+    }
+
+    if(pdTRUE != xIsConnected) {
+        printk("Connect fail!\r\n");
+        return eWiFiFailure;
+    }
+    printk("Tcp connect success to %d.%d.%d.%d.\r\n",
+        pucIPAddr[0], pucIPAddr[1], pucIPAddr[2], pucIPAddr[3]);
+
+    xCurrentTime = xStartTime = xTaskGetTickCount();
+    while((xCurrentTime - xStartTime) < xTimeout) {
+        xResult = SOCKETS_Send( iperf_socket, data, sizeof(data), 0);
+        if(xResult == -pdFREERTOS_ERRNO_ENOTCONN) {
+            printk("Tcp connection lost.\r\n");
+            break;
+        }
+        if(xResult < 0) {
+            printk("send fail.\r\n");
+        }
+        xCurrentTime = xTaskGetTickCount();
+    }
+
+    xResult = SOCKETS_Shutdown(iperf_socket, SOCKETS_SHUT_RDWR);
+    if( 0 == xResult )
+    {
+        /* Keep calling receive until an error code is returned. */
+        do
+        {
+            xResult = SOCKETS_Recv(iperf_socket, pcRxBuffer, sizeof(pcRxBuffer), 0);
+        }
+        while( xResult >= 0 );
+
+        xResult = 0;
+    }
+    else
+    {
+        printk("Socket failed to shutdown\r\n");
+        return eWiFiFailure;
+    }
+
+    xResult = SOCKETS_Close( iperf_socket );
+    if(xResult != SOCKETS_ERROR_NONE) {
+        printk("Socket failed to close\r\n");
+        return eWiFiFailure;
+    }
+
+    return eWiFiSuccess;
+}
+
+/*-----------------------------------------------------------*/
 WIFIReturnCode_t WIFI_GetIP( uint8_t * pucIPAddr )
 {
 
